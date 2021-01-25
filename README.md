@@ -4,7 +4,7 @@ Koto is an in-development audiobook, music, and podcast manager that is designed
 
 ## Blog
 
-- [Dev Diary 1: Koto - Foundations](https://joshuastrobl.com/2021/01/25/2021-01-25-dev-diary-1-koto-foundations)
+- [Dev Diary 1: Koto - Foundations](https://joshuastrobl.com/2021/01/25/dev-diary-1-koto-foundations/)
 
 ## License
 
