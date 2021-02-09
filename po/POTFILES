@@ -1,0 +1,7 @@
+data/com.github.joshstrobl.koto.desktop.in
+data/com.github.joshstrobl.koto.appdata.xml.in
+data/com.github.joshstrobl.koto.gschema.xml
+src/koto-window.ui
+src/main.c
+src/koto-window.c
+

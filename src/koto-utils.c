@@ -1,0 +1,28 @@
+/* koto-utils.c
+ *
+ * Copyright 2021 Joshua Strobl
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * 	http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "koto-utils.h"
+
+GtkWidget* koto_create_flat_icon_button(gchar *icon_name, GtkIconSize size) {
+	GtkWidget* button;
+	button = gtk_button_new_from_icon_name(icon_name, size);
+
+	GtkStyleContext *button_style = gtk_widget_get_style_context(button);
+	gtk_style_context_add_class(button_style, "flat");
+
+	return button;
+}

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gresources>
+	<gresource prefix="/com/github/joshstrobl/koto">
+		<file>koto-headerbar.ui</file>
+		<file>koto-window.ui</file>
+		<file alias="style.css">../data/style.css</file>
+	</gresource>
+</gresources>

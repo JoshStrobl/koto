@@ -1,0 +1,20 @@
+.primary-nav > .frame > box >.koto-button {
+	padding: 10px 0;
+}
+
+.primary-nav .expander .expander-header {
+	padding-bottom: 10px;
+}
+
+.expander > revealer > box > .koto-button {
+	min-height: 40px;
+}
+
+.koto-button > image {
+	margin-right: 10px;
+}
+
+.primary-nav label,
+.expander-header label {
+	font-size: large;
+}
