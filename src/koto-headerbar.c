@@ -33,8 +33,6 @@ G_DEFINE_TYPE(KotoHeaderBar, koto_headerbar, GTK_TYPE_HEADER_BAR)
 static void koto_headerbar_class_init(KotoHeaderBarClass *c) {
 	GtkWidgetClass *widget_class = GTK_WIDGET_CLASS(c);
 	gtk_widget_class_set_template_from_resource(widget_class, "/com/github/joshstrobl/koto/koto-headerbar.ui");
-	//gtk_widget_class_bind_template_child(widget_class, KotoHeaderBar, menu_button);
-	//gtk_widget_class_bind_template_child(widget_class, KotoHeaderBar, search);
 }
 
 static void koto_headerbar_init(KotoHeaderBar *self) {
