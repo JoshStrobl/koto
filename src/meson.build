@@ -1,13 +1,12 @@
 koto_sources = [
+	'indexer/file.c',
 	'indexer/file-indexer.c',
 	'main.c',
 	'koto-button.c',
 	'koto-expander.c',
-	'koto-flipper-button.c',
 	'koto-headerbar.c',
 	'koto-nav.c',
 	'koto-playerbar.c',
-	'koto-utils.c',
 	'koto-window.c',
 ]
 

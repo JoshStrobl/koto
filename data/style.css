@@ -1,4 +1,4 @@
-.primary-nav > .frame > box >.koto-button {
+.primary-nav > .frame > box >.koto-button > box {
 	padding: 10px 0;
 }
 
@@ -6,11 +6,12 @@
 	padding-bottom: 10px;
 }
 
-.expander > revealer > box > .koto-button {
+.expander > revealer > box > .koto-button,
+.expander > revealer > box > .koto-button > box {
 	min-height: 40px;
 }
 
-.koto-button > image {
+.koto-button > box > image {
 	margin-right: 10px;
 }
 

@@ -18,13 +18,8 @@
 #include <dirent.h>
 #include <magic.h>
 #include <sys/stat.h>
+#include "file.h"
 #include "file-indexer.h"
-
-struct KotoIndexedFile {
-	GObject parent_instance;
-	gchar *file_name;
-	gchar *path;
-};
 
 struct KotoIndexedAlbum {
 	GObject parent_instance;
@@ -41,7 +36,7 @@ struct _KotoIndexedArtist {
 	gchar *artist_name;
 	GHashTable *albums;
 	gchar *path;
-}
+};
 
 struct _KotoIndexedLibrary {
 	GObject parent_instance;
@@ -74,10 +69,14 @@ static void koto_indexed_library_class_init(KotoIndexedLibraryClass *c) {
 		"Path",
 		"Path to Music",
 		NULL,
-		G_PARAM_CONSTRUCT_ONLY|G_PARAM_EXPLICIT_NOTIFY|G_PARAM_READWRITE
+		G_PARAM_CONSTRUCT|G_PARAM_EXPLICIT_NOTIFY|G_PARAM_READWRITE
 	);
 
 	g_object_class_install_properties(gobject_class, N_PROPERTIES, props);
+}
+
+static void koto_indexed_library_init(KotoIndexedLibrary *self) {
+	self->music_artists = g_hash_table_new(g_str_hash, g_str_equal);
 }
 
 static void koto_indexed_library_get_property(GObject *obj, guint prop_id, GValue *val, GParamSpec *spec) {
@@ -175,18 +174,29 @@ void index_file(KotoIndexedLibrary *self, gchar *path) {
 		g_str_has_prefix(mime_info[0], "audio/") || // Is audio
 		g_str_has_prefix(mime_info[0], "image/") // Is image
 	) {
-		g_message("File Name: %s", path);
+		//g_message("File Name: %s", path);
+	}
+
+	if (g_str_has_prefix(mime_info[0], "audio/")) { // Is an audio file
+		KotoIndexedFile *file = koto_indexed_file_new(path);
+		gchar *filepath;
+		gchar *parsed_name;
+
+		g_object_get(file,
+			"path", &filepath,
+			"parsed-name", &parsed_name,
+		NULL);
+
+		g_free(filepath);
+		g_free(parsed_name);
+		g_object_unref(file);
 	}
 
 	g_strfreev(mime_info); // Free our mimeinfo
 }
 
-static void koto_indexed_library_init(KotoIndexedLibrary *self) {
-	self->files = g_hash_table_new(g_str_hash, g_str_equal);
-}
-
 KotoIndexedLibrary* koto_indexed_library_new(const gchar *path) {
-	return g_object_new(KOTO_INDEXED_TYPE_LIBRARY,
+	return g_object_new(KOTO_TYPE_INDEXED_LIBRARY,
 		"path", path,
 		NULL
 	);

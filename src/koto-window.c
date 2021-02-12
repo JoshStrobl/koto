@@ -37,12 +37,9 @@ G_DEFINE_TYPE (KotoWindow, koto_window, GTK_TYPE_APPLICATION_WINDOW)
 
 static void koto_window_class_init (KotoWindowClass *klass) {
 	GtkWidgetClass *widget_class = GTK_WIDGET_CLASS (klass);
-
-	gtk_widget_class_set_template_from_resource (widget_class, "/com/github/joshstrobl/koto/koto-window.ui");
 }
 
 static void koto_window_init (KotoWindow *self) {
-	gtk_widget_init_template (GTK_WIDGET (self));
 	GtkCssProvider* provider = gtk_css_provider_new();
 	gtk_css_provider_load_from_resource(provider, "/com/github/joshstrobl/koto/style.css");
 	gtk_style_context_add_provider_for_screen(gdk_screen_get_default(), GTK_STYLE_PROVIDER(provider), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
@@ -75,8 +72,12 @@ static void koto_window_init (KotoWindow *self) {
 	}
 
 	gtk_container_add(GTK_CONTAINER(self), self->primary_layout);
-	gtk_widget_show_all(GTK_WIDGET(self));
+	gtk_widget_set_size_request(GTK_WIDGET(self), 1200, 675);
+	gtk_window_set_title(GTK_WINDOW(self), "Koto");
+	gtk_window_set_wmclass(GTK_WINDOW(self), "com.github.joshstrobl.koto", "com.github.joshstrobl.koto");
+	gtk_window_set_icon_name(GTK_WINDOW(self), "audio-headphones");
 
+	gtk_widget_show_all(GTK_WIDGET(self));
 	g_thread_new("load-library", load_library, self);
 }
 

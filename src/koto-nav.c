@@ -20,7 +20,6 @@
 #include "koto-button.h"
 #include "koto-expander.h"
 #include "koto-nav.h"
-#include "koto-utils.h"
 
 struct _KotoNav {
 	GtkScrolledWindow parent_instance;
@@ -68,7 +67,7 @@ static void koto_nav_init(KotoNav *self) {
 
 	gtk_container_add(GTK_CONTAINER(self), self->content);
 
-	KotoButton *h_button = koto_button_new_with_icon("Home", "user-home-symbolic", KOTO_BUTTON_PIXBUF_SIZE_SMALL);
+	KotoButton *h_button = koto_button_new_with_icon("Home", "user-home-symbolic", NULL, KOTO_BUTTON_PIXBUF_SIZE_SMALL);
 
 	if (h_button != NULL) {
 		self->home_button = h_button;
@@ -80,8 +79,7 @@ static void koto_nav_init(KotoNav *self) {
 	koto_nav_create_podcasts_section(self);
 
 
-
-	GtkWidget *playlist_add_button = koto_create_flat_icon_button("list-add-symbolic", GTK_ICON_SIZE_SMALL_TOOLBAR);
+	KotoButton *playlist_add_button = koto_button_new_with_icon("", "list-add-symbolic", NULL, KOTO_BUTTON_PIXBUF_SIZE_SMALL);
 	KotoExpander *pl_expander = koto_expander_new_with_button("playlist-symbolic", "Playlists", playlist_add_button);
 
 	if (pl_expander != NULL) {

@@ -1,4 +1,5 @@
 indexer_sources = [
+	'file.c',
 	'file-indexer.c',
 ]
 

@@ -1,4 +1,4 @@
-/* koto-utils.h
+/* file.h
  *
  * Copyright 2021 Joshua Strobl
  *
@@ -15,10 +15,18 @@
  * limitations under the License.
  */
 
-#include <gtk-3.0/gtk/gtk.h>
+#pragma once
+#include <glib-2.0/glib-object.h>
 
 G_BEGIN_DECLS
 
-GtkWidget* koto_create_flat_icon_button(gchar *icon_name, GtkIconSize size);
+#define KOTO_TYPE_INDEXED_FILE koto_indexed_file_get_type()
+G_DECLARE_FINAL_TYPE(KotoIndexedFile, koto_indexed_file, KOTO, INDEXED_FILE, GObject);
+
+KotoIndexedFile* koto_indexed_file_new(const gchar *path);
+
+void koto_indexed_file_set_file_name(KotoIndexedFile *self, gchar *new_file_name);
+void koto_indexed_file_set_parsed_name(KotoIndexedFile *self, gchar *new_parsed_name);
+void koto_indexed_file_parse_name(KotoIndexedFile *self);
 
 G_END_DECLS

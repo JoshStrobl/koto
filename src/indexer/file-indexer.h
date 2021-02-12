@@ -20,14 +20,10 @@
 
 G_BEGIN_DECLS
 
-#define KOTO_INDEXED_TYPE_FILE koto_indexed_file_get_type()
-G_DECLARE_FINAL_TYPE(KotoIndexedFile, koto_indexed_file, KOTO, INDEXED_FILE, GObject);
-
-#define KOTO_INDEXED_TYPE_LIBRARY koto_indexed_library_get_type()
+#define KOTO_TYPE_INDEXED_LIBRARY koto_indexed_library_get_type()
 G_DECLARE_FINAL_TYPE(KotoIndexedLibrary, koto_indexed_library, KOTO, INDEXED_LIBRARY, GObject);
 
 KotoIndexedLibrary* koto_indexed_library_new(const gchar *path);
-KotoIndexedFile* koto_indexed_file_new(gchar *path);
 
 void start_indexing(KotoIndexedLibrary *self);
 void index_folder(KotoIndexedLibrary *self, gchar *path);

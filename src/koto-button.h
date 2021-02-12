@@ -16,9 +16,6 @@
  */
 
 #pragma once
-#ifndef __GTK_ENUMS_H__
-#define __GTK_ENUMS_H__
-#endif
 
 #include <glib-object.h>
 #include <gdk-pixbuf-2.0/gdk-pixbuf/gdk-pixbuf.h>
@@ -40,18 +37,20 @@ typedef enum {
 
 #define KOTO_TYPE_BUTTON (koto_button_get_type())
 
-G_DECLARE_FINAL_TYPE (KotoButton, koto_button, KOTO, BUTTON, GtkBox)
+G_DECLARE_FINAL_TYPE (KotoButton, koto_button, KOTO, BUTTON, GtkEventBox)
 
 guint koto_get_pixbuf_size(KotoButtonPixbufSize size);
 
 KotoButton* koto_button_new_plain(gchar *label);
-KotoButton* koto_button_new_with_icon(gchar *label, gchar *icon_name, KotoButtonPixbufSize size);
+KotoButton* koto_button_new_with_icon(gchar *label, gchar *icon_name, gchar *alt_icon_name, KotoButtonPixbufSize size);
 KotoButton* koto_button_new_with_pixbuf(gchar *label, GdkPixbuf *pix, KotoButtonPixbufSize size);
 
+void koto_button_flip(KotoButton *self);
 void koto_button_set_badge_text(KotoButton *self, gchar *text);
-void koto_button_set_icon_name(KotoButton *self, gchar *icon_name);
+void koto_button_set_icon_name(KotoButton *self, gchar *icon_name, gboolean for_alt);
 void koto_button_set_pixbuf(KotoButton *self, GdkPixbuf *pix);
 void koto_button_set_pixbuf_size(KotoButton *self, guint size);
 void koto_button_set_text(KotoButton *self, gchar *text);
+void koto_button_show_image(KotoButton *self, gboolean use_alt);
 
 G_END_DECLS

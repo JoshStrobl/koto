@@ -15,10 +15,9 @@
  * limitations under the License.
  */
 
-#include <glib/gi18n.h>
+#include "koto-button.h"
 #include "koto-config.h"
 #include "koto-playerbar.h"
-#include "koto-utils.h"
 
 struct _KotoPlayerBar {
 	GtkBox parent_instance;
@@ -29,13 +28,13 @@ struct _KotoPlayerBar {
 	GtkWidget *secondary_controls_section;
 
 	/* Primary Buttons */
-	GtkWidget *back_button;
-	GtkWidget *play_pause_button;
-	GtkWidget *forward_button;
-	GtkWidget *repeat_button;
-	GtkWidget *shuffle_button;
-	GtkWidget *playlist_button;
-	GtkWidget *eq_button;
+	KotoButton *back_button;
+	KotoButton *play_pause_button;
+	KotoButton *forward_button;
+	KotoButton *repeat_button;
+	KotoButton *shuffle_button;
+	KotoButton *playlist_button;
+	KotoButton *eq_button;
 	GtkWidget *volume_button;
 
 	/* Selected Playback Section */
@@ -113,9 +112,9 @@ void koto_playerbar_create_playback_details(KotoPlayerBar* bar) {
 		gtk_box_pack_start(GTK_BOX(bar->playback_section), bar->artwork, FALSE, FALSE, 0);
 	}
 
-	bar->playback_title = gtk_label_new(_("Title"));
-	bar->playback_album = gtk_label_new(_("Album"));
-	bar->playback_artist = gtk_label_new(_("Artist"));
+	bar->playback_title = gtk_label_new("Title");
+	bar->playback_album = gtk_label_new("Album");
+	bar->playback_artist = gtk_label_new("Artist");
 
 	gtk_box_pack_start(GTK_BOX(bar->playback_details_section), GTK_WIDGET(bar->playback_title), TRUE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX(bar->playback_details_section), GTK_WIDGET(bar->playback_album), TRUE, TRUE, 0);
@@ -125,45 +124,45 @@ void koto_playerbar_create_playback_details(KotoPlayerBar* bar) {
 }
 
 void koto_playerbar_create_primary_controls(KotoPlayerBar* bar) {
-	bar->back_button = koto_create_flat_icon_button("media-skip-backward-symbolic", GTK_ICON_SIZE_LARGE_TOOLBAR);
-	bar->play_pause_button = koto_create_flat_icon_button("media-playback-start-symbolic", GTK_ICON_SIZE_DND); // TODO: Have this take in a state and switch to a different icon if necessary
-	bar->forward_button = koto_create_flat_icon_button("media-skip-forward-symbolic", GTK_ICON_SIZE_LARGE_TOOLBAR);
+	bar->back_button = koto_button_new_with_icon("", "media-skip-backward-symbolic", NULL, KOTO_BUTTON_PIXBUF_SIZE_NORMAL);
+	bar->play_pause_button = koto_button_new_with_icon("", "media-playback-start-symbolic", NULL, KOTO_BUTTON_PIXBUF_SIZE_LARGE); // TODO: Have this take in a state and switch to a different icon if necessary
+	bar->forward_button = koto_button_new_with_icon("", "media-skip-forward-symbolic", NULL, KOTO_BUTTON_PIXBUF_SIZE_NORMAL);
 
 	if (bar->back_button != NULL) {
-		gtk_box_pack_start(GTK_BOX(bar->primary_controls_section), bar->back_button, FALSE, FALSE, 0);
+		gtk_box_pack_start(GTK_BOX(bar->primary_controls_section), GTK_WIDGET(bar->back_button), FALSE, FALSE, 0);
 	}
 
 	if (bar->play_pause_button != NULL) {
-		gtk_box_pack_start(GTK_BOX(bar->primary_controls_section), bar->play_pause_button, FALSE, FALSE, 0);
+		gtk_box_pack_start(GTK_BOX(bar->primary_controls_section), GTK_WIDGET(bar->play_pause_button), FALSE, FALSE, 0);
 	}
 
 	if (bar->forward_button != NULL) {
-		gtk_box_pack_start(GTK_BOX(bar->primary_controls_section), bar->forward_button, FALSE, FALSE, 0);
+		gtk_box_pack_start(GTK_BOX(bar->primary_controls_section), GTK_WIDGET(bar->forward_button), FALSE, FALSE, 0);
 	}
 }
 
 void koto_playerbar_create_secondary_controls(KotoPlayerBar* bar) {
-	bar->repeat_button = koto_create_flat_icon_button("media-playlist-repeat-symbolic", GTK_ICON_SIZE_LARGE_TOOLBAR);
-	bar->shuffle_button = koto_create_flat_icon_button("media-playlist-shuffle-symbolic", GTK_ICON_SIZE_LARGE_TOOLBAR);
-	bar->playlist_button = koto_create_flat_icon_button("playlist-symbolic", GTK_ICON_SIZE_LARGE_TOOLBAR);
-	bar->eq_button = koto_create_flat_icon_button("multimedia-equalizer-symbolic", GTK_ICON_SIZE_LARGE_TOOLBAR);
+	bar->repeat_button = koto_button_new_with_icon("", "media-playlist-repeat-symbolic", NULL, KOTO_BUTTON_PIXBUF_SIZE_NORMAL);
+	bar->shuffle_button = koto_button_new_with_icon("", "media-playlist-shuffle-symbolic", NULL, KOTO_BUTTON_PIXBUF_SIZE_NORMAL);
+	bar->playlist_button = koto_button_new_with_icon("", "playlist-symbolic", NULL, KOTO_BUTTON_PIXBUF_SIZE_NORMAL);
+	bar->eq_button = koto_button_new_with_icon("", "multimedia-equalizer-symbolic", NULL, KOTO_BUTTON_PIXBUF_SIZE_NORMAL);
 	bar->volume_button = gtk_volume_button_new(); // Have this take in a state and switch to a different icon if necessary
 	gtk_scale_button_set_value(GTK_SCALE_BUTTON(bar->volume_button), 0.5);
 
 	if (bar->repeat_button != NULL) {
-		gtk_box_pack_start(GTK_BOX(bar->secondary_controls_section), bar->repeat_button, FALSE, FALSE, 0);
+		gtk_box_pack_start(GTK_BOX(bar->secondary_controls_section), GTK_WIDGET(bar->repeat_button), FALSE, FALSE, 0);
 	}
 
 	if (bar->shuffle_button != NULL) {
-		gtk_box_pack_start(GTK_BOX(bar->secondary_controls_section), bar->shuffle_button, FALSE, FALSE, 0);
+		gtk_box_pack_start(GTK_BOX(bar->secondary_controls_section), GTK_WIDGET(bar->shuffle_button), FALSE, FALSE, 0);
 	}
 
 	if (bar->playlist_button != NULL) {
-		gtk_box_pack_start(GTK_BOX(bar->secondary_controls_section), bar->playlist_button, FALSE, FALSE, 0);
+		gtk_box_pack_start(GTK_BOX(bar->secondary_controls_section), GTK_WIDGET(bar->playlist_button), FALSE, FALSE, 0);
 	}
 
 	if (bar->eq_button != NULL) {
-		gtk_box_pack_start(GTK_BOX(bar->secondary_controls_section), bar->eq_button, FALSE, FALSE, 0);
+		gtk_box_pack_start(GTK_BOX(bar->secondary_controls_section), GTK_WIDGET(bar->eq_button), FALSE, FALSE, 0);
 	}
 
 	if (bar->volume_button != NULL) {

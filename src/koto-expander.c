@@ -19,20 +19,18 @@
 #include <gtk-3.0/gtk/gtk.h>
 #include "koto-config.h"
 #include "koto-button.h"
-#include "koto-flipper-button.h"
 #include "koto-expander.h"
-#include "koto-utils.h"
 
 enum {
-	PROP_0,
+	PROP_EXP_0,
 	PROP_HEADER_ICON_NAME,
 	PROP_HEADER_LABEL,
 	PROP_HEADER_SECONDARY_BUTTON,
 	PROP_CONTENT,
-	N_PROPERTIES
+	N_EXP_PROPERTIES
 };
 
-static GParamSpec *props[N_PROPERTIES] = { NULL, };
+static GParamSpec *expander_props[N_EXP_PROPERTIES] = { NULL, };
 
 struct _KotoExpander {
 	GtkBox parent_instance;
@@ -43,8 +41,8 @@ struct _KotoExpander {
 	gchar *icon_name;
 	gchar *label;
 
-	GtkWidget *header_secondary_button;
-	KotoFlipperButton *header_expand_button;
+	KotoButton *header_secondary_button;
+	KotoButton *header_expand_button;
 
 	GtkWidget *revealer;
 	GtkWidget *content;
@@ -65,7 +63,7 @@ static void koto_expander_class_init(KotoExpanderClass *c) {
 	gobject_class->set_property = koto_expander_set_property;
 	gobject_class->get_property = koto_expander_get_property;
 
-	props[PROP_HEADER_ICON_NAME] = g_param_spec_string(
+	expander_props[PROP_HEADER_ICON_NAME] = g_param_spec_string(
 		"icon-name",
 		"Icon Name",
 		"Name of the icon to use in the Expander",
@@ -73,7 +71,7 @@ static void koto_expander_class_init(KotoExpanderClass *c) {
 		G_PARAM_CONSTRUCT|G_PARAM_EXPLICIT_NOTIFY|G_PARAM_READWRITE
 	);
 
-	props[PROP_HEADER_LABEL] = g_param_spec_string(
+	expander_props[PROP_HEADER_LABEL] = g_param_spec_string(
 		"label",
 		"Label",
 		"Label for the Expander",
@@ -81,15 +79,15 @@ static void koto_expander_class_init(KotoExpanderClass *c) {
 		G_PARAM_CONSTRUCT|G_PARAM_EXPLICIT_NOTIFY|G_PARAM_READWRITE
 	);
 
-	props[PROP_HEADER_SECONDARY_BUTTON] = g_param_spec_object(
+	expander_props[PROP_HEADER_SECONDARY_BUTTON] = g_param_spec_object(
 		"secondary-button",
 		"Secondary Button",
 		"Secondary Button to be placed next to Expander button",
-		GTK_TYPE_WIDGET,
+		KOTO_TYPE_BUTTON,
 		G_PARAM_CONSTRUCT|G_PARAM_EXPLICIT_NOTIFY|G_PARAM_READWRITE
 	);
 
-	props[PROP_CONTENT] = g_param_spec_object(
+	expander_props[PROP_CONTENT] = g_param_spec_object(
 		"content",
 		"Content",
 		"Content inside the Expander",
@@ -97,7 +95,7 @@ static void koto_expander_class_init(KotoExpanderClass *c) {
 		G_PARAM_EXPLICIT_NOTIFY|G_PARAM_READWRITE
 	);
 
-	g_object_class_install_properties(gobject_class, N_PROPERTIES, props);
+	g_object_class_install_properties(gobject_class, N_EXP_PROPERTIES, expander_props);
 }
 
 static void koto_expander_get_property(GObject *obj, guint prop_id, GValue *val, GParamSpec *spec) {
@@ -126,7 +124,7 @@ static void koto_expander_set_property(GObject *obj, guint prop_id, const GValue
 		KotoExpander *self = KOTO_EXPANDER(obj);
 
 		if (!GTK_IS_WIDGET(self->header_button)) { // Header Button is not a widget
-			KotoButton *new_button = koto_button_new_with_icon("Temporary Text", "emblem-favorite-symbolic", KOTO_BUTTON_PIXBUF_SIZE_SMALL);
+			KotoButton *new_button = koto_button_new_with_icon("Temporary Text", "emblem-favorite-symbolic", NULL, KOTO_BUTTON_PIXBUF_SIZE_SMALL);
 
 			if (GTK_IS_WIDGET(new_button)) { // Created our widget successfully
 				self->header_button = new_button;
@@ -137,14 +135,14 @@ static void koto_expander_set_property(GObject *obj, guint prop_id, const GValue
 		switch (prop_id) {
 			case PROP_HEADER_ICON_NAME:
 				g_return_if_fail(GTK_IS_WIDGET(self->header_button));
-				koto_button_set_icon_name(self->header_button, g_strdup(g_value_get_string(val)));
+				koto_button_set_icon_name(self->header_button, g_strdup(g_value_get_string(val)), FALSE);
 				break;
 			case PROP_HEADER_LABEL:
 				g_return_if_fail(GTK_IS_WIDGET(self->header_button));
 				koto_button_set_text(self->header_button, g_strdup(g_value_get_string(val)));
 				break;
 			case PROP_HEADER_SECONDARY_BUTTON:
-				koto_expander_set_secondary_button(self, (GtkWidget*) g_value_get_object(val));
+				koto_expander_set_secondary_button(self, (KotoButton*) g_value_get_object(val));
 				break;
 			case PROP_CONTENT:
 				koto_expander_set_content(self, (GtkWidget*) g_value_get_object(val));
@@ -171,7 +169,7 @@ static void koto_expander_init(KotoExpander *self) {
 	gtk_revealer_set_reveal_child(GTK_REVEALER(self->revealer), TRUE); // Set to be revealed by default
 	gtk_revealer_set_transition_type(GTK_REVEALER(self->revealer), GTK_REVEALER_TRANSITION_TYPE_SLIDE_DOWN);
 
-	self->header_expand_button = koto_flipper_button_new("pan-down-symbolic", "pan-up-symbolic", GTK_ICON_SIZE_SMALL_TOOLBAR);
+	self->header_expand_button = koto_button_new_with_icon("", "pan-down-symbolic", "pan-up-symbolic", KOTO_BUTTON_PIXBUF_SIZE_SMALL);
 	gtk_box_pack_end(GTK_BOX(self->header), GTK_WIDGET(self->header_expand_button), FALSE, FALSE, 0);
 
 	gtk_box_pack_start(GTK_BOX(self), self->header, FALSE, FALSE, 0);
@@ -179,27 +177,26 @@ static void koto_expander_init(KotoExpander *self) {
 
 	self->constructed = TRUE;
 
-	g_signal_connect(self->header_expand_button, "clicked", G_CALLBACK(koto_expander_toggle_content), self);
+	g_signal_connect(self->header_expand_button, "button-release-event", G_CALLBACK(koto_expander_toggle_content), self);
 }
 
-void koto_expander_set_secondary_button(KotoExpander *self, GtkWidget *new_button) {
+void koto_expander_set_secondary_button(KotoExpander *self, KotoButton *new_button) {
 	if (!self->constructed) {
 		return;
 	}
 
-	if (!GTK_IS_BUTTON(new_button)) {
+	if (!GTK_IS_WIDGET(new_button)) {
 		return;
 	}
 
-	if (GTK_IS_BUTTON(self->header_secondary_button)) { // Already have a button
-		gtk_container_remove(GTK_CONTAINER(self->header), self->header_secondary_button);
-		//g_free(self->header_secondary_button);
+	if (GTK_IS_WIDGET(self->header_secondary_button)) { // Already have a button
+		gtk_container_remove(GTK_CONTAINER(self->header), GTK_WIDGET(self->header_secondary_button));
 	}
 
 	self->header_secondary_button = new_button;
-	gtk_box_pack_end(GTK_BOX(self->header), self->header_secondary_button, FALSE, FALSE, 0);
+	gtk_box_pack_end(GTK_BOX(self->header), GTK_WIDGET(self->header_secondary_button), FALSE, FALSE, 0);
 
-	g_object_notify_by_pspec(G_OBJECT(self), props[PROP_HEADER_SECONDARY_BUTTON]);
+	g_object_notify_by_pspec(G_OBJECT(self), expander_props[PROP_HEADER_SECONDARY_BUTTON]);
 }
 
 void koto_expander_set_content(KotoExpander *self, GtkWidget *new_content) {
@@ -215,12 +212,12 @@ void koto_expander_set_content(KotoExpander *self, GtkWidget *new_content) {
 	self->content = new_content;
 	gtk_container_add(GTK_CONTAINER(self->revealer), self->content);
 
-	g_object_notify_by_pspec(G_OBJECT(self), props[PROP_CONTENT]);
+	g_object_notify_by_pspec(G_OBJECT(self), expander_props[PROP_CONTENT]);
 }
 
-void koto_expander_toggle_content(GtkWidget *button, gpointer data) {
+void koto_expander_toggle_content(GtkWidget *button, GdkEvent *event, gpointer data) {
 	KotoExpander* self = data;
-	koto_flipper_button_flip(KOTO_FLIPPER_BUTTON(button));
+	koto_button_flip(KOTO_BUTTON(button));
 	GtkRevealer* rev = GTK_REVEALER(self->revealer);
 	gtk_revealer_set_reveal_child(rev, !gtk_revealer_get_reveal_child(rev)); // Invert our values
 }
@@ -234,7 +231,7 @@ KotoExpander* koto_expander_new(gchar *primary_icon_name, gchar *primary_label_t
 	);
 }
 
-KotoExpander* koto_expander_new_with_button(gchar *primary_icon_name, gchar *primary_label_text, GtkWidget *secondary_button) {
+KotoExpander* koto_expander_new_with_button(gchar *primary_icon_name, gchar *primary_label_text, KotoButton *secondary_button) {
 	return g_object_new(KOTO_TYPE_EXPANDER,
 		"orientation", GTK_ORIENTATION_VERTICAL,
 		"icon-name", primary_icon_name,

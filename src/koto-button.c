@@ -50,19 +50,21 @@ guint koto_get_pixbuf_size(KotoButtonPixbufSize s) {
 }
 
 enum {
-	PROP_0,
+	PROP_BTN_0,
 	PROP_PIX_SIZE,
 	PROP_TEXT,
 	PROP_BADGE_TEXT,
 	PROP_PIX,
 	PROP_ICON_NAME,
-	N_PROPERTIES
+	PROP_ALT_ICON_NAME,
+	N_BTN_PROPERTIES
 };
 
-static GParamSpec *props[N_PROPERTIES] = { NULL, };
+static GParamSpec *btn_props[N_BTN_PROPERTIES] = { NULL, };
 
 struct _KotoButton {
-	GtkBox parent_instance;
+	GtkEventBox parent_instance;
+	GtkBox *content;
 	guint pix_size;
 
 	GtkWidget *button_image;
@@ -71,16 +73,18 @@ struct _KotoButton {
 
 	gchar *badge_text;
 	gchar *icon_name;
+	gchar *alt_icon_name;
 	gchar *text;
 
 	GdkPixbuf *pix;
+	gboolean currently_showing_alt;
 };
 
 struct _KotoButtonClass {
 	GtkBoxClass parent_class;
 };
 
-G_DEFINE_TYPE(KotoButton, koto_button, GTK_TYPE_BOX);
+G_DEFINE_TYPE(KotoButton, koto_button, GTK_TYPE_EVENT_BOX);
 
 static void koto_button_get_property(GObject *obj, guint prop_id, GValue *val, GParamSpec *spec);
 static void koto_button_set_property(GObject *obj, guint prop_id, const GValue *val, GParamSpec *spec);
@@ -91,7 +95,7 @@ static void koto_button_class_init(KotoButtonClass *c) {
 	gobject_class->set_property = koto_button_set_property;
 	gobject_class->get_property = koto_button_get_property;
 
-	props[PROP_PIX_SIZE] = g_param_spec_uint(
+	btn_props[PROP_PIX_SIZE] = g_param_spec_uint(
 		"pixbuf-size",
 		"Pixbuf Size",
 		"Size of the pixbuf",
@@ -101,7 +105,7 @@ static void koto_button_class_init(KotoButtonClass *c) {
 		G_PARAM_CONSTRUCT|G_PARAM_EXPLICIT_NOTIFY|G_PARAM_READWRITE
 	);
 
-	props[PROP_TEXT] = g_param_spec_string(
+	btn_props[PROP_TEXT] = g_param_spec_string(
 		"button-text",
 		"Button Text",
 		"Text of Button",
@@ -109,7 +113,7 @@ static void koto_button_class_init(KotoButtonClass *c) {
 		G_PARAM_CONSTRUCT|G_PARAM_EXPLICIT_NOTIFY|G_PARAM_READWRITE
 	);
 
-	props[PROP_BADGE_TEXT] = g_param_spec_string(
+	btn_props[PROP_BADGE_TEXT] = g_param_spec_string(
 		"badge-text",
 		"Badge Text",
 		"Text of Badge",
@@ -117,7 +121,7 @@ static void koto_button_class_init(KotoButtonClass *c) {
 		G_PARAM_CONSTRUCT|G_PARAM_EXPLICIT_NOTIFY|G_PARAM_READWRITE
 	);
 
-	props[PROP_PIX] = g_param_spec_object(
+	btn_props[PROP_PIX] = g_param_spec_object(
 		"pixbuf",
 		"Pixbuf",
 		"Pixbuf",
@@ -125,7 +129,7 @@ static void koto_button_class_init(KotoButtonClass *c) {
 		G_PARAM_CONSTRUCT|G_PARAM_EXPLICIT_NOTIFY|G_PARAM_READWRITE
 	);
 
-	props[PROP_ICON_NAME] = g_param_spec_string(
+	btn_props[PROP_ICON_NAME] = g_param_spec_string(
 		"icon-name",
 		"Icon Name",
 		"Name of Icon",
@@ -133,12 +137,23 @@ static void koto_button_class_init(KotoButtonClass *c) {
 		G_PARAM_CONSTRUCT|G_PARAM_EXPLICIT_NOTIFY|G_PARAM_READWRITE
 	);
 
-	g_object_class_install_properties(gobject_class, N_PROPERTIES, props);
+	btn_props[PROP_ALT_ICON_NAME] = g_param_spec_string(
+		"alt-icon-name",
+		"Name of an Alternate Icon",
+		"Name of an Alternate Icon",
+		NULL,
+		G_PARAM_CONSTRUCT|G_PARAM_EXPLICIT_NOTIFY|G_PARAM_READWRITE
+	);
+
+	g_object_class_install_properties(gobject_class, N_BTN_PROPERTIES, btn_props);
 }
 
 static void koto_button_init(KotoButton *self) {
 	GtkStyleContext *style = gtk_widget_get_style_context(GTK_WIDGET(self));
 	gtk_style_context_add_class(style, "koto-button");
+	self->currently_showing_alt = FALSE;
+	self->content = GTK_BOX(gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0));
+	gtk_container_add(GTK_CONTAINER(self), GTK_WIDGET(self->content));
 }
 
 static void koto_button_get_property(GObject *obj, guint prop_id, GValue *val, GParamSpec *spec) {
@@ -156,6 +171,9 @@ static void koto_button_get_property(GObject *obj, guint prop_id, GValue *val, G
 			break;
 		case PROP_ICON_NAME:
 			g_value_set_string(val, self->icon_name);
+			break;
+		case PROP_ALT_ICON_NAME:
+			g_value_set_string(val, self->alt_icon_name);
 			break;
 		case PROP_PIX:
 			g_value_set_object(val, self->pix);
@@ -183,12 +201,25 @@ static void koto_button_set_property(GObject *obj, guint prop_id, const GValue *
 			koto_button_set_pixbuf(self, (GdkPixbuf*) g_value_get_object(val));
 			break;
 		case PROP_ICON_NAME:
-			koto_button_set_icon_name(self, g_strdup(g_value_get_string(val)));
+			koto_button_set_icon_name(self, g_strdup(g_value_get_string(val)), FALSE);
+			if (!self->currently_showing_alt) { // Not showing alt
+				koto_button_show_image(self, FALSE);
+			}
+			break;
+		case PROP_ALT_ICON_NAME:
+			koto_button_set_icon_name(self, g_strdup(g_value_get_string(val)), TRUE);
+			if (self->currently_showing_alt) { // Currently showing the alt image
+				koto_button_show_image(self, TRUE);
+			}
 			break;
 		default:
 			G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, prop_id, spec);
 			break;
 	}
+}
+
+void koto_button_flip(KotoButton *self) {
+	koto_button_show_image(self, !self->currently_showing_alt);
 }
 
 void koto_button_set_badge_text(KotoButton *self, gchar *text) {
@@ -203,7 +234,7 @@ void koto_button_set_badge_text(KotoButton *self, gchar *text) {
 		gtk_label_set_text(GTK_LABEL(self->badge_label), self->badge_text);
 	} else {
 		self->badge_label = gtk_label_new(self->badge_text); // Create our label
-		gtk_box_pack_end(GTK_BOX(self), self->badge_label, FALSE, FALSE, 0); // Add to the end of the box
+		gtk_box_pack_end(self->content, self->badge_label, FALSE, FALSE, 0); // Add to the end of the box
 	}
 
 	if (strcmp(self->badge_text, "") != 0) { // Empty badge
@@ -212,17 +243,34 @@ void koto_button_set_badge_text(KotoButton *self, gchar *text) {
 		gtk_widget_show(self->badge_label); // Show our badge
 	}
 
-	g_object_notify_by_pspec(G_OBJECT(self), props[PROP_BADGE_TEXT]);
+	g_object_notify_by_pspec(G_OBJECT(self), btn_props[PROP_BADGE_TEXT]);
 }
 
-void koto_button_set_icon_name(KotoButton *self, gchar *icon_name) {
+void koto_button_set_icon_name(KotoButton *self, gchar *icon_name, gboolean for_alt) {
 	gchar *copied_icon_name = g_strdup(icon_name);
-	g_message("icon name set in koto button: %s", icon_name);
-	g_free(self->icon_name);
-	self->icon_name = copied_icon_name;
 
-	if ((self->icon_name == NULL) || (strcmp(self->icon_name,"") == 0)) { // Have no icon name now
-		g_message("Have no icon name now?");
+	if (for_alt) { // Is for the alternate icon
+		if ((self->alt_icon_name != NULL) && strcmp(icon_name, self->alt_icon_name) != 0) { // If the icons are different
+			g_free(self->alt_icon_name);
+		}
+
+		self->alt_icon_name = copied_icon_name;
+	} else {
+		if ((self->icon_name != NULL) && strcmp(icon_name, self->icon_name) != 0) {
+			g_free(self->icon_name);
+		}
+
+		self->icon_name = copied_icon_name;
+	}
+
+	gboolean hide_image = FALSE;
+	if (for_alt && self->currently_showing_alt && ((self->alt_icon_name == NULL) || strcmp(self->alt_icon_name, "") == 0)) { // For alt, alt is currently showing, and no longer have alt
+		hide_image = TRUE;
+	} else if (!for_alt && ((self->icon_name == NULL) || (strcmp(self->icon_name,"") == 0))) { // Not for alt, no icon
+		hide_image = TRUE;
+	}
+
+	if (hide_image) { // Should hide the image
 		if (GTK_IS_IMAGE(self->button_image)) { // If we already have a button image
 			gtk_widget_hide(self->button_image); // Hide
 		}
@@ -230,12 +278,7 @@ void koto_button_set_icon_name(KotoButton *self, gchar *icon_name) {
 		return;
 	}
 
-	GtkIconTheme *theme = gtk_icon_theme_get_default(); // Get the default icon theme
-	GdkPixbuf* icon_pix = gtk_icon_theme_load_icon_for_scale(theme, self->icon_name, (gint) self->pix_size, 1, GTK_ICON_LOOKUP_USE_BUILTIN & GTK_ICON_LOOKUP_GENERIC_FALLBACK, NULL);
-	g_return_if_fail(GDK_IS_PIXBUF(icon_pix)); // Return if not a pixbuf
-	koto_button_set_pixbuf(self, icon_pix);
-
-	g_object_notify_by_pspec(G_OBJECT(self), props[PROP_ICON_NAME]);
+	g_object_notify_by_pspec(G_OBJECT(self), for_alt ? btn_props[PROP_ALT_ICON_NAME] : btn_props[PROP_ICON_NAME]);
 }
 
 void koto_button_set_pixbuf(KotoButton *self, GdkPixbuf *pix) {
@@ -260,11 +303,11 @@ void koto_button_set_pixbuf(KotoButton *self, GdkPixbuf *pix) {
 		GtkWidget *new_image = gtk_image_new_from_pixbuf(use_pix); // Create our new image
 		g_return_if_fail(GTK_IS_IMAGE(new_image)); // Return if we failed to create our image
 		self->button_image = new_image;
-		gtk_box_pack_start(GTK_BOX(self), self->button_image, FALSE, FALSE, 0); // Prepend the image
-		gtk_box_reorder_child(GTK_BOX(self), self->button_image, 0);
+		gtk_box_pack_start(self->content, self->button_image, FALSE, FALSE, 0); // Prepend the image
+		gtk_box_reorder_child(self->content, self->button_image, 0);
 	}
 
-	g_object_notify_by_pspec(G_OBJECT(self), props[PROP_PIX]);
+	g_object_notify_by_pspec(G_OBJECT(self), btn_props[PROP_PIX]);
 }
 
 void koto_button_set_pixbuf_size(KotoButton *self, guint size) {
@@ -276,7 +319,7 @@ void koto_button_set_pixbuf_size(KotoButton *self, guint size) {
 		koto_button_set_pixbuf(self, self->pix);
 	}
 
-	g_object_notify_by_pspec(G_OBJECT(self), props[PROP_PIX_SIZE]);
+	g_object_notify_by_pspec(G_OBJECT(self), btn_props[PROP_PIX_SIZE]);
 }
 
 void koto_button_set_text(KotoButton *self, gchar *text) {
@@ -300,30 +343,43 @@ void koto_button_set_text(KotoButton *self, gchar *text) {
 		if (strcmp(self->text, "") != 0) { // If we have text
 			self->button_label = gtk_label_new(self->text); // Create our label
 			gtk_label_set_xalign(GTK_LABEL(self->button_label), 0);
-			gtk_box_pack_start(GTK_BOX(self), self->button_label, FALSE, FALSE, 0); // Add to the beginning of the box
+			gtk_box_pack_start(self->content, self->button_label, FALSE, FALSE, 0); // Add to the beginning of the box
 
 			if (GTK_IS_IMAGE(self->button_image)) { // If we have an image
-				gtk_box_reorder_child(GTK_BOX(self), self->button_image, 0); // Move to the beginning
+				gtk_box_reorder_child(self->content, self->button_image, 0); // Move to the beginning
 			}
 		}
 	}
 
-	g_object_notify_by_pspec(G_OBJECT(self), props[PROP_TEXT]);
+	g_object_notify_by_pspec(G_OBJECT(self), btn_props[PROP_TEXT]);
+}
+
+void koto_button_show_image(KotoButton *self, gboolean use_alt) {
+	if (use_alt && ((self->alt_icon_name == NULL) || (strcmp(self->alt_icon_name, "") == 0))) { // Don't have an alt icon set
+		return;
+	} else if (!use_alt && ((self->icon_name == NULL) || (strcmp(self->icon_name, "") == 0))) { // Don't have icon set
+		return;
+	}
+
+	GtkIconTheme *theme = gtk_icon_theme_get_default(); // Get the default icon theme
+	GdkPixbuf* icon_pix = gtk_icon_theme_load_icon_for_scale(theme, use_alt ? self->alt_icon_name : self->icon_name, (gint) self->pix_size, 1, GTK_ICON_LOOKUP_USE_BUILTIN & GTK_ICON_LOOKUP_GENERIC_FALLBACK, NULL);
+	g_return_if_fail(GDK_IS_PIXBUF(icon_pix)); // Return if not a pixbuf
+	koto_button_set_pixbuf(self, icon_pix);
+	self->currently_showing_alt = use_alt;
 }
 
 KotoButton* koto_button_new_plain(gchar *label) {
 	return g_object_new(KOTO_TYPE_BUTTON,
 		"button-text", label,
-		"orientation", GTK_ORIENTATION_HORIZONTAL,
 		NULL
 	);
 }
 
-KotoButton* koto_button_new_with_icon(gchar *label, gchar *icon_name, KotoButtonPixbufSize size) {
+KotoButton* koto_button_new_with_icon(gchar *label, gchar *icon_name, gchar *alt_icon_name, KotoButtonPixbufSize size) {
 	return g_object_new(KOTO_TYPE_BUTTON,
 		"button-text", label,
 		"icon-name", icon_name,
-		"orientation", GTK_ORIENTATION_HORIZONTAL,
+		"alt-icon-name", alt_icon_name,
 		"pixbuf-size", koto_get_pixbuf_size(size),
 		NULL
 	);
@@ -333,7 +389,6 @@ KotoButton* koto_button_new_with_pixbuf(gchar *label, GdkPixbuf *pix, KotoButton
 	return g_object_new(KOTO_TYPE_BUTTON,
 		"button-text", label,
 		"pixbuf", pix,
-		"orientation", GTK_ORIENTATION_HORIZONTAL,
 		"pixbuf-size", koto_get_pixbuf_size(size),
 		NULL
 	);

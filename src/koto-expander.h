@@ -18,6 +18,7 @@
 #pragma once
 
 #include <gtk-3.0/gtk/gtk.h>
+#include "koto-button.h"
 
 G_BEGIN_DECLS
 
@@ -26,11 +27,11 @@ G_BEGIN_DECLS
 G_DECLARE_FINAL_TYPE (KotoExpander, koto_expander, KOTO, EXPANDER, GtkBox)
 
 KotoExpander* koto_expander_new(gchar *primary_icon_name, gchar *primary_label_text);
-KotoExpander* koto_expander_new_with_button(gchar *primary_icon_name, gchar *primary_label_text, GtkWidget *secondary_button);
+KotoExpander* koto_expander_new_with_button(gchar *primary_icon_name, gchar *primary_label_text, KotoButton *secondary_button);
 void koto_expander_set_icon_name(KotoExpander *self, const gchar *in);
 void koto_expander_set_label(KotoExpander *self, const gchar *label);
-void koto_expander_set_secondary_button(KotoExpander *self, GtkWidget *new_button);
+void koto_expander_set_secondary_button(KotoExpander *self, KotoButton *new_button);
 void koto_expander_set_content(KotoExpander *self, GtkWidget *new_content);
-void koto_expander_toggle_content(GtkWidget *button, gpointer data);
+void koto_expander_toggle_content(GtkWidget *button, GdkEvent *event, gpointer data);
 
 G_END_DECLS
