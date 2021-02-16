@@ -17,7 +17,7 @@
 
 #pragma once
 
-#include <gtk/gtk.h>
+#include <gtk-3.0/gtk/gtk.h>
 
 G_BEGIN_DECLS
 
