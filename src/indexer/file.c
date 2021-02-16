@@ -16,17 +16,19 @@
  */
 
 #include <glib-2.0/glib.h>
+#include <taglib/tag_c.h>
 #include "file.h"
+#include "koto-utils.h"
 
 struct _KotoIndexedFile {
 	GObject parent_instance;
 	gchar *path;
+
 	gchar *file_name;
 	gchar *parsed_name;
 	gchar *artist;
 	gchar *album;
-
-	guint position;
+	guint *position;
 	gboolean acquired_metadata_from_id3;
 };
 
@@ -131,7 +133,7 @@ static void koto_indexed_file_get_property(GObject *obj, guint prop_id, GValue *
 			g_value_set_string(val, self->parsed_name);
 			break;
 		case PROP_POSITION:
-			g_value_set_uint(val, self->position);
+			g_value_set_uint(val, GPOINTER_TO_UINT(self->position));
 			break;
 		default:
 			G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, prop_id, spec);
@@ -144,8 +146,7 @@ static void koto_indexed_file_set_property(GObject *obj, guint prop_id, const GV
 
 	switch (prop_id) {
 		case PROP_PATH:
-			self->path = g_strdup(g_value_get_string(val)); // Update our path
-			koto_indexed_file_set_file_name(self, g_path_get_basename(self->path)); // Update our file name
+			koto_indexed_file_update_path(self, g_value_get_string(val)); // Update the path
 			break;
 		case PROP_ARTIST:
 			self->artist = g_strdup(g_value_get_string(val));
@@ -160,12 +161,71 @@ static void koto_indexed_file_set_property(GObject *obj, guint prop_id, const GV
 			koto_indexed_file_set_parsed_name(self, g_strdup(g_value_get_string(val)));
 			break;
 		case PROP_POSITION:
-			self->position = g_value_get_uint(val);
+			koto_indexed_file_set_position(self, g_value_get_uint(val));
 			break;
 		default:
 			G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, prop_id, spec);
 			break;
 	}
+}
+
+void koto_indexed_file_parse_name(KotoIndexedFile *self) {
+	gchar *copied_file_name = g_strdelimit(g_strdup(self->file_name), "_", ' '); // Replace _ with whitespace for starters
+
+	if (self->artist != NULL && strcmp(self->artist, "") != 0) { // If we have artist set
+		gchar **split = g_strsplit(copied_file_name, self->artist, -1); // Split whenever we encounter the artist
+		copied_file_name = g_strjoinv("", split); // Remove the artist
+		g_strfreev(split);
+	}
+
+	if (self->artist != NULL && strcmp(self->album, "") != 0) { // If we have album set
+		gchar **split = g_strsplit(copied_file_name, self->album, -1); // Split whenever we encounter the album
+		copied_file_name = g_strjoinv("", split); // Remove the album
+		g_strfreev(split);
+
+		split = g_strsplit(copied_file_name, g_utf8_strdown(self->album, g_utf8_strlen(self->album, -1)), -1); // Split whenever we encounter the album lowercased
+		copied_file_name = g_strjoin("", split, NULL); // Remove the lowercased album
+		g_strfreev(split);
+	}
+
+	if (g_str_match_string(copied_file_name, "-", FALSE)) { // Contains - like a heathen
+		gchar **split = g_strsplit(copied_file_name, " - ", -1); // Split whenever we encounter " - "
+		copied_file_name = g_strjoin("", split, NULL); // Remove entirely
+		g_strfreev(split);
+
+		if (g_str_match_string(copied_file_name, "-", FALSE)) { // If we have any stragglers
+			split = g_strsplit(copied_file_name, "-", -1); // Split whenever we encounter -
+			copied_file_name = g_strjoin("", split, NULL); // Remove entirely
+			g_strfreev(split);
+		}
+	}
+
+	gchar *file_without_ext = koto_utils_get_filename_without_extension(copied_file_name);
+	g_free(copied_file_name);
+
+	gchar **split = g_regex_split_simple("^([\\d]+)\\s", file_without_ext, G_REGEX_JAVASCRIPT_COMPAT, 0);
+
+	if (g_strv_length(split) > 1) { // Has positional info at the beginning of the file
+		gchar *num = split[1];
+
+		g_free(file_without_ext); // Free the prior name
+		file_without_ext = g_strdup(split[2]); // Set to our second item which is the rest of the song name without the prefixed numbers
+
+		if ((strcmp(num, "0") == 0) || (strcmp(num, "00") == 0)) { // Is exactly zero
+			koto_indexed_file_set_position(self, 0); // Set position to 0
+		} else { // Either starts with 0 (like 09) or doesn't start with it at all
+			guint64 potential_pos = g_ascii_strtoull(num, NULL, 10); // Attempt to convert
+
+			if (potential_pos != 0) { // Got a legitimate position
+				koto_indexed_file_set_position(self, potential_pos);
+			}
+		}
+	}
+
+	g_strfreev(split);
+
+	koto_indexed_file_set_parsed_name(self, file_without_ext);
+	g_free(file_without_ext);
 }
 
 void koto_indexed_file_set_file_name(KotoIndexedFile *self, gchar *new_file_name) {
@@ -206,64 +266,45 @@ void koto_indexed_file_set_parsed_name(KotoIndexedFile *self, gchar *new_parsed_
 	g_object_notify_by_pspec(G_OBJECT(self), props[PROP_PARSED_NAME]);
 }
 
-void koto_indexed_file_parse_name(KotoIndexedFile *self) {
-	gchar *copied_file_name = g_strdelimit(g_strdup(self->file_name), "_", ' '); // Replace _ with whitespace for starters
-
-	if (self->artist != NULL && strcmp(self->artist, "") != 0) { // If we have artist set
-		gchar **split = g_strsplit(copied_file_name, self->artist, -1); // Split whenever we encounter the artist
-		copied_file_name = g_strjoinv("", split); // Remove the artist
-		g_strfreev(split);
+void koto_indexed_file_set_position(KotoIndexedFile *self, guint pos) {
+	if (pos == 0) { // No position change really
+		return;
 	}
 
-	if (self->artist != NULL && strcmp(self->album, "") != 0) { // If we have album set
-		gchar **split = g_strsplit(copied_file_name, self->album, -1); // Split whenever we encounter the album
-		copied_file_name = g_strjoinv("", split); // Remove the album
-		g_strfreev(split);
+	self->position = GUINT_TO_POINTER(pos);
+	g_object_notify_by_pspec(G_OBJECT(self), props[PROP_POSITION]);
+}
 
-		split = g_strsplit(copied_file_name, g_utf8_strdown(self->album, g_utf8_strlen(self->album, -1)), -1); // Split whenever we encounter the album lowercased
-		copied_file_name = g_strjoin("", split, NULL); // Remove the lowercased album
-		g_strfreev(split);
-	}
+void koto_indexed_file_update_metadata(KotoIndexedFile *self) {
+		TagLib_File *t_file = taglib_file_new(self->path); // Get a taglib file for this file
 
-	if (g_str_match_string(copied_file_name, "-", FALSE)) { // Contains - like a heathen
-		gchar **split = g_strsplit(copied_file_name, " - ", -1); // Split whenever we encounter " - "
-		copied_file_name = g_strjoin("", split, NULL); // Remove entirely
-		g_strfreev(split);
-
-		if (g_str_match_string(copied_file_name, "-", FALSE)) { // If we have any stragglers
-			split = g_strsplit(copied_file_name, "-", -1); // Split whenever we encounter -
-			copied_file_name = g_strjoin("", split, NULL); // Remove entirely
-			g_strfreev(split);
-		}
-	}
-
-	gchar **split = g_strsplit(copied_file_name, ".", -1); // Split every time we see .
-	g_free(copied_file_name);
-	guint len_of_extension_split = g_strv_length(split);
-
-	if (len_of_extension_split == 2) { // Only have two elements
-		copied_file_name = g_strdup(split[0]); // Get the first element
-	} else {
-		gchar *new_parsed_name = "";
-		for (guint i = 0; i < len_of_extension_split - 1; i++) { // Iterate over everything except the last item
-			if (g_strcmp0(new_parsed_name, "") == 0) { // Currently empty
-				new_parsed_name = g_strdup(split[i]); // Just duplicate this string
-			} else {
-				gchar *tmp_copy = g_strdup(new_parsed_name);
-				g_free(new_parsed_name); // Free the old
-				new_parsed_name = g_strdup(g_strjoin(".", tmp_copy, split[i], NULL)); // Join the two strings with a . again and duplicate it, setting it to our new_parsed_name
-				g_free(tmp_copy); // Free our temporary copy
-			}
+		if ((t_file != NULL) && taglib_file_is_valid(t_file)) { // If we got the taglib file and it is valid
+			self->acquired_metadata_from_id3 = TRUE;
+			TagLib_Tag *tag = taglib_file_tag(t_file); // Get our tag
+			koto_indexed_file_set_parsed_name(self, taglib_tag_title(tag)); // Set the title of the file
+			self->artist = g_strdup(taglib_tag_artist((tag))); // Set the artist
+			self->album = g_strdup(taglib_tag_album(tag)); // Set the album
+			koto_indexed_file_set_position(self, (uint) taglib_tag_track(tag)); // Get the track, convert to uint and cast as a pointer
 		}
 
-		copied_file_name = g_strdup(new_parsed_name);
-		g_free(new_parsed_name);
+		taglib_tag_free_strings(); // Free strings
+		taglib_file_free(t_file); // Free the file
+}
+
+void koto_indexed_file_update_path(KotoIndexedFile *self, const gchar *new_path) {
+	if (new_path == NULL) {
+		return;
 	}
 
-	g_strfreev(split);
+	if (self->path != NULL) { // Already have a path
+		g_free(self->path); // Free it
+	}
 
-	koto_indexed_file_set_parsed_name(self, copied_file_name);
-	g_free(copied_file_name);
+	self->path = g_strdup(new_path); // Duplicate the path and set it
+	koto_indexed_file_update_metadata(self); // Attempt to get ID3 info
+	koto_indexed_file_set_file_name(self, g_path_get_basename(self->path)); // Update our file name
+
+	g_object_notify_by_pspec(G_OBJECT(self), props[PROP_PATH]);
 }
 
 KotoIndexedFile* koto_indexed_file_new(const gchar *path) {

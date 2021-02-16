@@ -25,8 +25,11 @@ G_DECLARE_FINAL_TYPE(KotoIndexedFile, koto_indexed_file, KOTO, INDEXED_FILE, GOb
 
 KotoIndexedFile* koto_indexed_file_new(const gchar *path);
 
+void koto_indexed_file_parse_name(KotoIndexedFile *self);
 void koto_indexed_file_set_file_name(KotoIndexedFile *self, gchar *new_file_name);
 void koto_indexed_file_set_parsed_name(KotoIndexedFile *self, gchar *new_parsed_name);
-void koto_indexed_file_parse_name(KotoIndexedFile *self);
+void koto_indexed_file_set_position(KotoIndexedFile *self, guint pos);
+void koto_indexed_file_update_metadata(KotoIndexedFile *self);
+void koto_indexed_file_update_path(KotoIndexedFile *self, const gchar *new_path);
 
 G_END_DECLS

@@ -1,4 +1,6 @@
 koto_sources = [
+	'indexer/album.c',
+	'indexer/artist.c',
 	'indexer/file.c',
 	'indexer/file-indexer.c',
 	'main.c',
@@ -7,6 +9,7 @@ koto_sources = [
 	'koto-headerbar.c',
 	'koto-nav.c',
 	'koto-playerbar.c',
+	'koto-utils.c',
 	'koto-window.c',
 ]
 
@@ -15,6 +18,7 @@ koto_deps = [
 	dependency('gio-2.0', version: '>= 2.66'),
 	dependency('gtk+-3.0', version: '>= 3.24'),
 	dependency('libmagic', version: '>=5.39'),
+	dependency('taglib_c', version: '>=1.11'),
 ]
 
 gnome = import('gnome')

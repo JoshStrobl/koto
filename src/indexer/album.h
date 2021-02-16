@@ -17,17 +17,22 @@
 
 #pragma once
 #include <glib-2.0/glib-object.h>
+#include "file.h"
 
 G_BEGIN_DECLS
 
-#define KOTO_INDEXED_ALBUM_TYPE koto_indexed_album_get_type()
+#define KOTO_TYPE_INDEXED_ALBUM koto_indexed_album_get_type()
 G_DECLARE_FINAL_TYPE (KotoIndexedAlbum, koto_indexed_album, KOTO, INDEXED_ALBUM, GObject);
 
 KotoIndexedAlbum* koto_indexed_album_new(const gchar *path);
 
-void add_song(KotoIndexedAlbum *self, KotoIndexedFile *file);
-KotoIndexedFile** get_songs(KotoIndexedAlbum *self);
-void remove_song(KotoIndexedAlbum *self, KotoIndexedFile *file);
-void remove_song_by_name(KotoIndexedAlbum *self, gchar *file_name);
+void koto_indexed_album_add_file(KotoIndexedAlbum *self, KotoIndexedFile *file);
+gchar* koto_indexed_album_get_album_art(KotoIndexedAlbum *self);
+GList* koto_indexed_album_get_files(KotoIndexedAlbum *self);
+void koto_indexed_album_remove_file(KotoIndexedAlbum *self, KotoIndexedFile *file);
+void koto_indexed_album_remove_file_by_name(KotoIndexedAlbum *self, const gchar *file_name);
+void koto_indexed_album_set_album_art(KotoIndexedAlbum *self, const gchar *album_art);
+void koto_indexed_album_set_album_name(KotoIndexedAlbum *self, const gchar *album_name);
+void koto_indexed_album_update_path(KotoIndexedAlbum *self, const gchar *path);
 
 G_END_DECLS

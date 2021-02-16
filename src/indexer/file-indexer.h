@@ -17,6 +17,7 @@
 
 #pragma once
 #include <glib-2.0/glib-object.h>
+#include "artist.h"
 
 G_BEGIN_DECLS
 
@@ -25,8 +26,10 @@ G_DECLARE_FINAL_TYPE(KotoIndexedLibrary, koto_indexed_library, KOTO, INDEXED_LIB
 
 KotoIndexedLibrary* koto_indexed_library_new(const gchar *path);
 
+void koto_indexed_library_add_artist(KotoIndexedLibrary *self, KotoIndexedArtist *artist);
+KotoIndexedArtist* koto_indexed_library_get_artist(KotoIndexedLibrary *self, gchar* artist_name);
+void koto_indexed_library_remove_artist(KotoIndexedLibrary *self, KotoIndexedArtist *artist);
 void start_indexing(KotoIndexedLibrary *self);
-void index_folder(KotoIndexedLibrary *self, gchar *path);
-void index_file(KotoIndexedLibrary *self, gchar *path);
+void index_folder(KotoIndexedLibrary *self, gchar *path, guint depth);
 
 G_END_DECLS

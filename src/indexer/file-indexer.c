@@ -17,26 +17,13 @@
 
 #include <dirent.h>
 #include <magic.h>
+#include <stdio.h>
 #include <sys/stat.h>
+#include <taglib/tag_c.h>
+#include "album.h"
+#include "artist.h"
 #include "file.h"
 #include "file-indexer.h"
-
-struct KotoIndexedAlbum {
-	GObject parent_instance;
-	gboolean has_album_art;
-	gchar *album_name;
-	gchar *art_path;
-	gchar *path;
-	GHashTable *songs;
-};
-
-struct _KotoIndexedArtist {
-	GObject parent_instance;
-	gboolean has_artist_art;
-	gchar *artist_name;
-	GHashTable *albums;
-	gchar *path;
-};
 
 struct _KotoIndexedLibrary {
 	GObject parent_instance;
@@ -73,10 +60,58 @@ static void koto_indexed_library_class_init(KotoIndexedLibraryClass *c) {
 	);
 
 	g_object_class_install_properties(gobject_class, N_PROPERTIES, props);
+	taglib_id3v2_set_default_text_encoding(TagLib_ID3v2_UTF8); // Ensure our id3v2 text encoding is UTF-8
 }
 
 static void koto_indexed_library_init(KotoIndexedLibrary *self) {
 	self->music_artists = g_hash_table_new(g_str_hash, g_str_equal);
+}
+
+void koto_indexed_library_add_artist(KotoIndexedLibrary *self, KotoIndexedArtist *artist) {
+	if (artist == NULL) { // No artist
+		return;
+	}
+
+	if (self->music_artists == NULL) { // Not a HashTable
+		self->music_artists = g_hash_table_new(g_str_hash, g_str_equal);
+	}
+
+	gchar *artist_name;
+	g_object_get(artist, "name", &artist_name, NULL);
+
+	if (g_hash_table_contains(self->music_artists, artist_name)) { // Already have the artist
+		g_free(artist_name);
+		return;
+	}
+
+	g_hash_table_insert(self->music_artists, artist_name, artist); // Add the artist
+}
+
+KotoIndexedArtist* koto_indexed_library_get_artist(KotoIndexedLibrary *self, gchar *artist_name) {
+	if (artist_name == NULL) {
+		return NULL;
+	}
+
+	if (self->music_artists == NULL) { // Not a HashTable
+		return NULL;
+	}
+
+	return g_hash_table_lookup(self->music_artists, (KotoIndexedArtist*) artist_name);
+}
+
+void koto_indexed_library_remove_artist(KotoIndexedLibrary *self, KotoIndexedArtist *artist) {
+	if (artist == NULL) {
+		return;
+	}
+
+	if (self->music_artists == NULL) { // Not a HashTable
+		return;
+	}
+
+	gchar *artist_name;
+	g_object_get(artist, "name", &artist_name, NULL);
+
+	g_hash_table_remove(self->music_artists, artist_name); // Remove the artist
 }
 
 static void koto_indexed_library_get_property(GObject *obj, guint prop_id, GValue *val, GParamSpec *spec) {
@@ -98,7 +133,6 @@ static void koto_indexed_library_set_property(GObject *obj, guint prop_id, const
 	switch (prop_id) {
 		case PROP_PATH:
 			self->path = g_strdup(g_value_get_string(val));
-			g_message("Set to %s", self->path);
 			start_indexing(self);
 			break;
 		default:
@@ -131,11 +165,14 @@ void start_indexing(KotoIndexedLibrary *self) {
 		return;
 	}
 
-	index_folder(self, self->path);
+	index_folder(self, self->path, 0);
 	magic_close(self->magic_cookie);
+	g_hash_table_foreach(self->music_artists, output_artists, NULL);
 }
 
-void index_folder(KotoIndexedLibrary *self, gchar *path) {
+void index_folder(KotoIndexedLibrary *self, gchar *path, guint depth) {
+	depth++;
+
 	DIR *dir = opendir(path); // Attempt to open our directory
 
 	if (dir == NULL) {
@@ -145,54 +182,88 @@ void index_folder(KotoIndexedLibrary *self, gchar *path) {
 	struct dirent *entry;
 
 	while ((entry = readdir(dir))) {
-		if (!g_str_has_prefix(entry->d_name, ".")) { // Not a reference to parent dir, self, or a hidden item
-			gchar *full_path = g_strdup_printf("%s%s%s", path, G_DIR_SEPARATOR_S, entry->d_name);
-
-			if (entry->d_type == DT_DIR) { // Directory
-				index_folder(self, full_path); // Index this directory
-			} else if (entry->d_type == DT_REG) { // Regular file
-				index_file(self, full_path); // Index the file
-			}
-
-			g_free(full_path);
+		if (g_str_has_prefix(entry->d_name, ".")) { // A reference to parent dir, self, or a hidden item
+			continue;
 		}
+
+		gchar *full_path = g_strdup_printf("%s%s%s", path, G_DIR_SEPARATOR_S, entry->d_name);
+
+		if (entry->d_type == DT_DIR) { // Directory
+			if (depth == 1) { // If we are following FOLDER/ARTIST/ALBUM then this would be artist
+				KotoIndexedArtist *artist = koto_indexed_artist_new(full_path); // Attempt to get the artist
+				gchar *artist_name;
+
+				g_object_get(artist,
+					"name", &artist_name,
+					NULL
+				);
+
+				koto_indexed_library_add_artist(self, artist); // Add the artist
+				index_folder(self, full_path, depth); // Index this directory
+				g_free(artist_name);
+			} else if (depth == 2) { // If we are following FOLDER/ARTIST/ALBUM then this would be album
+				gchar *artist_name = g_path_get_basename(path); // Get the last entry from our path which is probably the artist
+				KotoIndexedAlbum *album = koto_indexed_album_new(full_path);
+
+				KotoIndexedArtist *artist = koto_indexed_library_get_artist(self, artist_name); // Get the artist
+
+				if (artist == NULL) {
+					continue;
+				}
+
+				koto_indexed_artist_add_album(artist, album); // Add the album
+				g_free(artist_name);
+			}
+		}
+
+		g_free(full_path);
 	}
 
 	closedir(dir); // Close the directory
 }
 
-void index_file(KotoIndexedLibrary *self, gchar *path) {
-	const char *mime_type = magic_file(self->magic_cookie, path);
+void output_artists(gpointer artist_key, gpointer artist_ptr, gpointer data) {
+	KotoIndexedArtist *artist = (KotoIndexedArtist*) artist_ptr;
+	gchar *artist_name;
+	g_object_get(artist, "name", &artist_name, NULL);
 
-	if (mime_type == NULL) { // Failed to get the mimetype
-		return;
+	g_debug("Artist: %s", artist_name);
+	GList *albums = koto_indexed_artist_get_albums(artist); // Get the albums for this artist
+
+	if (albums != NULL) {
+		g_debug("Length of Albums: %d", g_list_length(albums));
 	}
 
-	gchar** mime_info = g_strsplit(mime_type, ";", 2); // Only care about our first item
+	GList *a;
+	for (a = albums; a != NULL; a = a->next) {
+		KotoIndexedAlbum *album = (KotoIndexedAlbum*) a->data;
+		gchar *artwork = koto_indexed_album_get_album_art(album);
+		gchar *album_name;
+		g_object_get(album, "name", &album_name, NULL);
+		g_debug("Album Art: %s", artwork);
+		g_debug("Album Name: %s", album_name);
 
-	if (
-		g_str_has_prefix(mime_info[0], "audio/") || // Is audio
-		g_str_has_prefix(mime_info[0], "image/") // Is image
-	) {
-		//g_message("File Name: %s", path);
+		GList *files = koto_indexed_album_get_files(album); // Get the files for the album
+		GList *f;
+
+		for (f = files; f != NULL; f = f->next) {
+			KotoIndexedFile *file = (KotoIndexedFile*) f->data;
+			gchar *filepath;
+			gchar *parsed_name;
+			guint *pos;
+
+			g_object_get(file,
+				"path", &filepath,
+				"parsed-name", &parsed_name,
+				"position", &pos,
+			NULL);
+			g_debug("File Path: %s", filepath);
+			g_debug("Parsed Name: %s", parsed_name);
+			g_debug("Position: %d", GPOINTER_TO_INT(pos));
+			g_free(filepath);
+			g_free(parsed_name);
+		}
 	}
-
-	if (g_str_has_prefix(mime_info[0], "audio/")) { // Is an audio file
-		KotoIndexedFile *file = koto_indexed_file_new(path);
-		gchar *filepath;
-		gchar *parsed_name;
-
-		g_object_get(file,
-			"path", &filepath,
-			"parsed-name", &parsed_name,
-		NULL);
-
-		g_free(filepath);
-		g_free(parsed_name);
-		g_object_unref(file);
-	}
-
-	g_strfreev(mime_info); // Free our mimeinfo
 }
 
 KotoIndexedLibrary* koto_indexed_library_new(const gchar *path) {
