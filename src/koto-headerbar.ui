@@ -7,7 +7,7 @@
     <property name="icon-name">audio-headphones</property>
     <property name="icon_size">3</property>
   </object>
-  <template class="KotoHeaderBar" parent="GtkHeaderBar">
+  <template class="GtkHeaderBar" parent="GtkHeaderBar">
     <property name="visible">True</property>
     <property name="can-focus">False</property>
     <property name="show-close-button">True</property>

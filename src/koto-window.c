@@ -16,8 +16,8 @@
  */
 
 #include "indexer/file-indexer.h"
+#include "pages/music/music-local.h"
 #include "koto-config.h"
-#include "koto-headerbar.h"
 #include "koto-nav.h"
 #include "koto-playerbar.h"
 #include "koto-window.h"
@@ -25,60 +25,90 @@
 struct _KotoWindow {
 	GtkApplicationWindow  parent_instance;
 	KotoIndexedLibrary *library;
-	KotoHeaderBar        *header_bar;
+
+	GtkWidget        *header_bar;
+	GtkWidget *menu_button;
+	GtkWidget *search_entry;
+
 	GtkWidget *primary_layout;
 	GtkWidget *content_layout;
 
 	KotoNav *nav;
+	GtkWidget *pages;
 	KotoPlayerBar *player_bar;
 };
 
 G_DEFINE_TYPE (KotoWindow, koto_window, GTK_TYPE_APPLICATION_WINDOW)
 
 static void koto_window_class_init (KotoWindowClass *klass) {
-	GtkWidgetClass *widget_class = GTK_WIDGET_CLASS (klass);
+	(void)klass;
 }
 
 static void koto_window_init (KotoWindow *self) {
 	GtkCssProvider* provider = gtk_css_provider_new();
 	gtk_css_provider_load_from_resource(provider, "/com/github/joshstrobl/koto/style.css");
-	gtk_style_context_add_provider_for_screen(gdk_screen_get_default(), GTK_STYLE_PROVIDER(provider), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+	// TODO: Change 900 back to GTK_STYLE_PROVIDER_PRIORITY_APPLICATION so users are allowed to override the style.
+	// We want them to be able to override it. It's their system, style it how they want. We just need this to test our own currently.
+	gtk_style_context_add_provider_for_display(gdk_display_get_default(), GTK_STYLE_PROVIDER(provider), 900);
 
-	//KotoHeaderBar *header = koto_headerbar_new();
-	self->header_bar = koto_headerbar_new();
-
-	if (self->header_bar != NULL) {
-		gtk_window_set_titlebar(GTK_WINDOW(self), GTK_WIDGET(self->header_bar));
-	}
+	create_new_headerbar(self); // Create our headerbar
 
 	self->primary_layout = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+	gtk_widget_set_hexpand(self->primary_layout, TRUE);
+	gtk_widget_set_vexpand(self->primary_layout, TRUE);
+
 	self->content_layout = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
+	gtk_widget_set_hexpand(self->content_layout, TRUE);
+	gtk_widget_set_vexpand(self->content_layout, TRUE);
 
 	self->nav = koto_nav_new();
 
 	if (self->nav != NULL) {
-		gtk_box_pack_start(GTK_BOX(self->content_layout), GTK_WIDGET(self->nav), FALSE, TRUE, 10);
-
-		GtkWidget *sep = gtk_separator_new(GTK_ORIENTATION_VERTICAL);
-		gtk_box_pack_end(GTK_BOX(self->content_layout), sep, FALSE, TRUE, 0);
+		gtk_box_prepend(GTK_BOX(self->content_layout), koto_nav_get_nav(self->nav));
 	}
 
-	gtk_box_pack_start(GTK_BOX(self->primary_layout), self->content_layout, TRUE, TRUE, 0);
+	self->pages = gtk_stack_new(); // New stack to hold our pages
+
+	if (GTK_IS_STACK(self->pages)) { // Created our stack successfully
+		gtk_stack_set_transition_type(GTK_STACK(self->pages), GTK_STACK_TRANSITION_TYPE_OVER_LEFT_RIGHT);
+		gtk_box_append(GTK_BOX(self->content_layout), self->pages);
+	}
+
+	gtk_box_prepend(GTK_BOX(self->primary_layout), self->content_layout);
 
 	self->player_bar = koto_playerbar_new();
 
 	if (self->player_bar != NULL) {
-		gtk_box_pack_start(GTK_BOX(self->primary_layout), GTK_WIDGET(self->player_bar), FALSE, FALSE, 0);
+		GtkWidget *playerbar_main = koto_playerbar_get_main(self->player_bar);
+		gtk_box_append(GTK_BOX(self->primary_layout), playerbar_main);
 	}
 
-	gtk_container_add(GTK_CONTAINER(self), self->primary_layout);
+	gtk_window_set_child(GTK_WINDOW(self), self->primary_layout);
 	gtk_widget_set_size_request(GTK_WIDGET(self), 1200, 675);
 	gtk_window_set_title(GTK_WINDOW(self), "Koto");
-	gtk_window_set_wmclass(GTK_WINDOW(self), "com.github.joshstrobl.koto", "com.github.joshstrobl.koto");
 	gtk_window_set_icon_name(GTK_WINDOW(self), "audio-headphones");
+	gtk_window_set_startup_id(GTK_WINDOW(self), "com.github.joshstrobl.koto");
 
-	gtk_widget_show_all(GTK_WIDGET(self));
-	g_thread_new("load-library", load_library, self);
+	g_thread_new("load-library", (void*) load_library, self);
+}
+
+void create_new_headerbar(KotoWindow *self) {
+	self->header_bar = gtk_header_bar_new();
+	g_return_if_fail(GTK_IS_HEADER_BAR(self->header_bar));
+
+	self->menu_button = gtk_button_new_from_icon_name("audio-headphones");
+
+	self->search_entry = gtk_search_entry_new();
+	gtk_widget_add_css_class(self->menu_button, "flat");
+	gtk_widget_set_can_focus(self->search_entry, TRUE);
+	gtk_widget_set_size_request(self->search_entry, 400, -1); // Have 400px width
+	g_object_set(self->search_entry, "placeholder-text", "Search...", NULL);
+
+	gtk_header_bar_pack_start(GTK_HEADER_BAR(self->header_bar), self->menu_button);
+	gtk_header_bar_set_show_title_buttons(GTK_HEADER_BAR(self->header_bar), TRUE);
+	gtk_header_bar_set_title_widget(GTK_HEADER_BAR(self->header_bar), self->search_entry);
+
+	gtk_window_set_titlebar(GTK_WINDOW(self), self->header_bar);
 }
 
 void load_library(KotoWindow *self) {
@@ -86,5 +116,13 @@ void load_library(KotoWindow *self) {
 
 	if (lib != NULL) {
 		self->library = lib;
+		KotoPageMusicLocal* l = koto_page_music_local_new();
+
+		if (GTK_IS_WIDGET(l)) { // Created our local library page
+			koto_page_music_local_set_library(l, self->library);
+			gtk_stack_add_named(GTK_STACK(self->pages), GTK_WIDGET(l), "music.local");
+			// TODO: Remove and do some fancy state loading
+			gtk_stack_set_visible_child_name(GTK_STACK(self->pages), "music.local");
+		}
 	}
 }

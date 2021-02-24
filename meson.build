@@ -27,6 +27,6 @@ subdir('po')
 
 gnome.post_install(
 	glib_compile_schemas: true,
-	gtk_update_icon_cache: true
+	gtk_update_icon_cache: false
 )
 meson.add_install_script('build-aux/meson/postinstall.py')

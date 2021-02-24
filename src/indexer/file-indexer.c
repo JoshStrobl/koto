@@ -72,9 +72,7 @@ void koto_indexed_library_add_artist(KotoIndexedLibrary *self, KotoIndexedArtist
 		return;
 	}
 
-	if (self->music_artists == NULL) { // Not a HashTable
-		self->music_artists = g_hash_table_new(g_str_hash, g_str_equal);
-	}
+	koto_indexed_library_get_artists(self); // Call to generate if needed
 
 	gchar *artist_name;
 	g_object_get(artist, "name", &artist_name, NULL);
@@ -92,11 +90,17 @@ KotoIndexedArtist* koto_indexed_library_get_artist(KotoIndexedLibrary *self, gch
 		return NULL;
 	}
 
-	if (self->music_artists == NULL) { // Not a HashTable
-		return NULL;
-	}
+	koto_indexed_library_get_artists(self); // Call to generate if needed
 
 	return g_hash_table_lookup(self->music_artists, (KotoIndexedArtist*) artist_name);
+}
+
+GHashTable* koto_indexed_library_get_artists(KotoIndexedLibrary *self) {
+	if (self->music_artists == NULL) { // Not a HashTable
+		self->music_artists = g_hash_table_new(g_str_hash, g_str_equal);
+	}
+
+	return self->music_artists;
 }
 
 void koto_indexed_library_remove_artist(KotoIndexedLibrary *self, KotoIndexedArtist *artist) {
@@ -104,9 +108,7 @@ void koto_indexed_library_remove_artist(KotoIndexedLibrary *self, KotoIndexedArt
 		return;
 	}
 
-	if (self->music_artists == NULL) { // Not a HashTable
-		return;
-	}
+	koto_indexed_library_get_artists(self); // Call to generate if needed
 
 	gchar *artist_name;
 	g_object_get(artist, "name", &artist_name, NULL);
@@ -223,6 +225,8 @@ void index_folder(KotoIndexedLibrary *self, gchar *path, guint depth) {
 }
 
 void output_artists(gpointer artist_key, gpointer artist_ptr, gpointer data) {
+	(void)artist_key;
+	(void)data;
 	KotoIndexedArtist *artist = (KotoIndexedArtist*) artist_ptr;
 	gchar *artist_name;
 	g_object_get(artist, "name", &artist_name, NULL);

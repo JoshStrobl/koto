@@ -17,9 +17,11 @@
 
 #pragma once
 #include <glib-2.0/glib.h>
+#include <gtk-4.0/gtk/gtk.h>
 
 G_BEGIN_DECLS
 
+GtkWidget* koto_utils_create_image_from_filepath(gchar *filepath, gchar *fallback_icon, guint width, guint height);
 gchar* koto_utils_get_filename_without_extension(gchar *filename);
 
 G_END_DECLS

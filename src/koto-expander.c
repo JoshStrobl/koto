@@ -16,7 +16,7 @@
  */
 
 #include <glib/gi18n.h>
-#include <gtk-3.0/gtk/gtk.h>
+#include <gtk-4.0/gtk/gtk.h>
 #include "koto-config.h"
 #include "koto-button.h"
 #include "koto-expander.h"
@@ -128,7 +128,8 @@ static void koto_expander_set_property(GObject *obj, guint prop_id, const GValue
 
 			if (GTK_IS_WIDGET(new_button)) { // Created our widget successfully
 				self->header_button = new_button;
-				gtk_box_pack_start(GTK_BOX(self->header), GTK_WIDGET(self->header_button), TRUE, TRUE, 0); // Add it
+				gtk_widget_set_hexpand(GTK_WIDGET(self->header_button), TRUE);
+				gtk_box_prepend(GTK_BOX(self->header), GTK_WIDGET(self->header_button));
 			}
 		}
 
@@ -154,11 +155,9 @@ static void koto_expander_set_property(GObject *obj, guint prop_id, const GValue
 }
 
 static void koto_expander_init(KotoExpander *self) {
-	GtkSettings *settings = gtk_settings_get_default();
-	g_object_set(settings, "gtk_application_prefer_dark_theme", TRUE, NULL);
-
 	GtkStyleContext *style = gtk_widget_get_style_context(GTK_WIDGET(self));
 	gtk_style_context_add_class(style, "expander");
+	gtk_widget_set_hexpand((GTK_WIDGET(self)), TRUE);
 
 	self->header = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 10);
 
@@ -170,14 +169,16 @@ static void koto_expander_init(KotoExpander *self) {
 	gtk_revealer_set_transition_type(GTK_REVEALER(self->revealer), GTK_REVEALER_TRANSITION_TYPE_SLIDE_DOWN);
 
 	self->header_expand_button = koto_button_new_with_icon("", "pan-down-symbolic", "pan-up-symbolic", KOTO_BUTTON_PIXBUF_SIZE_SMALL);
-	gtk_box_pack_end(GTK_BOX(self->header), GTK_WIDGET(self->header_expand_button), FALSE, FALSE, 0);
+	gtk_box_append(GTK_BOX(self->header), GTK_WIDGET(self->header_expand_button));
 
-	gtk_box_pack_start(GTK_BOX(self), self->header, FALSE, FALSE, 0);
-	gtk_box_pack_end(GTK_BOX(self), self->revealer, TRUE, TRUE, 0);
+	gtk_box_prepend(GTK_BOX(self), self->header);
+	gtk_box_append(GTK_BOX(self), self->revealer);
 
 	self->constructed = TRUE;
 
-	g_signal_connect(self->header_expand_button, "button-release-event", G_CALLBACK(koto_expander_toggle_content), self);
+	GtkGesture *controller = gtk_gesture_click_new(); // Create a new GtkGestureClick
+	g_signal_connect(controller, "pressed", G_CALLBACK(koto_expander_toggle_content), self);
+	gtk_widget_add_controller(GTK_WIDGET(self->header_expand_button), GTK_EVENT_CONTROLLER(controller));
 }
 
 void koto_expander_set_secondary_button(KotoExpander *self, KotoButton *new_button) {
@@ -190,11 +191,11 @@ void koto_expander_set_secondary_button(KotoExpander *self, KotoButton *new_butt
 	}
 
 	if (GTK_IS_WIDGET(self->header_secondary_button)) { // Already have a button
-		gtk_container_remove(GTK_CONTAINER(self->header), GTK_WIDGET(self->header_secondary_button));
+		gtk_box_remove(GTK_BOX(self->header), GTK_WIDGET(self->header_secondary_button));
 	}
 
 	self->header_secondary_button = new_button;
-	gtk_box_pack_end(GTK_BOX(self->header), GTK_WIDGET(self->header_secondary_button), FALSE, FALSE, 0);
+	gtk_box_append(GTK_BOX(self->header), GTK_WIDGET(self->header_secondary_button));
 
 	g_object_notify_by_pspec(G_OBJECT(self), expander_props[PROP_HEADER_SECONDARY_BUTTON]);
 }
@@ -204,20 +205,22 @@ void koto_expander_set_content(KotoExpander *self, GtkWidget *new_content) {
 		return;
 	}
 
-	if (self->content != NULL) { // Already have content
-		gtk_container_remove(GTK_CONTAINER(self->revealer), self->content);
-		g_free(self->content);
+	if (GTK_IS_WIDGET(self->content)) { // Already have content
+		gtk_revealer_set_child(GTK_REVEALER(self->revealer), NULL);
+		g_object_unref(self->content);
 	}
 
 	self->content = new_content;
-	gtk_container_add(GTK_CONTAINER(self->revealer), self->content);
+	gtk_revealer_set_child(GTK_REVEALER(self->revealer), self->content);
 
 	g_object_notify_by_pspec(G_OBJECT(self), expander_props[PROP_CONTENT]);
 }
 
-void koto_expander_toggle_content(GtkWidget *button, GdkEvent *event, gpointer data) {
+void koto_expander_toggle_content(GtkGestureClick *gesture, int n_press, double x, double y, gpointer data) {
+	(void) gesture; (void) n_press; (void) x; (void) y;
 	KotoExpander* self = data;
-	koto_button_flip(KOTO_BUTTON(button));
+
+	koto_button_flip(KOTO_BUTTON(self->header_expand_button));
 	GtkRevealer* rev = GTK_REVEALER(self->revealer);
 	gtk_revealer_set_reveal_child(rev, !gtk_revealer_get_reveal_child(rev)); // Invert our values
 }

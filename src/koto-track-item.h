@@ -1,4 +1,4 @@
-/* koto-window.h
+/* koto-track-item.h
  *
  * Copyright 2021 Joshua Strobl
  *
@@ -17,15 +17,17 @@
 
 #pragma once
 
+#include <glib-2.0/glib-object.h>
 #include <gtk-4.0/gtk/gtk.h>
+#include "indexer/file.h"
 
 G_BEGIN_DECLS
 
-#define KOTO_TYPE_WINDOW (koto_window_get_type())
+#define KOTO_TYPE_TRACK_ITEM (koto_track_item_get_type())
 
-G_DECLARE_FINAL_TYPE (KotoWindow, koto_window, KOTO, WINDOW, GtkApplicationWindow)
+G_DECLARE_FINAL_TYPE(KotoTrackItem, koto_track_item, KOTO, TRACK_ITEM, GtkBox)
+
+KotoTrackItem* koto_track_item_new(KotoIndexedFile *file);
+void koto_track_item_set_track(KotoTrackItem *self, KotoIndexedFile *file);
 
 G_END_DECLS
-
-void create_new_headerbar(KotoWindow *self);
-void load_library(KotoWindow *self);

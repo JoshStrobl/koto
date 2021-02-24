@@ -28,6 +28,7 @@ KotoIndexedLibrary* koto_indexed_library_new(const gchar *path);
 
 void koto_indexed_library_add_artist(KotoIndexedLibrary *self, KotoIndexedArtist *artist);
 KotoIndexedArtist* koto_indexed_library_get_artist(KotoIndexedLibrary *self, gchar* artist_name);
+GHashTable* koto_indexed_library_get_artists(KotoIndexedLibrary *self);
 void koto_indexed_library_remove_artist(KotoIndexedLibrary *self, KotoIndexedArtist *artist);
 void start_indexing(KotoIndexedLibrary *self);
 void index_folder(KotoIndexedLibrary *self, gchar *path, guint depth);

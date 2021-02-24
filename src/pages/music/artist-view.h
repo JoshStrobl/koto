@@ -1,4 +1,4 @@
-/* koto-headerbar.h
+/* artist-view.h
  *
  * Copyright 2021 Joshua Strobl
  *
@@ -17,14 +17,20 @@
 
 #pragma once
 
-#include <gtk-3.0/gtk/gtk.h>
+#include <glib-2.0/glib-object.h>
+#include <gtk-4.0/gtk/gtk.h>
+#include "../../indexer/album.h"
+#include "../../indexer/artist.h"
 
 G_BEGIN_DECLS
 
-#define KOTO_TYPE_HEADERBAR (koto_headerbar_get_type())
+#define KOTO_TYPE_ARTIST_VIEW (koto_artist_view_get_type())
 
-G_DECLARE_FINAL_TYPE (KotoHeaderBar, koto_headerbar, KOTO, HEADERBAR, GtkHeaderBar)
+G_DECLARE_FINAL_TYPE (KotoArtistView, koto_artist_view, KOTO, ARTIST_VIEW, GObject)
 
-KotoHeaderBar* koto_headerbar_new (void);
+KotoArtistView* koto_artist_view_new();
+void koto_artist_view_add_album(KotoArtistView *self, KotoIndexedAlbum *album);
+void koto_artist_view_add_artist(KotoArtistView *self, KotoIndexedArtist *artist);
+GtkWidget* koto_artist_view_get_main(KotoArtistView *self);
 
 G_END_DECLS

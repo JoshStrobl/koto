@@ -16,6 +16,26 @@
  */
 
 #include <glib-2.0/glib.h>
+#include <gtk-4.0/gtk/gtk.h>
+
+GtkWidget* koto_utils_create_image_from_filepath(gchar *filepath, gchar *fallback_icon, guint width, guint height) {
+	GtkWidget* image = NULL;
+
+	if (strcmp(filepath, "") != 0) { // If we have a filepath
+		if (g_file_test(filepath, G_FILE_TEST_EXISTS)) { // File exists
+			image = gtk_image_new_from_file(filepath); // Load from the filepath
+		}
+	}
+
+	if (!GTK_IS_IMAGE(image)) { // If we failed to get the image or never passed a valid filepath to begin with
+		image = gtk_image_new_from_icon_name(fallback_icon); // Set to the fallback icon
+	}
+
+	gtk_image_set_icon_size(GTK_IMAGE(image), GTK_ICON_SIZE_INHERIT);
+	gtk_widget_set_size_request(image, width, height);
+
+	return image;
+}
 
 gchar* koto_utils_get_filename_without_extension(gchar *filename) {
 	gchar *trimmed_file_name = g_strdup(filename);
@@ -42,7 +62,7 @@ gchar* koto_utils_get_filename_without_extension(gchar *filename) {
 		g_free(new_parsed_name);
 	}
 
-	gchar *stripped_file_name = g_strstrip(trimmed_file_name); // Strip leading and trailing whitespace
+	gchar *stripped_file_name = g_strstrip(g_strdup(trimmed_file_name)); // Strip leading and trailing whitespace
 	g_free(trimmed_file_name);
 	return stripped_file_name;
 }

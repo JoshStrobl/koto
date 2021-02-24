@@ -267,7 +267,7 @@ void koto_indexed_album_update_path(KotoIndexedAlbum *self, const gchar* new_pat
 
 			g_free(album_art_no_ext);
 			g_free(lower_art);
-		} else if (g_str_has_prefix(mime_type, "audio/")) { // Is an audio file
+		} else if (g_str_has_prefix(mime_type, "audio/") || g_str_has_prefix(mime_type, "video/ogg")) { // Is an audio file or ogg because it is special
 			KotoIndexedFile *file = koto_indexed_file_new(full_path);
 
 			if (file != NULL) { // Is a file

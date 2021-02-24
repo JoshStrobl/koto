@@ -1,3 +1,11 @@
+window {
+	background-color: #2e2e2e;
+}
+
+headerbar, .player-bar {
+	background-color: #1d1d1d;
+}
+
 .primary-nav > .frame > box >.koto-button > box {
 	padding: 10px 0;
 }
@@ -18,4 +26,12 @@
 .primary-nav label,
 .expander-header label {
 	font-size: large;
+}
+
+.page-music-local .artist-list {
+	background-color: #1d1d1d;
+}
+
+.page-music-local row {
+	padding: 10px;
 }

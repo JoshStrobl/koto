@@ -17,9 +17,9 @@
 
 #pragma once
 
-#include <glib-object.h>
+#include <glib-2.0/glib-object.h>
 #include <gdk-pixbuf-2.0/gdk-pixbuf/gdk-pixbuf.h>
-#include <gtk-3.0/gtk/gtk.h>
+#include <gtk-4.0/gtk/gtk.h>
 
 G_BEGIN_DECLS
 
@@ -37,7 +37,7 @@ typedef enum {
 
 #define KOTO_TYPE_BUTTON (koto_button_get_type())
 
-G_DECLARE_FINAL_TYPE (KotoButton, koto_button, KOTO, BUTTON, GtkEventBox)
+G_DECLARE_FINAL_TYPE (KotoButton, koto_button, KOTO, BUTTON, GtkBox)
 
 guint koto_get_pixbuf_size(KotoButtonPixbufSize size);
 

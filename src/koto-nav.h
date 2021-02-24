@@ -16,17 +16,18 @@
  */
 
 #pragma once
-#include <gtk-3.0/gtk/gtk.h>
+#include <gtk-4.0/gtk/gtk.h>
 
 G_BEGIN_DECLS
 
 #define KOTO_TYPE_NAV (koto_nav_get_type())
 
-G_DECLARE_FINAL_TYPE (KotoNav, koto_nav, KOTO, NAV, GtkScrolledWindow)
+G_DECLARE_FINAL_TYPE (KotoNav, koto_nav, KOTO, NAV, GObject)
 
 KotoNav* koto_nav_new (void);
 void koto_nav_create_audiobooks_section(KotoNav *self);
 void koto_nav_create_music_section(KotoNav *self);
 void koto_nav_create_podcasts_section(KotoNav *self);
+GtkWidget* koto_nav_get_nav(KotoNav *self);
 
 G_END_DECLS

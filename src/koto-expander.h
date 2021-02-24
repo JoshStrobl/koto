@@ -17,7 +17,7 @@
 
 #pragma once
 
-#include <gtk-3.0/gtk/gtk.h>
+#include <gtk-4.0/gtk/gtk.h>
 #include "koto-button.h"
 
 G_BEGIN_DECLS
@@ -32,6 +32,6 @@ void koto_expander_set_icon_name(KotoExpander *self, const gchar *in);
 void koto_expander_set_label(KotoExpander *self, const gchar *label);
 void koto_expander_set_secondary_button(KotoExpander *self, KotoButton *new_button);
 void koto_expander_set_content(KotoExpander *self, GtkWidget *new_content);
-void koto_expander_toggle_content(GtkWidget *button, GdkEvent *event, gpointer data);
+void koto_expander_toggle_content(GtkGestureClick *gesture, int n_press, double x, double y, gpointer data);
 
 G_END_DECLS

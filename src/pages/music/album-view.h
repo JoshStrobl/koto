@@ -1,4 +1,4 @@
-/* koto-window.h
+/* album-view.h
  *
  * Copyright 2021 Joshua Strobl
  *
@@ -17,15 +17,20 @@
 
 #pragma once
 
+#include <glib-2.0/glib-object.h>
 #include <gtk-4.0/gtk/gtk.h>
+#include "../../indexer/album.h"
+#include "../../indexer/artist.h"
 
 G_BEGIN_DECLS
 
-#define KOTO_TYPE_WINDOW (koto_window_get_type())
+#define KOTO_TYPE_ALBUM_VIEW (koto_album_view_get_type())
 
-G_DECLARE_FINAL_TYPE (KotoWindow, koto_window, KOTO, WINDOW, GtkApplicationWindow)
+G_DECLARE_FINAL_TYPE(KotoAlbumView, koto_album_view, KOTO, ALBUM_VIEW, GObject)
+
+KotoAlbumView* koto_album_view_new(KotoIndexedAlbum *album);
+GtkWidget* koto_album_view_get_main(KotoAlbumView *self);
+void koto_album_view_set_album(KotoAlbumView *self, KotoIndexedAlbum *album);
+int koto_album_view_sort_tracks(GtkListBoxRow *track1, GtkListBoxRow *track2, gpointer user_data);
 
 G_END_DECLS
-
-void create_new_headerbar(KotoWindow *self);
-void load_library(KotoWindow *self);

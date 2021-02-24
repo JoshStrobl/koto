@@ -1,0 +1,227 @@
+/* music-local.c
+ *
+ * Copyright 2021 Joshua Strobl
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * 	http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include <glib-2.0/glib.h>
+#include <gtk-4.0/gtk/gtk.h>
+#include "../../indexer/file-indexer.h"
+#include "koto-button.h"
+#include "koto-config.h"
+#include "music-local.h"
+
+enum {
+	PROP_0,
+	PROP_LIB,
+	N_PROPERTIES
+};
+
+static GParamSpec *props[N_PROPERTIES] = { NULL, };
+
+struct _KotoPageMusicLocal {
+	GtkBox parent_instance;
+	GtkWidget *scrolled_window;
+	GtkWidget *artist_list;
+	GtkWidget *stack;
+
+	KotoIndexedLibrary *lib;
+	gboolean constructed;
+};
+
+struct _KotoPageMusicLocalClass {
+	GtkBoxClass parent_class;
+};
+
+G_DEFINE_TYPE(KotoPageMusicLocal, koto_page_music_local, GTK_TYPE_BOX);
+
+static void koto_page_music_local_constructed(GObject *obj);
+static void koto_page_music_local_get_property(GObject *obj, guint prop_id, GValue *val, GParamSpec *spec);
+static void koto_page_music_local_set_property(GObject *obj, guint prop_id, const GValue *val, GParamSpec *spec);
+
+static void koto_page_music_local_class_init(KotoPageMusicLocalClass *c) {
+	GObjectClass *gobject_class;
+	gobject_class = G_OBJECT_CLASS(c);
+	gobject_class->constructed = koto_page_music_local_constructed;
+	gobject_class->set_property = koto_page_music_local_set_property;
+	gobject_class->get_property = koto_page_music_local_get_property;
+
+	props[PROP_LIB] = g_param_spec_object(
+		"lib",
+		"Library",
+		"Library",
+		KOTO_TYPE_INDEXED_LIBRARY,
+		G_PARAM_CONSTRUCT|G_PARAM_EXPLICIT_NOTIFY|G_PARAM_READWRITE
+	);
+
+	g_object_class_install_properties(gobject_class, N_PROPERTIES, props);
+}
+
+static void koto_page_music_local_get_property(GObject *obj, guint prop_id, GValue *val, GParamSpec *spec) {
+	KotoPageMusicLocal *self = KOTO_PAGE_MUSIC_LOCAL(obj);
+
+	switch (prop_id) {
+		case PROP_LIB:
+			g_value_set_object(val, self->lib);
+			break;
+		default:
+			G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, prop_id, spec);
+			break;
+	}
+}
+
+static void koto_page_music_local_set_property(GObject *obj, guint prop_id, const GValue *val, GParamSpec *spec) {
+	KotoPageMusicLocal *self = KOTO_PAGE_MUSIC_LOCAL(obj);
+
+	switch (prop_id) {
+		case PROP_LIB:
+			koto_page_music_local_set_library(self, (KotoIndexedLibrary*) g_value_get_object(val));
+			break;
+		default:
+			G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, prop_id, spec);
+			break;
+	}
+}
+
+static void koto_page_music_local_init(KotoPageMusicLocal *self) {
+	self->lib = NULL;
+	self->constructed = FALSE;
+}
+
+static void koto_page_music_local_constructed(GObject *obj) {
+	KotoPageMusicLocal *self = KOTO_PAGE_MUSIC_LOCAL(obj);
+	gtk_widget_add_css_class(GTK_WIDGET(self), "page-music-local");
+	gtk_widget_set_hexpand(GTK_WIDGET(self), TRUE);
+
+	G_OBJECT_CLASS (koto_page_music_local_parent_class)->constructed (obj);
+	self->constructed = TRUE;
+}
+
+void koto_page_music_local_add_artist(KotoPageMusicLocal *self, KotoIndexedArtist *artist) {
+	gchar *artist_name;
+	g_object_get(artist, "name", &artist_name, NULL);
+	KotoButton *artist_button = koto_button_new_plain(artist_name);
+	gtk_list_box_prepend(GTK_LIST_BOX(self->artist_list), GTK_WIDGET(artist_button));
+
+	KotoArtistView *artist_view = koto_artist_view_new(); // Create our new artist view
+	koto_artist_view_add_artist(artist_view, artist); // Add the artist
+	gtk_stack_add_named(GTK_STACK(self->stack), koto_artist_view_get_main(artist_view), artist_name);
+
+	GtkGesture *controller = gtk_gesture_click_new(); // Create a new GtkGestureClick
+	g_signal_connect(controller, "pressed", G_CALLBACK(koto_page_music_local_handle_artist_click), self);
+	gtk_widget_add_controller(GTK_WIDGET(artist_button), GTK_EVENT_CONTROLLER(controller));
+}
+
+void koto_page_music_local_handle_artist_click(GtkGestureClick *gesture, int n_press, double x, double y, gpointer data) {
+	(void) n_press; (void) x; (void) y;
+	KotoPageMusicLocal *self = (KotoPageMusicLocal*) data;
+	GtkWidget *btn_widget = gtk_event_controller_get_widget(GTK_EVENT_CONTROLLER(gesture)); // Get the widget that applied to this gesture
+	KotoButton *btn = KOTO_BUTTON(btn_widget);
+
+	gchar *artist_name;
+	g_object_get(btn, "button-text", &artist_name, NULL);
+	gtk_stack_set_visible_child_name(GTK_STACK(self->stack), artist_name);
+}
+
+void koto_page_music_local_set_library(KotoPageMusicLocal *self, KotoIndexedLibrary *lib) {
+	if (lib == NULL) {
+		return;
+	}
+
+	if (self->lib != NULL) { // If lib is already set
+		g_free(self->lib);
+	}
+
+	self->lib = lib;
+
+	if (!self->constructed) {
+		return;
+	}
+
+	if (!GTK_IS_SCROLLED_WINDOW(self->scrolled_window)) {
+		self->scrolled_window = gtk_scrolled_window_new();
+		gtk_widget_add_css_class(self->scrolled_window, "artist-list");
+		gtk_box_prepend(GTK_BOX(self), self->scrolled_window);
+	}
+
+	if (GTK_IS_LIST_BOX(self->artist_list)) { // artist list is a list box
+		gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(self->scrolled_window), NULL); // Set to null to maybe clear?
+		g_object_unref(self->artist_list); // Unref
+	}
+
+	if (GTK_IS_STACK(self->stack)) { // Stack is a Stack
+		gtk_box_remove(GTK_BOX(self), GTK_WIDGET(self->stack)); // Destroy to free references
+	}
+
+	self->artist_list = gtk_list_box_new(); // Create our artist list
+
+	gboolean list_created = GTK_IS_LIST_BOX(self->artist_list);
+
+	if (list_created) { // Successfully created our list
+		gtk_list_box_set_activate_on_single_click(GTK_LIST_BOX(self->artist_list), TRUE);
+		gtk_list_box_set_selection_mode(GTK_LIST_BOX(self->artist_list), GTK_SELECTION_BROWSE);
+		gtk_list_box_set_sort_func(GTK_LIST_BOX(self->artist_list), koto_page_music_local_sort_artists, NULL, NULL); // Add our sort function
+		gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(self->scrolled_window), self->artist_list);
+		gtk_widget_show(GTK_WIDGET(self->artist_list));
+	}
+
+	gtk_scrolled_window_set_min_content_width(GTK_SCROLLED_WINDOW(self->scrolled_window), 300);
+	gtk_scrolled_window_set_propagate_natural_height(GTK_SCROLLED_WINDOW(self->scrolled_window), FALSE);
+	gtk_widget_set_size_request(GTK_WIDGET(self->artist_list), 300, -1);
+
+	self->stack = gtk_stack_new(); // Create a new stack
+	gtk_widget_set_hexpand(self->stack, TRUE);
+	gboolean stack_created = GTK_IS_STACK(self->stack);
+
+	if (list_created && stack_created) {
+		GHashTableIter artist_list_iter;
+		gpointer artist_key;
+		gpointer artist_data;
+
+		GHashTable *artists = koto_indexed_library_get_artists(self->lib); // Get the artists
+
+		g_hash_table_iter_init(&artist_list_iter, artists);
+		while (g_hash_table_iter_next(&artist_list_iter, &artist_key, &artist_data)) { // For each of the music artists
+			KotoIndexedArtist *artist = (KotoIndexedArtist*) artist_data; // Cast our data as a KotoIndexedArtist
+			koto_page_music_local_add_artist(self, artist);
+		}
+	}
+
+	if (stack_created) { // Successfully created our stack
+		gtk_box_append(GTK_BOX(self), self->stack);
+	}
+
+	gtk_widget_show(GTK_WIDGET(self));
+}
+
+int koto_page_music_local_sort_artists(GtkListBoxRow *artist1, GtkListBoxRow *artist2, gpointer user_data) {
+	(void) user_data;
+	KotoButton *artist1_btn = KOTO_BUTTON(gtk_list_box_row_get_child(artist1));
+	KotoButton *artist2_btn = KOTO_BUTTON(gtk_list_box_row_get_child(artist2));
+
+	gchar *artist1_text;
+	gchar *artist2_text;
+
+	g_object_get(artist1_btn, "button-text", &artist1_text, NULL);
+	g_object_get(artist2_btn, "button-text", &artist2_text, NULL);
+
+	return g_utf8_collate(artist1_text, artist2_text);
+}
+
+KotoPageMusicLocal* koto_page_music_local_new() {
+	return g_object_new(KOTO_TYPE_PAGE_MUSIC_LOCAL,
+		"orientation", GTK_ORIENTATION_HORIZONTAL,
+		NULL
+	);
+}
