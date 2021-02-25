@@ -28,6 +28,7 @@ struct _KotoIndexedFile {
 	gchar *parsed_name;
 	gchar *artist;
 	gchar *album;
+	guint *cd;
 	guint *position;
 	gboolean acquired_metadata_from_id3;
 };
@@ -41,6 +42,7 @@ enum {
 	PROP_ALBUM,
 	PROP_FILE_NAME,
 	PROP_PARSED_NAME,
+	PROP_CD,
 	PROP_POSITION,
 	N_PROPERTIES
 };
@@ -96,6 +98,16 @@ static void koto_indexed_file_class_init(KotoIndexedFileClass *c) {
 		G_PARAM_CONSTRUCT|G_PARAM_EXPLICIT_NOTIFY|G_PARAM_READWRITE
 	);
 
+	props[PROP_CD] = g_param_spec_uint(
+		"cd",
+		"CD the Track belongs to",
+		"CD the Track belongs to",
+		0,
+		G_MAXUINT16,
+		1,
+		G_PARAM_CONSTRUCT|G_PARAM_EXPLICIT_NOTIFY|G_PARAM_READWRITE
+	);
+
 	props[PROP_POSITION] = g_param_spec_uint(
 		"position",
 		"Position in Audiobook, Album, etc.",
@@ -132,6 +144,9 @@ static void koto_indexed_file_get_property(GObject *obj, guint prop_id, GValue *
 		case PROP_PARSED_NAME:
 			g_value_set_string(val, self->parsed_name);
 			break;
+		case PROP_CD:
+			g_value_set_uint(val, GPOINTER_TO_UINT(self->cd));
+			break;
 		case PROP_POSITION:
 			g_value_set_uint(val, GPOINTER_TO_UINT(self->position));
 			break;
@@ -159,6 +174,9 @@ static void koto_indexed_file_set_property(GObject *obj, guint prop_id, const GV
 			break;
 		case PROP_PARSED_NAME:
 			koto_indexed_file_set_parsed_name(self, g_strdup(g_value_get_string(val)));
+			break;
+		case PROP_CD:
+			koto_indexed_file_set_cd(self, g_value_get_uint(val));
 			break;
 		case PROP_POSITION:
 			koto_indexed_file_set_position(self, g_value_get_uint(val));
@@ -249,6 +267,15 @@ void koto_indexed_file_set_file_name(KotoIndexedFile *self, gchar *new_file_name
 	}
 }
 
+void koto_indexed_file_set_cd(KotoIndexedFile *self, guint cd) {
+	if (cd <= 1) { // No change really
+		return;
+	}
+
+	self->cd = GUINT_TO_POINTER(cd);
+	g_object_notify_by_pspec(G_OBJECT(self), props[PROP_CD]);
+}
+
 void koto_indexed_file_set_parsed_name(KotoIndexedFile *self, gchar *new_parsed_name) {
 	if (new_parsed_name == NULL) {
 		return;
@@ -307,9 +334,10 @@ void koto_indexed_file_update_path(KotoIndexedFile *self, const gchar *new_path)
 	g_object_notify_by_pspec(G_OBJECT(self), props[PROP_PATH]);
 }
 
-KotoIndexedFile* koto_indexed_file_new(const gchar *path) {
+KotoIndexedFile* koto_indexed_file_new(const gchar *path, guint *cd) {
 	return g_object_new(KOTO_TYPE_INDEXED_FILE,
 		"path", path,
+		"cd", cd,
 		NULL
 	);
 }

@@ -1,2 +1,3 @@
 builddir
 .buildconfig
+src/theme/style.css

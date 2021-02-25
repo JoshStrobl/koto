@@ -93,6 +93,7 @@ static void koto_track_item_init(KotoTrackItem *self) {
 
 	self->add_to_playlist_button = koto_button_new_with_icon(NULL, "playlist-symbolic", NULL, KOTO_BUTTON_PIXBUF_SIZE_TINY);
 
+	gtk_widget_add_css_class(GTK_WIDGET(self), "track-item");
 	gtk_widget_set_hexpand(GTK_WIDGET(self), TRUE);
 	gtk_widget_set_hexpand(GTK_WIDGET(self->track_label), TRUE);
 

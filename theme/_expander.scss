@@ -1,0 +1,17 @@
+@import 'vars';
+
+.expander {
+	& > .expander-header {
+		& > label {
+			font-size: large;
+		}
+	}
+
+	& > revealer > box {
+		& > .koto-button {
+			&, & > box {
+				min-height: 40px;
+			}
+		}
+	}
+}

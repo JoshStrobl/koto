@@ -30,7 +30,8 @@ gnome = import('gnome')
 
 koto_sources += gnome.compile_resources('koto-resources',
 	'koto.gresource.xml',
-	c_name: 'koto'
+	dependencies: [ theme ],
+	c_name: 'koto',
 )
 
 executable('com.github.joshstrobl.koto', koto_sources,

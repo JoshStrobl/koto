@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 
+#include <gtk-4.0/gdk/x11/gdkx.h>
 #include "indexer/file-indexer.h"
 #include "pages/music/music-local.h"
 #include "koto-config.h"
@@ -47,17 +48,17 @@ static void koto_window_class_init (KotoWindowClass *klass) {
 static void koto_window_init (KotoWindow *self) {
 	GtkCssProvider* provider = gtk_css_provider_new();
 	gtk_css_provider_load_from_resource(provider, "/com/github/joshstrobl/koto/style.css");
-	// TODO: Change 900 back to GTK_STYLE_PROVIDER_PRIORITY_APPLICATION so users are allowed to override the style.
-	// We want them to be able to override it. It's their system, style it how they want. We just need this to test our own currently.
-	gtk_style_context_add_provider_for_display(gdk_display_get_default(), GTK_STYLE_PROVIDER(provider), 900);
+	gtk_style_context_add_provider_for_display(gdk_display_get_default(), GTK_STYLE_PROVIDER(provider), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
 
 	create_new_headerbar(self); // Create our headerbar
 
 	self->primary_layout = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+	gtk_widget_add_css_class(self->primary_layout, "primary-layout");
 	gtk_widget_set_hexpand(self->primary_layout, TRUE);
 	gtk_widget_set_vexpand(self->primary_layout, TRUE);
 
 	self->content_layout = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
+	gtk_widget_add_css_class(self->content_layout, "content-layout");
 	gtk_widget_set_hexpand(self->content_layout, TRUE);
 	gtk_widget_set_vexpand(self->content_layout, TRUE);
 
@@ -84,7 +85,11 @@ static void koto_window_init (KotoWindow *self) {
 	}
 
 	gtk_window_set_child(GTK_WINDOW(self), self->primary_layout);
+#ifdef GDK_WINDOWING_X11
+	set_optimal_default_window_size(self);
+#else
 	gtk_widget_set_size_request(GTK_WIDGET(self), 1200, 675);
+#endif
 	gtk_window_set_title(GTK_WINDOW(self), "Koto");
 	gtk_window_set_icon_name(GTK_WINDOW(self), "audio-headphones");
 	gtk_window_set_startup_id(GTK_WINDOW(self), "com.github.joshstrobl.koto");
@@ -94,6 +99,7 @@ static void koto_window_init (KotoWindow *self) {
 
 void create_new_headerbar(KotoWindow *self) {
 	self->header_bar = gtk_header_bar_new();
+	gtk_widget_add_css_class(self->header_bar, "hdr");
 	g_return_if_fail(GTK_IS_HEADER_BAR(self->header_bar));
 
 	self->menu_button = gtk_button_new_from_icon_name("audio-headphones");
@@ -124,5 +130,29 @@ void load_library(KotoWindow *self) {
 			// TODO: Remove and do some fancy state loading
 			gtk_stack_set_visible_child_name(GTK_STACK(self->pages), "music.local");
 		}
+	}
+}
+
+void set_optimal_default_window_size(KotoWindow *self) {
+	GdkDisplay *default_display = gdk_display_get_default();
+	g_return_if_fail(GDK_IS_X11_DISPLAY(default_display));
+
+	GdkMonitor *default_monitor = gdk_x11_display_get_primary_monitor(GDK_X11_DISPLAY(default_display)); // Get primary monitor for the X11
+	g_return_if_fail(default_monitor);
+
+
+	GdkRectangle workarea = {0};
+	gdk_monitor_get_geometry(default_monitor, &workarea);
+
+	if (workarea.width <= 1280) { // Honestly how do you even get anything done?
+		gtk_widget_set_size_request(GTK_WIDGET(self), 1200, 675);
+	} else if ((workarea.width > 1280) && (workarea.width <= 1600)) { // Plebian monitor resolution
+		gtk_widget_set_size_request(GTK_WIDGET(self), 1400, 787);
+	} else if ((workarea.width > 1600) && (workarea.width <= 1920)) { // Something slightly normal
+		gtk_widget_set_size_request(GTK_WIDGET(self), 1600, 900);
+	} else if ((workarea.width > 1920) && (workarea.width <= 2560)) { // Well aren't you hot stuff?
+		gtk_widget_set_size_request(GTK_WIDGET(self), 1920, 1080);
+	} else { // Now you're just flexing
+		gtk_widget_set_size_request(GTK_WIDGET(self), 2560, 1400);
 	}
 }

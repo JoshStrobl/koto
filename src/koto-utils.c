@@ -32,6 +32,7 @@ GtkWidget* koto_utils_create_image_from_filepath(gchar *filepath, gchar *fallbac
 	}
 
 	gtk_image_set_icon_size(GTK_IMAGE(image), GTK_ICON_SIZE_INHERIT);
+	gtk_image_set_pixel_size(GTK_IMAGE(image), width);
 	gtk_widget_set_size_request(image, width, height);
 
 	return image;

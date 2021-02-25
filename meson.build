@@ -21,6 +21,7 @@ add_project_arguments([
 	'-I' + meson.current_build_dir(),
 ], language: 'c')
 
+subdir('theme')
 subdir('data')
 subdir('src')
 subdir('po')

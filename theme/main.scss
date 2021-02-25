@@ -1,0 +1,17 @@
+@import 'pages/music-local.scss';
+
+@import 'button';
+@import 'vars';
+@import 'expander';
+@import 'player-bar';
+@import 'primary-nav';
+@import 'track-item';
+
+window {
+	background-color: $grey;
+
+	& > headerbar, & > headerbar:active {
+		background-color: $midnight;
+		background-image: none;
+	}
+}

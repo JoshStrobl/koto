@@ -32,6 +32,7 @@ struct _KotoAlbumView {
 	GtkWidget *tracks;
 
 	GtkWidget *album_label;
+	GHashTable *cd_to_track_listbox;
 };
 
 G_DEFINE_TYPE(KotoAlbumView, koto_album_view, G_TYPE_OBJECT);
@@ -64,12 +65,15 @@ static void koto_album_view_class_init(KotoAlbumViewClass *c) {
 }
 
 static void koto_album_view_init(KotoAlbumView *self) {
+	self->cd_to_track_listbox = g_hash_table_new(g_str_hash, g_str_equal);
 	self->main = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
+	gtk_widget_add_css_class(self->main, "album-view");
 	gtk_widget_set_can_focus(self->main, FALSE);
 	self->album_tracks_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
 
 	self->tracks = gtk_list_box_new(); // Create our list of our tracks
 	gtk_list_box_set_sort_func(GTK_LIST_BOX(self->tracks), koto_album_view_sort_tracks, NULL, NULL); // Ensure we can sort our tracks
+	gtk_widget_add_css_class(self->tracks, "track-list");
 	gtk_widget_set_size_request(self->tracks, 600, -1);
 
 	gtk_box_append(GTK_BOX(self->main), self->album_tracks_box); // Add the tracks box to the art info combo box
@@ -106,6 +110,10 @@ static void koto_album_view_set_property(GObject *obj, guint prop_id, const GVal
 	}
 }
 
+void koto_album_view_add_track_to_listbox(KotoIndexedAlbum *self, KotoIndexedFile *file) {
+	(void) self; (void) file;
+}
+
 void koto_album_view_set_album(KotoAlbumView *self, KotoIndexedAlbum *album) {
 	if (album == NULL) {
 		return;
@@ -115,6 +123,7 @@ void koto_album_view_set_album(KotoAlbumView *self, KotoIndexedAlbum *album) {
 
 	gchar *album_art = koto_indexed_album_get_album_art(self->album); // Get the art for the album
 	GtkWidget *art_image = koto_utils_create_image_from_filepath(album_art, "audio-x-generic-symbolic", 220, 220);
+	gtk_widget_set_valign(art_image, GTK_ALIGN_START); // Align to top of list for album
 
 	gtk_box_prepend(GTK_BOX(self->main), art_image); // Prepend the image to the art info box
 
@@ -122,6 +131,7 @@ void koto_album_view_set_album(KotoAlbumView *self, KotoIndexedAlbum *album) {
 	g_object_get(album, "name", &album_name, NULL); // Get the album name
 
 	self->album_label = gtk_label_new(album_name);
+	gtk_widget_set_halign(self->album_label, GTK_ALIGN_START);
 	gtk_box_prepend(GTK_BOX(self->album_tracks_box), self->album_label); // Prepend our new label to the album + tracks box
 
 	GList *t;

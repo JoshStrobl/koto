@@ -29,3 +29,4 @@ G_END_DECLS
 
 void create_new_headerbar(KotoWindow *self);
 void load_library(KotoWindow *self);
+void set_optimal_default_window_size(KotoWindow *self);

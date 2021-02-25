@@ -1,0 +1,21 @@
+.primary-nav {
+	padding: 10px;
+
+	& > viewport > box {
+		& > .koto-botton {
+			& > box {
+				padding: 10px 0;
+
+				& > label {
+					font-size: large;
+				}
+			}
+		}
+
+		& > .expander {
+			& > .expander-header {
+				margin-bottom: 10px;
+			}
+		}
+	}
+}

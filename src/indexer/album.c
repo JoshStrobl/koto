@@ -151,6 +151,90 @@ void koto_indexed_album_set_album_art(KotoIndexedAlbum *self, const gchar *album
 	self->has_album_art = TRUE;
 }
 
+void koto_indexed_album_read_path(KotoIndexedAlbum *self, magic_t cookie, const gchar* path) {
+	DIR *dir = opendir(path); // Attempt to open our directory
+
+	if (dir == NULL) {
+		return;
+	}
+
+	struct dirent *entry;
+
+	while ((entry = readdir(dir))) {
+		if (g_str_has_prefix(entry->d_name, ".")) { // Reference to parent dir, self, or a hidden item
+			continue; // Skip
+		}
+
+		gchar *full_path = g_strdup_printf("%s%s%s", path, G_DIR_SEPARATOR_S, entry->d_name);
+
+		if (entry->d_type == DT_DIR) { // If this is a directory
+			koto_indexed_album_read_path(self, cookie, full_path); // Read this directory as well
+			continue;
+		}
+
+		if (entry->d_type != DT_REG) { // If this is not a regular file
+			continue; // Skip
+		}
+
+		const char *mime_type = magic_file(cookie, full_path);
+
+		if (mime_type == NULL) { // Failed to get the mimetype
+			g_free(full_path);
+			continue; // Skip
+		}
+
+		if (g_str_has_prefix(mime_type, "image/") && !self->has_album_art) { // Is an image file and doesn't have album art yet
+			gchar *album_art_no_ext = g_strdup(koto_utils_get_filename_without_extension(entry->d_name)); // Get the name of the file without the extension
+			gchar *lower_art = g_strdup(g_utf8_strdown(album_art_no_ext, -1)); // Lowercase
+
+			if (
+				(g_strrstr(lower_art, "Small") == NULL) && // Not Small
+				(g_strrstr(lower_art, "back") == NULL) // Not back
+			) {
+				koto_indexed_album_set_album_art(self, full_path);
+			}
+
+			g_free(album_art_no_ext);
+			g_free(lower_art);
+		} else if (g_str_has_prefix(mime_type, "audio/") || g_str_has_prefix(mime_type, "video/ogg")) { // Is an audio file or ogg because it is special
+			gchar *appended_slash_to_path = g_strdup_printf("%s%s", g_strdup(self->path), G_DIR_SEPARATOR_S);
+			gchar **possible_cd_split = g_strsplit(full_path, appended_slash_to_path, -1); // Split based on the album path
+			guint *cd = 0;
+
+			gchar *file_with_cd_sep = g_strdup(possible_cd_split[1]); // Duplicate
+			gchar **split_on_cd = g_strsplit(file_with_cd_sep, G_DIR_SEPARATOR_S, -1); // Split based on separator (e.g. / )
+
+			if (g_strv_length(split_on_cd) > 1) {
+				gchar *cdd = g_strdup(split_on_cd[0]);
+				gchar **cd_sep = g_strsplit(g_utf8_strdown(cdd, -1), "cd", -1);
+
+				if (g_strv_length(cd_sep) > 1) {
+					gchar *pos_str = g_strdup(cd_sep[1]);
+					cd = (guint*) g_ascii_strtoull(pos_str, NULL, 10); // Attempt to convert
+					g_free(pos_str);
+				}
+
+				g_strfreev(cd_sep);
+				g_free(cdd);
+			}
+
+			g_strfreev(split_on_cd);
+			g_free(file_with_cd_sep);
+
+			g_strfreev(possible_cd_split);
+			g_free(appended_slash_to_path);
+
+			KotoIndexedFile *file = koto_indexed_file_new(full_path, cd);
+
+			if (file != NULL) { // Is a file
+				koto_indexed_album_add_file(self, file); // Add our file
+			}
+		}
+
+		g_free(full_path);
+	}
+}
+
 void koto_indexed_album_remove_file(KotoIndexedAlbum *self, KotoIndexedFile *file) {
 	if (file == NULL) { // Not a file
 		return;
@@ -235,48 +319,7 @@ void koto_indexed_album_update_path(KotoIndexedAlbum *self, const gchar* new_pat
 		return;
 	}
 
-	struct dirent *entry;
-
-	while ((entry = readdir(dir))) {
-		if (g_str_has_prefix(entry->d_name, ".")) { // Reference to parent dir, self, or a hidden item
-			continue; // Skip
-		}
-
-		if (entry->d_type != DT_REG) { // If this is not a regular file
-			continue; // Skip
-		}
-
-		gchar *full_path = g_strdup_printf("%s%s%s", self->path, G_DIR_SEPARATOR_S, entry->d_name);
-		const char *mime_type = magic_file(magic_cookie, full_path);
-
-		if (mime_type == NULL) { // Failed to get the mimetype
-			g_free(full_path);
-			continue; // Skip
-		}
-
-		if (g_str_has_prefix(mime_type, "image/") && !self->has_album_art) { // Is an image file and doesn't have album art yet
-			gchar *album_art_no_ext = g_strdup(koto_utils_get_filename_without_extension(entry->d_name)); // Get the name of the file without the extension
-			gchar *lower_art = g_strdup(g_utf8_strdown(album_art_no_ext, -1)); // Lowercase
-
-			if (
-				(g_strrstr(lower_art, "Small") == NULL) && // Not Small
-				(g_strrstr(lower_art, "back") == NULL) // Not back
-			) {
-				koto_indexed_album_set_album_art(self, full_path);
-			}
-
-			g_free(album_art_no_ext);
-			g_free(lower_art);
-		} else if (g_str_has_prefix(mime_type, "audio/") || g_str_has_prefix(mime_type, "video/ogg")) { // Is an audio file or ogg because it is special
-			KotoIndexedFile *file = koto_indexed_file_new(full_path);
-
-			if (file != NULL) { // Is a file
-				koto_indexed_album_add_file(self, file); // Add our file
-			}
-		}
-
-		g_free(full_path);
-	}
+	koto_indexed_album_read_path(self, magic_cookie, self->path);
 
 	magic_close(magic_cookie);
 }
