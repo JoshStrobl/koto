@@ -268,7 +268,7 @@ void koto_indexed_file_set_file_name(KotoIndexedFile *self, gchar *new_file_name
 }
 
 void koto_indexed_file_set_cd(KotoIndexedFile *self, guint cd) {
-	if (cd <= 1) { // No change really
+	if (cd == 0) { // No change really
 		return;
 	}
 

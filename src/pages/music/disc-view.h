@@ -1,4 +1,4 @@
-/* album-view.h
+/* disc-view.h
  *
  * Copyright 2021 Joshua Strobl
  *
@@ -20,18 +20,17 @@
 #include <glib-2.0/glib-object.h>
 #include <gtk-4.0/gtk/gtk.h>
 #include "../../indexer/album.h"
-#include "../../indexer/artist.h"
 
 G_BEGIN_DECLS
 
-#define KOTO_TYPE_ALBUM_VIEW (koto_album_view_get_type())
+#define KOTO_TYPE_DISC_VIEW (koto_disc_view_get_type())
 
-G_DECLARE_FINAL_TYPE(KotoAlbumView, koto_album_view, KOTO, ALBUM_VIEW, GObject)
+G_DECLARE_FINAL_TYPE(KotoDiscView, koto_disc_view, KOTO, DISC_VIEW, GtkBox)
 
-KotoAlbumView* koto_album_view_new(KotoIndexedAlbum *album);
-GtkWidget* koto_album_view_get_main(KotoAlbumView *self);
-void koto_album_view_add_track_to_listbox(KotoIndexedAlbum *self, KotoIndexedFile *file);
-void koto_album_view_set_album(KotoAlbumView *self, KotoIndexedAlbum *album);
-int koto_album_view_sort_discs(GtkListBoxRow *track1, GtkListBoxRow *track2, gpointer user_data);
+KotoDiscView* koto_disc_view_new(KotoIndexedAlbum *album, guint *disc);
+void koto_disc_view_set_album(KotoDiscView *self, KotoIndexedAlbum *album);
+void koto_disc_view_set_disc_label_visible(KotoDiscView *self, gboolean visible);
+void koto_disc_view_set_disc_number(KotoDiscView *self, guint disc_number);
+int koto_album_view_sort_tracks(GtkListBoxRow *track1, GtkListBoxRow *track2, gpointer user_data);
 
 G_END_DECLS

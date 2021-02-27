@@ -98,7 +98,7 @@ void koto_playerbar_create_playback_details(KotoPlayerBar* bar) {
 	GtkIconTheme *default_icon_theme = gtk_icon_theme_get_for_display(gdk_display_get_default()); // Get the icon theme for this display
 
 	if (default_icon_theme != NULL) {
-		gint scale_factor = gtk_widget_get_scale_factor(GTK_WIDGET(bar));
+		gint scale_factor = gtk_widget_get_scale_factor(GTK_WIDGET(bar->main));
 		GtkIconPaintable* audio_paintable = gtk_icon_theme_lookup_icon(default_icon_theme, "audio-x-generic-symbolic", NULL, 96, scale_factor, GTK_TEXT_DIR_NONE, GTK_ICON_LOOKUP_PRELOAD);
 
 		if (GTK_IS_ICON_PAINTABLE(audio_paintable)) {

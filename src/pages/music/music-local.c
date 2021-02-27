@@ -117,17 +117,12 @@ void koto_page_music_local_add_artist(KotoPageMusicLocal *self, KotoIndexedArtis
 	KotoArtistView *artist_view = koto_artist_view_new(); // Create our new artist view
 	koto_artist_view_add_artist(artist_view, artist); // Add the artist
 	gtk_stack_add_named(GTK_STACK(self->stack), koto_artist_view_get_main(artist_view), artist_name);
-
-	GtkGesture *controller = gtk_gesture_click_new(); // Create a new GtkGestureClick
-	g_signal_connect(controller, "pressed", G_CALLBACK(koto_page_music_local_handle_artist_click), self);
-	gtk_widget_add_controller(GTK_WIDGET(artist_button), GTK_EVENT_CONTROLLER(controller));
 }
 
-void koto_page_music_local_handle_artist_click(GtkGestureClick *gesture, int n_press, double x, double y, gpointer data) {
-	(void) n_press; (void) x; (void) y;
+void koto_page_music_local_handle_artist_click(GtkListBox *box, GtkListBoxRow *row, gpointer data) {
+	(void) box;
 	KotoPageMusicLocal *self = (KotoPageMusicLocal*) data;
-	GtkWidget *btn_widget = gtk_event_controller_get_widget(GTK_EVENT_CONTROLLER(gesture)); // Get the widget that applied to this gesture
-	KotoButton *btn = KOTO_BUTTON(btn_widget);
+	KotoButton *btn = KOTO_BUTTON(gtk_list_box_row_get_child(row));
 
 	gchar *artist_name;
 	g_object_get(btn, "button-text", &artist_name, NULL);
@@ -169,6 +164,7 @@ void koto_page_music_local_set_library(KotoPageMusicLocal *self, KotoIndexedLibr
 	gboolean list_created = GTK_IS_LIST_BOX(self->artist_list);
 
 	if (list_created) { // Successfully created our list
+		g_signal_connect(GTK_LIST_BOX(self->artist_list), "row-activated", G_CALLBACK(koto_page_music_local_handle_artist_click), self);
 		gtk_list_box_set_activate_on_single_click(GTK_LIST_BOX(self->artist_list), TRUE);
 		gtk_list_box_set_selection_mode(GTK_LIST_BOX(self->artist_list), GTK_SELECTION_BROWSE);
 		gtk_list_box_set_sort_func(GTK_LIST_BOX(self->artist_list), koto_page_music_local_sort_artists, NULL, NULL); // Add our sort function
@@ -181,6 +177,8 @@ void koto_page_music_local_set_library(KotoPageMusicLocal *self, KotoIndexedLibr
 	gtk_widget_set_size_request(GTK_WIDGET(self->artist_list), 300, -1);
 
 	self->stack = gtk_stack_new(); // Create a new stack
+	gtk_stack_set_transition_duration(GTK_STACK(self->stack), 400);
+	gtk_stack_set_transition_type(GTK_STACK(self->stack), GTK_STACK_TRANSITION_TYPE_SLIDE_LEFT);
 	gtk_widget_set_hexpand(self->stack, TRUE);
 	gboolean stack_created = GTK_IS_STACK(self->stack);
 

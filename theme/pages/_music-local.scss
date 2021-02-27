@@ -37,18 +37,6 @@
 								font-weight: 900;
 								padding: $halvedpadding 0;
 							}
-
-							& > .track-list {
-								& > row {
-									&:nth-child(odd):not(:hover) {
-										background-color: $midnight;
-									}
-
-									&:nth-child(even), &:hover {
-										background-color: $grey;
-									}
-								}
-							}
 						}
 					}
 				}

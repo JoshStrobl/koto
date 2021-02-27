@@ -1,0 +1,20 @@
+@import "vars";
+
+.disc-view {
+	& > box { // Horizontal box with image and disc labe
+		color: #ccc;
+		margin: 10px 0;
+	}
+
+	& .track-list {
+		& > row {
+			&:nth-child(odd):not(:hover) {
+				background-color: $midnight;
+			}
+
+			&:nth-child(even), &:hover {
+				background-color: $grey;
+			}
+		}
+	}
+}

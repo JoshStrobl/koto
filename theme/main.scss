@@ -1,11 +1,12 @@
 @import 'pages/music-local.scss';
 
 @import 'button';
-@import 'vars';
+@import 'disc-view';
 @import 'expander';
 @import 'player-bar';
 @import 'primary-nav';
 @import 'track-item';
+@import 'vars';
 
 window {
 	background-color: $grey;

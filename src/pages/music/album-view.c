@@ -19,8 +19,8 @@
 #include <gtk-4.0/gtk/gtk.h>
 #include "../../indexer/album.h"
 #include "../../indexer/artist.h"
-#include "../../koto-track-item.h"
 #include "album-view.h"
+#include "disc-view.h"
 #include "koto-config.h"
 #include "koto-utils.h"
 
@@ -29,7 +29,7 @@ struct _KotoAlbumView {
 	KotoIndexedAlbum *album;
 	GtkWidget *main;
 	GtkWidget *album_tracks_box;
-	GtkWidget *tracks;
+	GtkWidget *discs;
 
 	GtkWidget *album_label;
 	GHashTable *cd_to_track_listbox;
@@ -71,13 +71,15 @@ static void koto_album_view_init(KotoAlbumView *self) {
 	gtk_widget_set_can_focus(self->main, FALSE);
 	self->album_tracks_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
 
-	self->tracks = gtk_list_box_new(); // Create our list of our tracks
-	gtk_list_box_set_sort_func(GTK_LIST_BOX(self->tracks), koto_album_view_sort_tracks, NULL, NULL); // Ensure we can sort our tracks
-	gtk_widget_add_css_class(self->tracks, "track-list");
-	gtk_widget_set_size_request(self->tracks, 600, -1);
+	self->discs = gtk_list_box_new(); // Create our list of our tracks
+	gtk_list_box_set_selection_mode(GTK_LIST_BOX(self->discs), GTK_SELECTION_NONE);
+	gtk_list_box_set_sort_func(GTK_LIST_BOX(self->discs), koto_album_view_sort_discs, NULL, NULL); // Ensure we can sort our discs
+	gtk_widget_add_css_class(self->discs, "discs-list");
+	gtk_widget_set_can_focus(self->discs, FALSE);
+	gtk_widget_set_size_request(self->discs, 600, -1);
 
 	gtk_box_append(GTK_BOX(self->main), self->album_tracks_box); // Add the tracks box to the art info combo box
-	gtk_box_append(GTK_BOX(self->album_tracks_box), self->tracks); // Add the tracks list box to the albums tracks box
+	gtk_box_append(GTK_BOX(self->album_tracks_box), self->discs); // Add the discs list box to the albums tracks box
 }
 
 GtkWidget* koto_album_view_get_main(KotoAlbumView *self) {
@@ -134,40 +136,49 @@ void koto_album_view_set_album(KotoAlbumView *self, KotoIndexedAlbum *album) {
 	gtk_widget_set_halign(self->album_label, GTK_ALIGN_START);
 	gtk_box_prepend(GTK_BOX(self->album_tracks_box), self->album_label); // Prepend our new label to the album + tracks box
 
-	GList *t;
-	for (t = koto_indexed_album_get_files(self->album); t != NULL; t = t->next) { // For each file / track
-		KotoIndexedFile *file = (KotoIndexedFile*) t->data;
-		KotoTrackItem *track_item = koto_track_item_new(file); // Create our new track item
-		gtk_list_box_prepend(GTK_LIST_BOX(self->tracks), GTK_WIDGET(track_item)); // Add to our tracks list box
+	GHashTable *discs = g_hash_table_new(g_str_hash, g_str_equal);
+	GList *tracks = koto_indexed_album_get_files(album); // Get the tracks for this album
+
+	for (guint i = 0; i < g_list_length(tracks); i++) {
+		KotoIndexedFile *file = (KotoIndexedFile*) g_list_nth_data(tracks, i); // Get the
+		guint *disc_number;
+		g_object_get(file, "cd", &disc_number, NULL);
+		gchar *disc_num_as_str = g_strdup_printf("%u", GPOINTER_TO_UINT(disc_number));
+
+		if (g_hash_table_contains(discs, disc_num_as_str)) { // Already have this added
+			continue; // Skip
+		}
+
+		g_hash_table_insert(discs, disc_num_as_str, "0"); // Mark this disc number in the hash table
+		KotoDiscView *disc_view = koto_disc_view_new(album, disc_number);
+		gtk_list_box_append(GTK_LIST_BOX(self->discs), GTK_WIDGET(disc_view)); // Add the Disc View to the List Box
 	}
+
+	if (g_list_length(g_hash_table_get_keys(discs)) == 1) { // Only have one album
+		GtkListBoxRow *row = gtk_list_box_get_row_at_index(GTK_LIST_BOX(self->discs), 0); // Get the first item
+
+		if (GTK_IS_LIST_BOX_ROW(row)) { // Is a row
+			koto_disc_view_set_disc_label_visible((KotoDiscView*) gtk_list_box_row_get_child(row), FALSE); // Get
+		}
+	}
+
+	g_hash_table_destroy(discs);
 }
 
-int koto_album_view_sort_tracks(GtkListBoxRow *track1, GtkListBoxRow *track2, gpointer user_data) {
+int koto_album_view_sort_discs(GtkListBoxRow *disc1, GtkListBoxRow *disc2, gpointer user_data) {
 	(void) user_data;
-	KotoTrackItem *track1_item = KOTO_TRACK_ITEM(gtk_list_box_row_get_child(track1));
-	KotoTrackItem *track2_item = KOTO_TRACK_ITEM(gtk_list_box_row_get_child(track2));
+	KotoDiscView *disc1_item = KOTO_DISC_VIEW(gtk_list_box_row_get_child(disc1));
+	KotoDiscView *disc2_item = KOTO_DISC_VIEW(gtk_list_box_row_get_child(disc2));
 
-	KotoIndexedFile *track1_file;
-	KotoIndexedFile *track2_file;
+	guint disc1_num;
+	guint disc2_num;
 
-	g_object_get(track1_item, "track", &track1_file, NULL);
-	g_object_get(track2_item, "track", &track2_file, NULL);
+	g_object_get(disc1_item, "disc", &disc1_num, NULL);
+	g_object_get(disc2_item, "disc", &disc2_num, NULL);
 
-	guint16 *track1_pos;
-	guint16 *track2_pos;
-
-	g_object_get(track1_file, "position", &track1_pos, NULL);
-	g_object_get(track2_file, "position", &track2_pos, NULL);
-
-	if (track1_pos == track2_pos) { // Identical positions (like reported as 0)
-		gchar *track1_name;
-		gchar *track2_name;
-
-		g_object_get(track1_file, "parsed-name", &track1_name, NULL);
-		g_object_get(track2_file, "parsed-name", &track2_name, NULL);
-
-		return g_utf8_collate(track1_name, track2_name);
-	} else if (track1_pos < track2_pos) {
+	if (disc1_num == disc2_num) { // Identical positions (like reported as 0)
+		return 0;
+	} else if (disc1_num < disc2_num) {
 		return -1;
 	} else {
 		return 1;

@@ -11,11 +11,12 @@ theme = custom_target('Theme generation',
 	depend_files: files([
 		'pages/_music-local.scss',
 		'_button.scss',
-		'_vars.scss',
+		'_disc-view.scss',
 		'_expander.scss',
 		'_player-bar.scss',
 		'_primary-nav.scss',
 		'_track-item.scss',
+		'_vars.scss',
 	]),
 	build_by_default: true,
 )

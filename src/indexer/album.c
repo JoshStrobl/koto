@@ -199,7 +199,7 @@ void koto_indexed_album_read_path(KotoIndexedAlbum *self, magic_t cookie, const 
 		} else if (g_str_has_prefix(mime_type, "audio/") || g_str_has_prefix(mime_type, "video/ogg")) { // Is an audio file or ogg because it is special
 			gchar *appended_slash_to_path = g_strdup_printf("%s%s", g_strdup(self->path), G_DIR_SEPARATOR_S);
 			gchar **possible_cd_split = g_strsplit(full_path, appended_slash_to_path, -1); // Split based on the album path
-			guint *cd = 0;
+			guint *cd = (guint*) 1;
 
 			gchar *file_with_cd_sep = g_strdup(possible_cd_split[1]); // Duplicate
 			gchar **split_on_cd = g_strsplit(file_with_cd_sep, G_DIR_SEPARATOR_S, -1); // Split based on separator (e.g. / )

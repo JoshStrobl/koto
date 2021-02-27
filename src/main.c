@@ -16,9 +16,12 @@
  */
 
 #include <glib/gi18n.h>
+#include "db/db.h"
 
 #include "koto-config.h"
 #include "koto-window.h"
+
+extern sqlite3 *koto_db;
 
 static void on_activate (GtkApplication *app) {
 	g_assert(GTK_IS_APPLICATION (app));
@@ -33,6 +36,16 @@ static void on_activate (GtkApplication *app) {
 	gtk_window_present(window);
 }
 
+static void on_shutdown(GtkApplication *app) {
+	(void) app;
+
+	if (koto_db != NULL) {
+		g_message("Have a db?");
+	}
+
+	close_db(); // Close the database
+}
+
 int main (int argc, char *argv[]) {
 	g_autoptr(GtkApplication) app = NULL;
 	int ret;
@@ -43,8 +56,10 @@ int main (int argc, char *argv[]) {
 	textdomain (GETTEXT_PACKAGE);
 
 	gtk_init();
+	open_db(); // Open our database
 	app = gtk_application_new ("com.github.joshstrobl.koto", G_APPLICATION_FLAGS_NONE);
 	g_signal_connect (app, "activate", G_CALLBACK (on_activate), NULL);
+	g_signal_connect(app, "shutdown", G_CALLBACK(on_shutdown), NULL);
 	ret = g_application_run (G_APPLICATION (app), argc, argv);
 
 	return ret;
