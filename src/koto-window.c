@@ -153,6 +153,6 @@ void set_optimal_default_window_size(KotoWindow *self) {
 	} else if ((workarea.width > 1920) && (workarea.width <= 2560)) { // Well aren't you hot stuff?
 		gtk_widget_set_size_request(GTK_WIDGET(self), 1920, 1080);
 	} else { // Now you're just flexing
-		gtk_widget_set_size_request(GTK_WIDGET(self), 2560, 1400);
+		gtk_widget_set_size_request(GTK_WIDGET(self), 2560, 1440);
 	}
 }
