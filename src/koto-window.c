@@ -147,7 +147,7 @@ void set_optimal_default_window_size(KotoWindow *self) {
 	if (workarea.width <= 1280) { // Honestly how do you even get anything done?
 		gtk_widget_set_size_request(GTK_WIDGET(self), 1200, 675);
 	} else if ((workarea.width > 1280) && (workarea.width <= 1600)) { // Plebian monitor resolution
-		gtk_widget_set_size_request(GTK_WIDGET(self), 1400, 787);
+		gtk_widget_set_size_request(GTK_WIDGET(self), 1300, 709);
 	} else if ((workarea.width > 1600) && (workarea.width <= 1920)) { // Something slightly normal
 		gtk_widget_set_size_request(GTK_WIDGET(self), 1600, 900);
 	} else if ((workarea.width > 1920) && (workarea.width <= 2560)) { // Well aren't you hot stuff?
