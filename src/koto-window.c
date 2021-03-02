@@ -16,7 +16,7 @@
  */
 
 #include <gtk-4.0/gdk/x11/gdkx.h>
-#include "indexer/file-indexer.h"
+#include "indexer/structs.h"
 #include "pages/music/music-local.h"
 #include "koto-config.h"
 #include "koto-nav.h"

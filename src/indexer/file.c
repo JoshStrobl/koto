@@ -16,12 +16,18 @@
  */
 
 #include <glib-2.0/glib.h>
+#include <sqlite3.h>
 #include <taglib/tag_c.h>
-#include "file.h"
+#include "structs.h"
 #include "koto-utils.h"
+
+extern sqlite3 *koto_db;
 
 struct _KotoIndexedFile {
 	GObject parent_instance;
+	gchar *artist_uuid;
+	gchar *album_uuid;
+	gchar *uuid;
 	gchar *path;
 
 	gchar *file_name;
@@ -30,13 +36,19 @@ struct _KotoIndexedFile {
 	gchar *album;
 	guint *cd;
 	guint *position;
+
 	gboolean acquired_metadata_from_id3;
+	gboolean do_initial_index;
 };
 
 G_DEFINE_TYPE(KotoIndexedFile, koto_indexed_file, G_TYPE_OBJECT);
 
 enum {
 	PROP_0,
+	PROP_ARTIST_UUID,
+	PROP_ALBUM_UUID,
+	PROP_UUID,
+	PROP_DO_INITIAL_INDEX,
 	PROP_PATH,
 	PROP_ARTIST,
 	PROP_ALBUM,
@@ -57,6 +69,38 @@ static void koto_indexed_file_class_init(KotoIndexedFileClass *c) {
 	gobject_class = G_OBJECT_CLASS(c);
 	gobject_class->set_property = koto_indexed_file_set_property;
 	gobject_class->get_property = koto_indexed_file_get_property;
+
+	props[PROP_ARTIST_UUID] = g_param_spec_string(
+		"artist-uuid",
+		"UUID to Artist associated with the File",
+		"UUID to Artist associated with the File",
+		NULL,
+		G_PARAM_CONSTRUCT|G_PARAM_EXPLICIT_NOTIFY|G_PARAM_READWRITE
+	);
+
+	props[PROP_ALBUM_UUID] = g_param_spec_string(
+		"album-uuid",
+		"UUID to Album associated with the File",
+		"UUID to Album associated with the File",
+		NULL,
+		G_PARAM_CONSTRUCT|G_PARAM_EXPLICIT_NOTIFY|G_PARAM_READWRITE
+	);
+
+	props[PROP_UUID] = g_param_spec_string(
+		"uuid",
+		"UUID to File in database",
+		"UUID to File in database",
+		NULL,
+		G_PARAM_CONSTRUCT|G_PARAM_EXPLICIT_NOTIFY|G_PARAM_READWRITE
+	);
+
+	props[PROP_DO_INITIAL_INDEX] = g_param_spec_boolean(
+		"do-initial-index",
+		"Do an initial indexing operating instead of pulling from the database",
+		"Do an initial indexing operating instead of pulling from the database",
+		FALSE,
+		G_PARAM_CONSTRUCT_ONLY|G_PARAM_EXPLICIT_NOTIFY|G_PARAM_READWRITE
+	);
 
 	props[PROP_PATH] = g_param_spec_string(
 		"path",
@@ -129,6 +173,15 @@ static void koto_indexed_file_get_property(GObject *obj, guint prop_id, GValue *
 	KotoIndexedFile *self = KOTO_INDEXED_FILE(obj);
 
 	switch (prop_id) {
+		case PROP_ARTIST_UUID:
+			g_value_set_string(val, self->artist_uuid);
+			break;
+		case PROP_ALBUM_UUID:
+			g_value_set_string(val, self->album_uuid);
+			break;
+		case PROP_UUID:
+			g_value_set_string(val, self->uuid);
+			break;
 		case PROP_PATH:
 			g_value_set_string(val, self->path);
 			break;
@@ -160,6 +213,21 @@ static void koto_indexed_file_set_property(GObject *obj, guint prop_id, const GV
 	KotoIndexedFile *self = KOTO_INDEXED_FILE(obj);
 
 	switch (prop_id) {
+		case PROP_ARTIST_UUID:
+			self->artist_uuid = g_strdup(g_value_get_string(val));
+			g_object_notify_by_pspec(G_OBJECT(self), props[PROP_ARTIST_UUID]);
+			break;
+		case PROP_ALBUM_UUID:
+			self->album_uuid = g_strdup(g_value_get_string(val));
+			g_object_notify_by_pspec(G_OBJECT(self), props[PROP_ALBUM_UUID]);
+			break;
+		case PROP_UUID:
+			self->uuid = g_strdup(g_value_get_string(val));
+			g_object_notify_by_pspec(G_OBJECT(self), props[PROP_UUID]);
+			break;
+		case PROP_DO_INITIAL_INDEX:
+			self->do_initial_index = g_value_get_boolean(val);
+			break;
 		case PROP_PATH:
 			koto_indexed_file_update_path(self, g_value_get_string(val)); // Update the path
 			break;
@@ -185,6 +253,43 @@ static void koto_indexed_file_set_property(GObject *obj, guint prop_id, const GV
 			G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, prop_id, spec);
 			break;
 	}
+}
+
+
+void koto_indexed_file_commit(KotoIndexedFile *self) {
+	if ((self->artist_uuid == NULL) || (strcmp(self->artist_uuid, "") == 0)) { // No valid required artist UUID
+		return;
+	}
+
+	if (self->album_uuid == NULL) {
+		g_object_set(self, "album-uuid", "", NULL); // Set to an empty string
+	}
+
+	gchar *commit_op = g_strdup_printf(
+		"INSERT INTO tracks(id, path, type, artist_id, album_id, file_name, name, disc, position)"
+		"VALUES('%s', quote(\"%s\"), 0, '%s', '%s', quote(\"%s\"), quote(\"%s\"), %d, %d)"
+		"ON CONFLICT(id) DO UPDATE SET path=excluded.path, type=excluded.type, album_id=excluded.album_id, file_name=excluded.file_name, name=excluded.file_name, disc=excluded.disc, position=excluded.position;",
+		self->uuid,
+		self->path,
+		self->artist_uuid,
+		self->album_uuid,
+		self->file_name,
+		self->parsed_name,
+		GPOINTER_TO_INT((int*) self->cd),
+		GPOINTER_TO_INT((int*) self->position)
+	);
+
+	g_debug("INSERT query for file: %s", commit_op);
+
+	gchar *commit_op_errmsg = NULL;
+	int rc = sqlite3_exec(koto_db, commit_op, 0, 0, &commit_op_errmsg);
+
+	if (rc != SQLITE_OK) {
+		g_warning("Failed to write our file to the database: %s", commit_op_errmsg);
+	}
+
+	g_free(commit_op);
+	g_free(commit_op_errmsg);
 }
 
 void koto_indexed_file_parse_name(KotoIndexedFile *self) {
@@ -334,10 +439,32 @@ void koto_indexed_file_update_path(KotoIndexedFile *self, const gchar *new_path)
 	g_object_notify_by_pspec(G_OBJECT(self), props[PROP_PATH]);
 }
 
-KotoIndexedFile* koto_indexed_file_new(const gchar *path, guint *cd) {
-	return g_object_new(KOTO_TYPE_INDEXED_FILE,
+KotoIndexedFile* koto_indexed_file_new(KotoIndexedAlbum *album, const gchar *path, guint *cd) {
+	KotoIndexedArtist *artist;
+
+	gchar *artist_uuid;
+	gchar *album_uuid;
+
+	g_object_get(album, "artist", &artist, NULL); // Get the artist from our Album
+	g_object_get(artist, "uuid", &artist_uuid, NULL); // Get the artist UUID from the artist
+	g_object_get(album, "uuid", &album_uuid, NULL); // Get the album UUID from the album
+
+	KotoIndexedFile *file = g_object_new(KOTO_TYPE_INDEXED_FILE,
+		"artist-uuid", artist_uuid,
+		"album-uuid", album_uuid,
+		"uuid", g_uuid_string_random(),
 		"path", path,
 		"cd", cd,
+		NULL
+	);
+
+	koto_indexed_file_commit(file); // Immediately commit to the database
+	return file;
+}
+
+KotoIndexedFile* koto_indexed_file_new_with_uuid(const gchar *uuid) {
+	return g_object_new(KOTO_TYPE_INDEXED_FILE,
+		"uuid", uuid,
 		NULL
 	);
 }

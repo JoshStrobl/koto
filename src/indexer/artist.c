@@ -16,11 +16,15 @@
  */
 
 #include <glib-2.0/glib.h>
-#include "album.h"
-#include "artist.h"
+#include <sqlite3.h>
+#include "structs.h"
+#include "../db/db.h"
+
+extern sqlite3 *koto_db;
 
 struct _KotoIndexedArtist {
 	GObject parent_instance;
+	gchar *uuid;
 	gchar *path;
 
 	gboolean has_artist_art;
@@ -32,6 +36,7 @@ G_DEFINE_TYPE(KotoIndexedArtist, koto_indexed_artist, G_TYPE_OBJECT);
 
 enum {
 	PROP_0,
+	PROP_UUID,
 	PROP_PATH,
 	PROP_ARTIST_NAME,
 	N_PROPERTIES
@@ -47,6 +52,14 @@ static void koto_indexed_artist_class_init(KotoIndexedArtistClass *c) {
 	gobject_class = G_OBJECT_CLASS(c);
 	gobject_class->set_property = koto_indexed_artist_set_property;
 	gobject_class->get_property = koto_indexed_artist_get_property;
+
+	props[PROP_UUID] = g_param_spec_string(
+		"uuid",
+		"UUID to Artist in database",
+		"UUID to Artist in database",
+		NULL,
+		G_PARAM_CONSTRUCT|G_PARAM_EXPLICIT_NOTIFY|G_PARAM_READWRITE
+	);
 
 	props[PROP_PATH] = g_param_spec_string(
 		"path",
@@ -67,6 +80,34 @@ static void koto_indexed_artist_class_init(KotoIndexedArtistClass *c) {
 	g_object_class_install_properties(gobject_class, N_PROPERTIES, props);
 }
 
+void koto_indexed_artist_commit(KotoIndexedArtist *self) {
+	if ((self->uuid == NULL) || strcmp(self->uuid, "")) { // UUID not set
+		self->uuid = g_strdup(g_uuid_string_random());
+	}
+
+	// TODO: Support multiple types instead of just local music artist
+	gchar *commit_op = g_strdup_printf(
+		"INSERT INTO artists(id,path,type,name,art_path)"
+		"VALUES ('%s', quote(\"%s\"), 0, quote(\"%s\"), NULL)"
+		"ON CONFLICT(id) DO UPDATE SET path=excluded.path, type=excluded.type, name=excluded.name, art_path=excluded.art_path;",
+		self->uuid,
+		self->path,
+		self->artist_name
+	);
+
+	g_debug("INSERT query for artist: %s", commit_op);
+
+	gchar *commit_opt_errmsg = NULL;
+	int rc = sqlite3_exec(koto_db, commit_op, 0, 0, &commit_opt_errmsg);
+
+	if (rc != SQLITE_OK) {
+		g_warning("Failed to write our artist to the database: %s", commit_opt_errmsg);
+	}
+
+	g_free(commit_op);
+	g_free(commit_opt_errmsg);
+}
+
 static void koto_indexed_artist_init(KotoIndexedArtist *self) {
 	self->has_artist_art = FALSE;
 	self->albums = NULL; // Set to null initially maybe
@@ -76,6 +117,9 @@ static void koto_indexed_artist_get_property(GObject *obj, guint prop_id, GValue
 	KotoIndexedArtist *self = KOTO_INDEXED_ARTIST(obj);
 
 	switch (prop_id) {
+		case PROP_UUID:
+			g_value_set_string(val, self->uuid);
+			break;
 		case PROP_PATH:
 			g_value_set_string(val, self->path);
 			break;
@@ -92,6 +136,10 @@ static void koto_indexed_artist_set_property(GObject *obj, guint prop_id, const 
 	KotoIndexedArtist *self = KOTO_INDEXED_ARTIST(obj);
 
 	switch (prop_id) {
+		case PROP_UUID:
+			self->uuid = g_strdup(g_value_get_string(val));
+			g_object_notify_by_pspec(G_OBJECT(self), props[PROP_UUID]);
+			break;
 		case PROP_PATH:
 			koto_indexed_artist_update_path(self, g_value_get_string(val));
 			break;
@@ -188,9 +236,20 @@ void koto_indexed_artist_set_artist_name(KotoIndexedArtist *self, const gchar *a
 }
 
 KotoIndexedArtist* koto_indexed_artist_new(const gchar *path) {
-	return g_object_new(KOTO_TYPE_INDEXED_ARTIST,
+	KotoIndexedArtist* artist = g_object_new(KOTO_TYPE_INDEXED_ARTIST,
+		"uuid", g_uuid_string_random(),
 		"path", path,
 		"name", g_path_get_basename(path),
+		NULL
+	);
+
+	koto_indexed_artist_commit(artist); // Commit the artist immediately to the database
+	return artist;
+}
+
+KotoIndexedArtist* koto_indexed_artist_new_with_uuid(const gchar *uuid) {
+	return g_object_new(KOTO_TYPE_INDEXED_ARTIST,
+		"uuid", uuid,
 		NULL
 	);
 }

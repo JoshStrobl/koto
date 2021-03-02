@@ -17,8 +17,7 @@
 
 #include <glib-2.0/glib.h>
 #include <gtk-4.0/gtk/gtk.h>
-#include "../../indexer/album.h"
-#include "../../indexer/artist.h"
+#include "../../indexer/structs.h"
 #include "album-view.h"
 #include "disc-view.h"
 #include "koto-config.h"

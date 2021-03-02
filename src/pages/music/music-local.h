@@ -19,8 +19,7 @@
 
 #include <glib-2.0/glib-object.h>
 #include <gtk-4.0/gtk/gtk.h>
-#include "../../indexer/artist.h"
-#include "../../indexer/file-indexer.h"
+#include "../../indexer/structs.h"
 #include "artist-view.h"
 
 G_BEGIN_DECLS

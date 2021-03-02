@@ -18,5 +18,6 @@
 #include <sqlite3.h>
 
 void close_db();
+void enable_foreign_keys();
 void open_db();
 

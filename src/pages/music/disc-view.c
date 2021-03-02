@@ -16,7 +16,7 @@
  */
 
 #include <gtk-4.0/gtk/gtk.h>
-#include "../../indexer/album.h"
+#include "../../indexer/structs.h"
 #include "../../koto-track-item.h"
 #include "disc-view.h"
 

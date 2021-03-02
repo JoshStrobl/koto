@@ -19,7 +19,7 @@
 
 #include <glib-2.0/glib-object.h>
 #include <gtk-4.0/gtk/gtk.h>
-#include "../../indexer/album.h"
+#include "../../indexer/structs.h"
 
 G_BEGIN_DECLS
 

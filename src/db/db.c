@@ -29,9 +29,9 @@ void close_db() {
 }
 
 void create_db_tables() {
-	char *tables_creation_queries = "CREATE TABLE IF NOT EXISTS artists(id string UNIQUE, path string UNIQUE, type int, name string, art_path string);"
-		"CREATE TABLE IF NOT EXISTS albums(id string UNIQUE, path string UNIQUE, artist_id int, name string, art_path string);"
-		"CREATE TABLE IF NOT EXISTS tracks(id string UNIQUE, path string UNIQUE, type int, artist_id int, album_id int, file_name string, name string, disc int, position int);";
+	char *tables_creation_queries = "CREATE TABLE IF NOT EXISTS artists(id string UNIQUE PRIMARY KEY, path string, type int, name string, art_path string);"
+		"CREATE TABLE IF NOT EXISTS albums(id string UNIQUE PRIMARY KEY, path string, artist_id string, name string, art_path string, FOREIGN KEY(artist_id) REFERENCES artists(id) ON DELETE CASCADE);"
+		"CREATE TABLE IF NOT EXISTS tracks(id string UNIQUE PRIMARY KEY, path string, type int, artist_id string, album_id string, file_name string, name string, disc int, position int, FOREIGN KEY(artist_id) REFERENCES artists(id) ON DELETE CASCADE);";
 
 	gchar *create_tables_errmsg = NULL;
 	int rc = sqlite3_exec(koto_db, tables_creation_queries, 0,0, &create_tables_errmsg);
@@ -39,6 +39,17 @@ void create_db_tables() {
 	if (rc != SQLITE_OK) {
 		g_critical("Failed to create required tables: %s", create_tables_errmsg);
 	}
+}
+
+void enable_foreign_keys() {
+	gchar *enable_foreign_keys_err = NULL;
+	int rc = sqlite3_exec(koto_db, "PRAGMA foreign_keys = ON;", 0, 0, &enable_foreign_keys_err);
+
+	if (rc != SQLITE_OK) {
+		g_critical("Failed to enable foreign key support. Ensure your sqlite3 is compiled with neither SQLITE_OMIT_FOREIGN_KEY or SQLITE_OMIT_TRIGGER defined: %s", enable_foreign_keys_err);
+	}
+
+	g_free(enable_foreign_keys_err);
 }
 
 void open_db() {
@@ -55,6 +66,8 @@ void open_db() {
 		g_critical("Failed to open or create database: %s", sqlite3_errmsg(koto_db));
 		return;
 	}
+
+	enable_foreign_keys(); // Enable FOREIGN KEY support
 
 	create_db_tables(); // Attempt to create our database tables
 }

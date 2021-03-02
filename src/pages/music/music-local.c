@@ -17,7 +17,7 @@
 
 #include <glib-2.0/glib.h>
 #include <gtk-4.0/gtk/gtk.h>
-#include "../../indexer/file-indexer.h"
+#include "../../indexer/structs.h"
 #include "koto-button.h"
 #include "koto-config.h"
 #include "music-local.h"

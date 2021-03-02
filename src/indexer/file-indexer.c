@@ -20,10 +20,7 @@
 #include <stdio.h>
 #include <sys/stat.h>
 #include <taglib/tag_c.h>
-#include "album.h"
-#include "artist.h"
-#include "file.h"
-#include "file-indexer.h"
+#include "structs.h"
 
 struct _KotoIndexedLibrary {
 	GObject parent_instance;
@@ -205,13 +202,14 @@ void index_folder(KotoIndexedLibrary *self, gchar *path, guint depth) {
 				g_free(artist_name);
 			} else if (depth == 2) { // If we are following FOLDER/ARTIST/ALBUM then this would be album
 				gchar *artist_name = g_path_get_basename(path); // Get the last entry from our path which is probably the artist
-				KotoIndexedAlbum *album = koto_indexed_album_new(full_path);
 
 				KotoIndexedArtist *artist = koto_indexed_library_get_artist(self, artist_name); // Get the artist
 
 				if (artist == NULL) {
 					continue;
 				}
+
+				KotoIndexedAlbum *album = koto_indexed_album_new(artist, full_path);
 
 				koto_indexed_artist_add_album(artist, album); // Add the album
 				g_free(artist_name);
