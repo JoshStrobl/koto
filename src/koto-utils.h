@@ -23,5 +23,6 @@ G_BEGIN_DECLS
 
 GtkWidget* koto_utils_create_image_from_filepath(gchar *filepath, gchar *fallback_icon, guint width, guint height);
 gchar* koto_utils_get_filename_without_extension(gchar *filename);
+gchar* koto_utils_unquote_string(gchar *s);
 
 G_END_DECLS

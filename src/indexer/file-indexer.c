@@ -20,7 +20,11 @@
 #include <stdio.h>
 #include <sys/stat.h>
 #include <taglib/tag_c.h>
+#include "../db/db.h"
 #include "structs.h"
+#include "../koto-utils.h"
+
+extern sqlite3 *koto_db;
 
 struct _KotoIndexedLibrary {
 	GObject parent_instance;
@@ -79,7 +83,7 @@ void koto_indexed_library_add_artist(KotoIndexedLibrary *self, KotoIndexedArtist
 		return;
 	}
 
-	g_hash_table_insert(self->music_artists, artist_name, artist); // Add the artist
+	g_hash_table_insert(self->music_artists, artist_name, artist); // Add the artist by its name (this needs to be done so we can get the artist when doing the depth of 2 indexing for the album)
 }
 
 KotoIndexedArtist* koto_indexed_library_get_artist(KotoIndexedLibrary *self, gchar *artist_name) {
@@ -131,13 +135,146 @@ static void koto_indexed_library_set_property(GObject *obj, guint prop_id, const
 
 	switch (prop_id) {
 		case PROP_PATH:
-			self->path = g_strdup(g_value_get_string(val));
-			start_indexing(self);
+			koto_indexed_library_set_path(self, g_strdup(g_value_get_string(val)));
 			break;
 		default:
 			G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, prop_id, spec);
 			break;
 	}
+}
+
+void koto_indexed_library_set_path(KotoIndexedLibrary *self, gchar *path) {
+	if (path == NULL) {
+		return;
+	}
+
+	if (self->path != NULL) {
+		g_free(self->path);
+	}
+
+	self->path = path;
+
+	if (created_new_db) { // Created new database
+		start_indexing(self); // Start index operation
+	} else { // Have existing database
+		read_from_db(self); // Read from the database
+	}
+}
+
+int process_artists(void *data, int num_columns, char **fields, char **column_names) {
+	(void) num_columns; (void) column_names; // Don't need these
+
+	KotoIndexedLibrary *self = (KotoIndexedLibrary*) data;
+
+	gchar *artist_uuid = g_strdup(koto_utils_unquote_string(fields[0])); // First column is UUID
+	gchar *artist_path = g_strdup(koto_utils_unquote_string(fields[1])); // Second column is path
+	gchar *artist_name = g_strdup(koto_utils_unquote_string(fields[3])); // Fourth column is artist name
+
+	KotoIndexedArtist *artist = koto_indexed_artist_new_with_uuid(artist_uuid); // Create our artist with the UUID
+
+	g_object_set(artist,
+		"path", artist_path, // Set path
+		"name", artist_name,  // Set name
+	NULL);
+
+	koto_indexed_library_add_artist(self, artist); // Add the artist
+
+	int albums_rc = sqlite3_exec(koto_db, g_strdup_printf("SELECT * FROM albums WHERE artist_id=\"%s\"", artist_uuid), process_albums, artist, NULL); // Process our albums
+	if (albums_rc != SQLITE_OK) { // Failed to get our albums
+		g_critical("Failed to read our albums: %s", sqlite3_errmsg(koto_db));
+		return 1;
+	}
+
+	g_free(artist_uuid);
+	g_free(artist_path);
+	g_free(artist_name);
+
+	return 0;
+}
+
+int process_albums(void *data, int num_columns, char **fields, char **column_names) {
+	(void) num_columns; (void) column_names; // Don't need these
+
+	KotoIndexedArtist *artist = (KotoIndexedArtist*) data;
+
+	gchar *album_uuid = g_strdup(koto_utils_unquote_string(fields[0]));
+	gchar *path = g_strdup(koto_utils_unquote_string(fields[1]));
+	gchar *artist_uuid = g_strdup(koto_utils_unquote_string(fields[2]));
+	gchar *album_name = g_strdup(koto_utils_unquote_string(fields[3]));
+	gchar *album_art = (fields[4] != NULL) ? g_strdup(koto_utils_unquote_string(fields[4])) : NULL;
+
+	KotoIndexedAlbum *album = koto_indexed_album_new_with_uuid(artist, album_uuid); // Create our album
+
+	g_object_set(album,
+		"path", path, // Set the path
+		"name", album_name, // Set name
+		"art-path", album_art, // Set art path if any
+	NULL);
+
+	koto_indexed_artist_add_album(artist, album); // Add the album
+
+	int tracks_rc = sqlite3_exec(koto_db, g_strdup_printf("SELECT * FROM tracks WHERE album_id=\"%s\"", album_uuid), process_tracks, album, NULL); // Process our tracks
+	if (tracks_rc != SQLITE_OK) { // Failed to get our tracks
+		g_critical("Failed to read our tracks: %s", sqlite3_errmsg(koto_db));
+		return 1;
+	}
+
+	g_free(album_uuid);
+	g_free(path);
+	g_free(artist_uuid);
+	g_free(album_name);
+
+	if (album_art != NULL) {
+		g_free(album_art);
+	}
+
+	return 0;
+}
+
+int process_tracks(void *data, int num_columns, char **fields, char **column_names) {
+	(void) num_columns; (void) column_names; // Don't need these
+
+	KotoIndexedAlbum *album = (KotoIndexedAlbum*) data;
+	gchar *track_uuid = g_strdup(koto_utils_unquote_string(fields[0]));
+	gchar *path = g_strdup(koto_utils_unquote_string(fields[1]));
+	gchar *artist_uuid = g_strdup(koto_utils_unquote_string(fields[3]));
+	gchar *album_uuid = g_strdup(koto_utils_unquote_string(fields[4]));
+	gchar *file_name = g_strdup(koto_utils_unquote_string(fields[5]));
+	gchar *name = g_strdup(koto_utils_unquote_string(fields[6]));
+	guint *disc_num = (guint*) g_ascii_strtoull(fields[6], NULL, 10);
+	guint *position = (guint*) g_ascii_strtoull(fields[7], NULL, 10);
+
+	KotoIndexedFile *file = koto_indexed_file_new_with_uuid(track_uuid); // Create our file
+	g_object_set(file,
+		"artist-uuid", artist_uuid,
+		"album-uuid", album_uuid,
+		"path", path,
+		"file-name", file_name,
+		"parsed-name", name,
+		"cd", disc_num,
+		"position", position,
+	NULL);
+
+	koto_indexed_album_add_file(album, file); // Add the file
+
+	g_free(track_uuid);
+	g_free(path);
+	g_free(artist_uuid);
+	g_free(album_uuid);
+	g_free(file_name);
+	g_free(name);
+
+	return 0;
+}
+
+void read_from_db(KotoIndexedLibrary *self) {
+	int artists_rc = sqlite3_exec(koto_db, "SELECT * FROM artists", process_artists, self, NULL); // Process our artists
+	if (artists_rc != SQLITE_OK) { // Failed to get our artists
+		g_critical("Failed to read our artists: %s", sqlite3_errmsg(koto_db));
+		return;
+	}
+
+	g_hash_table_foreach(self->music_artists, output_artists, NULL);
 }
 
 void start_indexing(KotoIndexedLibrary *self) {
@@ -167,6 +304,13 @@ void start_indexing(KotoIndexedLibrary *self) {
 	index_folder(self, self->path, 0);
 	magic_close(self->magic_cookie);
 	g_hash_table_foreach(self->music_artists, output_artists, NULL);
+}
+
+KotoIndexedLibrary* koto_indexed_library_new(const gchar *path) {
+	return g_object_new(KOTO_TYPE_INDEXED_LIBRARY,
+		"path", path,
+		NULL
+	);
 }
 
 void index_folder(KotoIndexedLibrary *self, gchar *path, guint depth) {
@@ -228,8 +372,8 @@ void output_artists(gpointer artist_key, gpointer artist_ptr, gpointer data) {
 	KotoIndexedArtist *artist = (KotoIndexedArtist*) artist_ptr;
 	gchar *artist_name;
 	g_object_get(artist, "name", &artist_name, NULL);
-
 	g_debug("Artist: %s", artist_name);
+
 	GList *albums = koto_indexed_artist_get_albums(artist); // Get the albums for this artist
 
 	if (albums != NULL) {
@@ -266,11 +410,4 @@ void output_artists(gpointer artist_key, gpointer artist_ptr, gpointer data) {
 			g_free(parsed_name);
 		}
 	}
-}
-
-KotoIndexedLibrary* koto_indexed_library_new(const gchar *path) {
-	return g_object_new(KOTO_TYPE_INDEXED_LIBRARY,
-		"path", path,
-		NULL
-	);
 }

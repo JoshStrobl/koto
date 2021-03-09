@@ -30,7 +30,7 @@ static void on_activate (GtkApplication *app) {
 
 	window = gtk_application_get_active_window (app);
 	if (window == NULL) {
-		window = g_object_new(KOTO_TYPE_WINDOW,  "application", app,  "default-width", 600,  "default-height", 300, NULL);
+		window = g_object_new(KOTO_TYPE_WINDOW,  "application", app,  "default-width", 1200,  "default-height", 675, NULL);
 	}
 
 	gtk_window_present(window);
@@ -38,11 +38,6 @@ static void on_activate (GtkApplication *app) {
 
 static void on_shutdown(GtkApplication *app) {
 	(void) app;
-
-	if (koto_db != NULL) {
-		g_message("Have a db?");
-	}
-
 	close_db(); // Close the database
 }
 

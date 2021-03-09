@@ -22,13 +22,19 @@
 #include <unistd.h>
 #include "db.h"
 
+int KOTO_DB_SUCCESS = 0;
+int KOTO_DB_NEW = 1;
+int KOTO_DB_FAIL = 2;
+
 sqlite3 *koto_db = NULL;
+gchar *db_filepath = NULL;
+gboolean created_new_db = FALSE;
 
 void close_db() {
 	sqlite3_close(koto_db);
 }
 
-void create_db_tables() {
+int create_db_tables() {
 	char *tables_creation_queries = "CREATE TABLE IF NOT EXISTS artists(id string UNIQUE PRIMARY KEY, path string, type int, name string, art_path string);"
 		"CREATE TABLE IF NOT EXISTS albums(id string UNIQUE PRIMARY KEY, path string, artist_id string, name string, art_path string, FOREIGN KEY(artist_id) REFERENCES artists(id) ON DELETE CASCADE);"
 		"CREATE TABLE IF NOT EXISTS tracks(id string UNIQUE PRIMARY KEY, path string, type int, artist_id string, album_id string, file_name string, name string, disc int, position int, FOREIGN KEY(artist_id) REFERENCES artists(id) ON DELETE CASCADE);";
@@ -39,9 +45,11 @@ void create_db_tables() {
 	if (rc != SQLITE_OK) {
 		g_critical("Failed to create required tables: %s", create_tables_errmsg);
 	}
+
+	return (rc == SQLITE_OK) ? KOTO_DB_SUCCESS : KOTO_DB_FAIL;
 }
 
-void enable_foreign_keys() {
+int enable_foreign_keys() {
 	gchar *enable_foreign_keys_err = NULL;
 	int rc = sqlite3_exec(koto_db, "PRAGMA foreign_keys = ON;", 0, 0, &enable_foreign_keys_err);
 
@@ -50,24 +58,55 @@ void enable_foreign_keys() {
 	}
 
 	g_free(enable_foreign_keys_err);
+	return (rc == SQLITE_OK) ? KOTO_DB_SUCCESS : KOTO_DB_FAIL;
 }
 
-void open_db() {
-	const gchar *data_home = g_get_user_data_dir();
-	gchar *data_dir = g_build_path(G_DIR_SEPARATOR_S, data_home, "com.github.joshstrobl.koto", NULL);
-	mkdir(data_home, 0755);
-	mkdir(data_dir, 0755);
-	chown(data_dir, getuid(), getgid());
-
-	gchar *db_path = g_build_filename(data_dir, "db", NULL); // Build out our path using XDG_DATA_HOME (e.g. .local/share/) + our namespace + db as the file name
-	int rc = sqlite3_open(db_path, &koto_db);
-
-	if (rc) {
-		g_critical("Failed to open or create database: %s", sqlite3_errmsg(koto_db));
-		return;
+gchar* get_db_path() {
+	if (db_filepath == NULL) {
+		const gchar *data_home = g_get_user_data_dir();
+		gchar *data_dir = g_build_path(G_DIR_SEPARATOR_S, data_home, "com.github.joshstrobl.koto", NULL);
+		db_filepath = g_build_filename(g_strdup(data_dir), "db", NULL); // Build out our path using XDG_DATA_HOME (e.g. .local/share/) + our namespace + db as the file name
+		g_free(data_dir);
 	}
 
-	enable_foreign_keys(); // Enable FOREIGN KEY support
+	return db_filepath;
+}
 
-	create_db_tables(); // Attempt to create our database tables
+int have_existing_db() {
+	struct stat db_stat;
+	int success = stat(get_db_path(), &db_stat);
+
+	return ((success == 0) && S_ISREG(db_stat.st_mode)) ? 0 : 1;
+}
+
+int open_db() {
+	int ret = KOTO_DB_SUCCESS; // Default to last return being SUCCESS
+
+	if (have_existing_db() == 1) { // If we do not have an existing DB
+		const gchar *data_home = g_get_user_data_dir();
+		const gchar *data_dir = g_path_get_dirname(db_filepath);
+		mkdir(data_home, 0755);
+		mkdir(data_dir, 0755);
+		chown(data_dir, getuid(), getgid());
+		ret = KOTO_DB_NEW;
+	}
+
+	if (sqlite3_open(db_filepath, &koto_db) != KOTO_DB_SUCCESS) { // If we failed to open the database file
+		g_critical("Failed to open or create database: %s", sqlite3_errmsg(koto_db));
+		return KOTO_DB_FAIL;
+	}
+
+	if (enable_foreign_keys() != KOTO_DB_SUCCESS) { // If we failed to enable foreign keys
+		return KOTO_DB_FAIL;
+	}
+
+	if (create_db_tables() != KOTO_DB_SUCCESS) {// Failed to create our database tables
+		return KOTO_DB_FAIL;
+	}
+
+	if (ret == KOTO_DB_NEW) {
+		created_new_db = TRUE;
+	}
+
+	return ret;
 }

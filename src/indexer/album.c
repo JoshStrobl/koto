@@ -156,8 +156,6 @@ void koto_indexed_album_commit(KotoIndexedAlbum *self) {
 		self->art_path
 	);
 
-	g_debug("INSERT query for album: %s", commit_op);
-
 	gchar *commit_op_errmsg = NULL;
 	int rc = sqlite3_exec(koto_db, commit_op, 0, 0, &commit_op_errmsg);
 
@@ -372,7 +370,6 @@ void koto_indexed_album_set_album_art(KotoIndexedAlbum *self, const gchar *album
 
 	self->art_path = g_strdup(album_art);
 
-	g_message("Set album art to %s", album_art);
 	self->has_album_art = TRUE;
 }
 
@@ -478,7 +475,7 @@ KotoIndexedAlbum* koto_indexed_album_new(KotoIndexedArtist *artist, const gchar 
 KotoIndexedAlbum* koto_indexed_album_new_with_uuid(KotoIndexedArtist *artist, const gchar *uuid) {
 	return g_object_new(KOTO_TYPE_INDEXED_ALBUM,
 		"artist", artist,
-		"uuid", uuid,
+		"uuid", g_strdup(uuid),
 		"do-initial-index", FALSE,
 		NULL
 	);

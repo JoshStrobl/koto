@@ -49,9 +49,9 @@ enum {
 	PROP_ALBUM_UUID,
 	PROP_UUID,
 	PROP_DO_INITIAL_INDEX,
-	PROP_PATH,
 	PROP_ARTIST,
 	PROP_ALBUM,
+	PROP_PATH,
 	PROP_FILE_NAME,
 	PROP_PARSED_NAME,
 	PROP_CD,
@@ -182,14 +182,14 @@ static void koto_indexed_file_get_property(GObject *obj, guint prop_id, GValue *
 		case PROP_UUID:
 			g_value_set_string(val, self->uuid);
 			break;
-		case PROP_PATH:
-			g_value_set_string(val, self->path);
-			break;
 		case PROP_ARTIST:
 			g_value_set_string(val, self->artist);
 			break;
 		case PROP_ALBUM:
 			g_value_set_string(val, self->album);
+			break;
+		case PROP_PATH:
+			g_value_set_string(val, self->path);
 			break;
 		case PROP_FILE_NAME:
 			g_value_set_string(val, self->file_name);
@@ -228,14 +228,14 @@ static void koto_indexed_file_set_property(GObject *obj, guint prop_id, const GV
 		case PROP_DO_INITIAL_INDEX:
 			self->do_initial_index = g_value_get_boolean(val);
 			break;
-		case PROP_PATH:
-			koto_indexed_file_update_path(self, g_value_get_string(val)); // Update the path
-			break;
 		case PROP_ARTIST:
 			self->artist = g_strdup(g_value_get_string(val));
 			break;
 		case PROP_ALBUM:
 			self->album = g_strdup(g_value_get_string(val));
+			break;
+		case PROP_PATH:
+			koto_indexed_file_update_path(self, g_value_get_string(val)); // Update the path
 			break;
 		case PROP_FILE_NAME:
 			koto_indexed_file_set_file_name(self, g_strdup(g_value_get_string(val))); // Update the file name
@@ -279,8 +279,6 @@ void koto_indexed_file_commit(KotoIndexedFile *self) {
 		GPOINTER_TO_INT((int*) self->position)
 	);
 
-	g_debug("INSERT query for file: %s", commit_op);
-
 	gchar *commit_op_errmsg = NULL;
 	int rc = sqlite3_exec(koto_db, commit_op, 0, 0, &commit_op_errmsg);
 
@@ -299,34 +297,16 @@ void koto_indexed_file_parse_name(KotoIndexedFile *self) {
 		gchar **split = g_strsplit(copied_file_name, self->artist, -1); // Split whenever we encounter the artist
 		copied_file_name = g_strjoinv("", split); // Remove the artist
 		g_strfreev(split);
-	}
 
-	if (self->artist != NULL && strcmp(self->album, "") != 0) { // If we have album set
-		gchar **split = g_strsplit(copied_file_name, self->album, -1); // Split whenever we encounter the album
-		copied_file_name = g_strjoinv("", split); // Remove the album
+		split = g_strsplit(copied_file_name, g_utf8_strdown(self->artist, -1), -1); // Lowercase album name and split by that
+		copied_file_name = g_strjoinv("", split); // Remove the artist
 		g_strfreev(split);
-
-		split = g_strsplit(copied_file_name, g_utf8_strdown(self->album, g_utf8_strlen(self->album, -1)), -1); // Split whenever we encounter the album lowercased
-		copied_file_name = g_strjoin("", split, NULL); // Remove the lowercased album
-		g_strfreev(split);
-	}
-
-	if (g_str_match_string(copied_file_name, "-", FALSE)) { // Contains - like a heathen
-		gchar **split = g_strsplit(copied_file_name, " - ", -1); // Split whenever we encounter " - "
-		copied_file_name = g_strjoin("", split, NULL); // Remove entirely
-		g_strfreev(split);
-
-		if (g_str_match_string(copied_file_name, "-", FALSE)) { // If we have any stragglers
-			split = g_strsplit(copied_file_name, "-", -1); // Split whenever we encounter -
-			copied_file_name = g_strjoin("", split, NULL); // Remove entirely
-			g_strfreev(split);
-		}
 	}
 
 	gchar *file_without_ext = koto_utils_get_filename_without_extension(copied_file_name);
 	g_free(copied_file_name);
 
-	gchar **split = g_regex_split_simple("^([\\d]+)\\s", file_without_ext, G_REGEX_JAVASCRIPT_COMPAT, 0);
+	gchar **split = g_regex_split_simple("^([\\d]+)", file_without_ext, G_REGEX_JAVASCRIPT_COMPAT, 0);
 
 	if (g_strv_length(split) > 1) { // Has positional info at the beginning of the file
 		gchar *num = split[1];
@@ -345,6 +325,14 @@ void koto_indexed_file_parse_name(KotoIndexedFile *self) {
 		}
 	}
 
+	g_strfreev(split);
+
+	split = g_strsplit(file_without_ext, " - ", -1); // Split whenever we encounter " - "
+	file_without_ext = g_strjoinv("", split); // Remove entirely
+	g_strfreev(split);
+
+	split = g_strsplit(file_without_ext, "-", -1); // Split whenever we encounter -
+	file_without_ext = g_strjoinv("", split); // Remove entirely
 	g_strfreev(split);
 
 	koto_indexed_file_set_parsed_name(self, file_without_ext);
@@ -367,7 +355,7 @@ void koto_indexed_file_set_file_name(KotoIndexedFile *self, gchar *new_file_name
 	self->file_name = g_strdup(new_file_name);
 	g_object_notify_by_pspec(G_OBJECT(self), props[PROP_FILE_NAME]);
 
-	if (!self->acquired_metadata_from_id3) { // Haven't acquired our information from ID3
+	if (!self->acquired_metadata_from_id3 && self->do_initial_index) { // Haven't acquired our information from ID3
 		koto_indexed_file_parse_name(self); // Update our parsed name
 	}
 }
@@ -417,6 +405,8 @@ void koto_indexed_file_update_metadata(KotoIndexedFile *self) {
 			self->artist = g_strdup(taglib_tag_artist((tag))); // Set the artist
 			self->album = g_strdup(taglib_tag_album(tag)); // Set the album
 			koto_indexed_file_set_position(self, (uint) taglib_tag_track(tag)); // Get the track, convert to uint and cast as a pointer
+		} else {
+			koto_indexed_file_set_file_name(self, g_path_get_basename(self->path)); // Update our file name
 		}
 
 		taglib_tag_free_strings(); // Free strings
@@ -433,8 +423,10 @@ void koto_indexed_file_update_path(KotoIndexedFile *self, const gchar *new_path)
 	}
 
 	self->path = g_strdup(new_path); // Duplicate the path and set it
-	koto_indexed_file_update_metadata(self); // Attempt to get ID3 info
-	koto_indexed_file_set_file_name(self, g_path_get_basename(self->path)); // Update our file name
+
+	if (self->do_initial_index) {
+		koto_indexed_file_update_metadata(self); // Attempt to get ID3 info
+	}
 
 	g_object_notify_by_pspec(G_OBJECT(self), props[PROP_PATH]);
 }
@@ -443,15 +435,27 @@ KotoIndexedFile* koto_indexed_file_new(KotoIndexedAlbum *album, const gchar *pat
 	KotoIndexedArtist *artist;
 
 	gchar *artist_uuid;
+	gchar *artist_name;
 	gchar *album_uuid;
+	gchar *album_name;
 
 	g_object_get(album, "artist", &artist, NULL); // Get the artist from our Album
-	g_object_get(artist, "uuid", &artist_uuid, NULL); // Get the artist UUID from the artist
-	g_object_get(album, "uuid", &album_uuid, NULL); // Get the album UUID from the album
+	g_object_get(artist,
+		"name", &artist_name,
+		"uuid", &artist_uuid, // Get the artist UUID from the artist
+	NULL);
+
+	g_object_get(album,
+		"name", &album_name,
+		"uuid", &album_uuid, // Get the album UUID from the album
+	NULL);
 
 	KotoIndexedFile *file = g_object_new(KOTO_TYPE_INDEXED_FILE,
 		"artist-uuid", artist_uuid,
 		"album-uuid", album_uuid,
+		"artist", artist_name,
+		"album", album_name,
+		"do-initial-index", TRUE,
 		"uuid", g_uuid_string_random(),
 		"path", path,
 		"cd", cd,
@@ -464,7 +468,7 @@ KotoIndexedFile* koto_indexed_file_new(KotoIndexedAlbum *album, const gchar *pat
 
 KotoIndexedFile* koto_indexed_file_new_with_uuid(const gchar *uuid) {
 	return g_object_new(KOTO_TYPE_INDEXED_FILE,
-		"uuid", uuid,
+		"uuid", g_strdup(uuid),
 		NULL
 	);
 }

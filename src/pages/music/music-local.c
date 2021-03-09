@@ -97,12 +97,35 @@ static void koto_page_music_local_set_property(GObject *obj, guint prop_id, cons
 static void koto_page_music_local_init(KotoPageMusicLocal *self) {
 	self->lib = NULL;
 	self->constructed = FALSE;
+
+	gtk_widget_add_css_class(GTK_WIDGET(self), "page-music-local");
+	gtk_widget_set_hexpand(GTK_WIDGET(self), TRUE);
+	gtk_widget_set_vexpand(GTK_WIDGET(self), TRUE);
+
+	self->scrolled_window = gtk_scrolled_window_new();
+	gtk_scrolled_window_set_min_content_width(GTK_SCROLLED_WINDOW(self->scrolled_window), 300);
+	gtk_scrolled_window_set_propagate_natural_height(GTK_SCROLLED_WINDOW(self->scrolled_window), FALSE);
+	gtk_widget_add_css_class(self->scrolled_window, "artist-list");
+	gtk_widget_set_vexpand(self->scrolled_window, TRUE); // Expand our scrolled window
+	gtk_box_prepend(GTK_BOX(self), self->scrolled_window);
+
+	self->artist_list = gtk_list_box_new(); // Create our artist list
+	g_signal_connect(GTK_LIST_BOX(self->artist_list), "row-activated", G_CALLBACK(koto_page_music_local_handle_artist_click), self);
+	gtk_list_box_set_activate_on_single_click(GTK_LIST_BOX(self->artist_list), TRUE);
+	gtk_list_box_set_selection_mode(GTK_LIST_BOX(self->artist_list), GTK_SELECTION_BROWSE);
+	gtk_list_box_set_sort_func(GTK_LIST_BOX(self->artist_list), koto_page_music_local_sort_artists, NULL, NULL); // Add our sort function
+	gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(self->scrolled_window), self->artist_list);
+
+	self->stack = gtk_stack_new(); // Create a new stack
+	gtk_stack_set_transition_duration(GTK_STACK(self->stack), 400);
+	gtk_stack_set_transition_type(GTK_STACK(self->stack), GTK_STACK_TRANSITION_TYPE_SLIDE_LEFT);
+	gtk_widget_set_hexpand(self->stack, TRUE);
+	gtk_widget_set_vexpand(self->stack, TRUE);
+	gtk_box_append(GTK_BOX(self), self->stack);
 }
 
 static void koto_page_music_local_constructed(GObject *obj) {
 	KotoPageMusicLocal *self = KOTO_PAGE_MUSIC_LOCAL(obj);
-	gtk_widget_add_css_class(GTK_WIDGET(self), "page-music-local");
-	gtk_widget_set_hexpand(GTK_WIDGET(self), TRUE);
 
 	G_OBJECT_CLASS (koto_page_music_local_parent_class)->constructed (obj);
 	self->constructed = TRUE;
@@ -144,63 +167,17 @@ void koto_page_music_local_set_library(KotoPageMusicLocal *self, KotoIndexedLibr
 		return;
 	}
 
-	if (!GTK_IS_SCROLLED_WINDOW(self->scrolled_window)) {
-		self->scrolled_window = gtk_scrolled_window_new();
-		gtk_widget_add_css_class(self->scrolled_window, "artist-list");
-		gtk_box_prepend(GTK_BOX(self), self->scrolled_window);
+	GHashTableIter artist_list_iter;
+	gpointer artist_key;
+	gpointer artist_data;
+
+	GHashTable *artists = koto_indexed_library_get_artists(self->lib); // Get the artists
+
+	g_hash_table_iter_init(&artist_list_iter, artists);
+	while (g_hash_table_iter_next(&artist_list_iter, &artist_key, &artist_data)) { // For each of the music artists
+		KotoIndexedArtist *artist = (KotoIndexedArtist*) artist_data; // Cast our data as a KotoIndexedArtist
+		koto_page_music_local_add_artist(self, artist);
 	}
-
-	if (GTK_IS_LIST_BOX(self->artist_list)) { // artist list is a list box
-		gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(self->scrolled_window), NULL); // Set to null to maybe clear?
-		g_object_unref(self->artist_list); // Unref
-	}
-
-	if (GTK_IS_STACK(self->stack)) { // Stack is a Stack
-		gtk_box_remove(GTK_BOX(self), GTK_WIDGET(self->stack)); // Destroy to free references
-	}
-
-	self->artist_list = gtk_list_box_new(); // Create our artist list
-
-	gboolean list_created = GTK_IS_LIST_BOX(self->artist_list);
-
-	if (list_created) { // Successfully created our list
-		g_signal_connect(GTK_LIST_BOX(self->artist_list), "row-activated", G_CALLBACK(koto_page_music_local_handle_artist_click), self);
-		gtk_list_box_set_activate_on_single_click(GTK_LIST_BOX(self->artist_list), TRUE);
-		gtk_list_box_set_selection_mode(GTK_LIST_BOX(self->artist_list), GTK_SELECTION_BROWSE);
-		gtk_list_box_set_sort_func(GTK_LIST_BOX(self->artist_list), koto_page_music_local_sort_artists, NULL, NULL); // Add our sort function
-		gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(self->scrolled_window), self->artist_list);
-		gtk_widget_show(GTK_WIDGET(self->artist_list));
-	}
-
-	gtk_scrolled_window_set_min_content_width(GTK_SCROLLED_WINDOW(self->scrolled_window), 300);
-	gtk_scrolled_window_set_propagate_natural_height(GTK_SCROLLED_WINDOW(self->scrolled_window), FALSE);
-	gtk_widget_set_size_request(GTK_WIDGET(self->artist_list), 300, -1);
-
-	self->stack = gtk_stack_new(); // Create a new stack
-	gtk_stack_set_transition_duration(GTK_STACK(self->stack), 400);
-	gtk_stack_set_transition_type(GTK_STACK(self->stack), GTK_STACK_TRANSITION_TYPE_SLIDE_LEFT);
-	gtk_widget_set_hexpand(self->stack, TRUE);
-	gboolean stack_created = GTK_IS_STACK(self->stack);
-
-	if (list_created && stack_created) {
-		GHashTableIter artist_list_iter;
-		gpointer artist_key;
-		gpointer artist_data;
-
-		GHashTable *artists = koto_indexed_library_get_artists(self->lib); // Get the artists
-
-		g_hash_table_iter_init(&artist_list_iter, artists);
-		while (g_hash_table_iter_next(&artist_list_iter, &artist_key, &artist_data)) { // For each of the music artists
-			KotoIndexedArtist *artist = (KotoIndexedArtist*) artist_data; // Cast our data as a KotoIndexedArtist
-			koto_page_music_local_add_artist(self, artist);
-		}
-	}
-
-	if (stack_created) { // Successfully created our stack
-		gtk_box_append(GTK_BOX(self), self->stack);
-	}
-
-	gtk_widget_show(GTK_WIDGET(self));
 }
 
 int koto_page_music_local_sort_artists(GtkListBoxRow *artist1, GtkListBoxRow *artist2, gpointer user_data) {

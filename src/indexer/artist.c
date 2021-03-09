@@ -95,8 +95,6 @@ void koto_indexed_artist_commit(KotoIndexedArtist *self) {
 		self->artist_name
 	);
 
-	g_debug("INSERT query for artist: %s", commit_op);
-
 	gchar *commit_opt_errmsg = NULL;
 	int rc = sqlite3_exec(koto_db, commit_op, 0, 0, &commit_opt_errmsg);
 
@@ -161,20 +159,20 @@ void koto_indexed_artist_add_album(KotoIndexedArtist *self, KotoIndexedAlbum *al
 		self->albums = g_hash_table_new(g_str_hash, g_str_equal); // Create a new HashTable
 	}
 
-	gchar *album_name;
-	g_object_get(album, "name", &album_name, NULL);
+	gchar *album_uuid;
+	g_object_get(album, "uuid", &album_uuid, NULL);
 
-	if (album_name == NULL) {
-		g_free(album_name);
+	if (album_uuid == NULL) {
+		g_free(album_uuid);
 		return;
 	}
 
-	if (g_hash_table_contains(self->albums, album_name)) { // If we have this album already
-		g_free(album_name);
+	if (g_hash_table_contains(self->albums, album_uuid)) { // If we have this album already
+		g_free(album_uuid);
 		return;
 	}
 
-	g_hash_table_insert(self->albums, album_name, album); // Add the album
+	g_hash_table_insert(self->albums, album_uuid, album); // Add the album
 }
 
 GList* koto_indexed_artist_get_albums(KotoIndexedArtist *self) {
@@ -183,6 +181,14 @@ GList* koto_indexed_artist_get_albums(KotoIndexedArtist *self) {
 	}
 
 	return g_hash_table_get_values(self->albums);
+}
+
+KotoIndexedAlbum* koto_indexed_artist_get_album(KotoIndexedArtist *self, gchar *album_uuid) {
+	if (self->albums == NULL) {
+		return NULL;
+	}
+
+	return g_hash_table_lookup(self->albums, album_uuid);
 }
 
 void koto_indexed_artist_remove_album(KotoIndexedArtist *self, KotoIndexedAlbum *album) {
@@ -194,19 +200,10 @@ void koto_indexed_artist_remove_album(KotoIndexedArtist *self, KotoIndexedAlbum 
 		self->albums = g_hash_table_new(g_str_hash, g_str_equal); // Create a new HashTable
 	}
 
-	gchar *album_name;
-	g_object_get(album, "name", &album_name, NULL);
+	gchar *album_uuid;
+	g_object_get(album, "uuid", &album_uuid, NULL);
 
-	g_hash_table_remove(self->albums, album_name);
-}
-
-void koto_indexed_artist_remove_album_by_name(KotoIndexedArtist *self, gchar *album_name) {
-	if (album_name == NULL) {
-		return;
-	}
-
-	KotoIndexedAlbum *album = g_hash_table_lookup(self->albums, album_name); // Get the album
-	koto_indexed_artist_remove_album(self, album);
+	g_hash_table_remove(self->albums, album_uuid);
 }
 
 void koto_indexed_artist_update_path(KotoIndexedArtist *self, const gchar *new_path) {
@@ -249,7 +246,7 @@ KotoIndexedArtist* koto_indexed_artist_new(const gchar *path) {
 
 KotoIndexedArtist* koto_indexed_artist_new_with_uuid(const gchar *uuid) {
 	return g_object_new(KOTO_TYPE_INDEXED_ARTIST,
-		"uuid", uuid,
+		"uuid", g_strdup(uuid),
 		NULL
 	);
 }

@@ -73,6 +73,8 @@ static void koto_window_init (KotoWindow *self) {
 	if (GTK_IS_STACK(self->pages)) { // Created our stack successfully
 		gtk_stack_set_transition_type(GTK_STACK(self->pages), GTK_STACK_TRANSITION_TYPE_OVER_LEFT_RIGHT);
 		gtk_box_append(GTK_BOX(self->content_layout), self->pages);
+		gtk_widget_set_hexpand(self->pages, TRUE);
+		gtk_widget_set_vexpand(self->pages, TRUE);
 	}
 
 	gtk_box_prepend(GTK_BOX(self->primary_layout), self->content_layout);
@@ -87,13 +89,12 @@ static void koto_window_init (KotoWindow *self) {
 	gtk_window_set_child(GTK_WINDOW(self), self->primary_layout);
 #ifdef GDK_WINDOWING_X11
 	set_optimal_default_window_size(self);
-#else
-	gtk_widget_set_size_request(GTK_WIDGET(self), 1200, 675);
 #endif
 	gtk_window_set_title(GTK_WINDOW(self), "Koto");
 	gtk_window_set_icon_name(GTK_WINDOW(self), "audio-headphones");
 	gtk_window_set_startup_id(GTK_WINDOW(self), "com.github.joshstrobl.koto");
 
+	gtk_widget_queue_draw(self->content_layout);
 	g_thread_new("load-library", (void*) load_library, self);
 }
 
@@ -124,13 +125,14 @@ void load_library(KotoWindow *self) {
 		self->library = lib;
 		KotoPageMusicLocal* l = koto_page_music_local_new();
 
-		if (GTK_IS_WIDGET(l)) { // Created our local library page
-			koto_page_music_local_set_library(l, self->library);
-			gtk_stack_add_named(GTK_STACK(self->pages), GTK_WIDGET(l), "music.local");
-			// TODO: Remove and do some fancy state loading
-			gtk_stack_set_visible_child_name(GTK_STACK(self->pages), "music.local");
-		}
+		// TODO: Remove and do some fancy state loading
+		gtk_stack_add_named(GTK_STACK(self->pages), GTK_WIDGET(l), "music.local");
+		gtk_stack_set_visible_child_name(GTK_STACK(self->pages), "music.local");
+		gtk_widget_show(self->pages); // Do not remove this. Will cause sporadic hiding of the local page content otherwise.
+		koto_page_music_local_set_library(l, self->library);
 	}
+
+	g_thread_exit(0);
 }
 
 void set_optimal_default_window_size(KotoWindow *self) {

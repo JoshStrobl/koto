@@ -54,7 +54,7 @@ gchar* koto_utils_get_filename_without_extension(gchar *filename) {
 			} else {
 				gchar *tmp_copy = g_strdup(new_parsed_name);
 				g_free(new_parsed_name); // Free the old
-				new_parsed_name = g_strdup(g_strjoin(".", tmp_copy, split[i], NULL)); // Join the two strings with a . again and duplicate it, setting it to our new_parsed_name
+				new_parsed_name = g_strjoin(".", tmp_copy, split[i], NULL); // Join the two strings with a . again and duplicate it, setting it to our new_parsed_name
 				g_free(tmp_copy); // Free our temporary copy
 			}
 		}
@@ -66,4 +66,20 @@ gchar* koto_utils_get_filename_without_extension(gchar *filename) {
 	gchar *stripped_file_name = g_strstrip(g_strdup(trimmed_file_name)); // Strip leading and trailing whitespace
 	g_free(trimmed_file_name);
 	return stripped_file_name;
+}
+
+gchar* koto_utils_unquote_string(gchar *s) {
+	gchar *new_s = NULL;
+
+	if (g_str_has_prefix(s, "'") && g_str_has_suffix(s, "'")) { // Begins and ends with '
+		new_s = g_utf8_substring(s, 1, g_utf8_strlen(s, -1)-1); // Start at 1 and end at n-1
+	} else {
+		new_s = g_strdup(s);
+	}
+
+	gchar **split_on_double_single = g_strsplit(new_s, "''", -1); // Split on instances of ''
+	new_s = g_strjoinv("'", split_on_double_single); // Rejoin as '
+	g_strfreev(split_on_double_single); // Free our array
+
+	return new_s;
 }

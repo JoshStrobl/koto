@@ -15,9 +15,17 @@
  * limitations under the License.
  */
 
+#include <glib-2.0/glib.h>
 #include <sqlite3.h>
 
-void close_db();
-void enable_foreign_keys();
-void open_db();
+extern int KOTO_DB_SUCCESS;
+extern int KOTO_DB_NEW;
+extern int KOTO_DB_FAIL;
+extern gboolean created_new_db;
 
+void close_db();
+int create_db_tables();
+gchar* get_db_path();
+int enable_foreign_keys();
+int have_existing_db();
+int open_db();

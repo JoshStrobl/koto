@@ -47,6 +47,11 @@ void koto_indexed_library_add_artist(KotoIndexedLibrary *self, KotoIndexedArtist
 KotoIndexedArtist* koto_indexed_library_get_artist(KotoIndexedLibrary *self, gchar* artist_name);
 GHashTable* koto_indexed_library_get_artists(KotoIndexedLibrary *self);
 void koto_indexed_library_remove_artist(KotoIndexedLibrary *self, KotoIndexedArtist *artist);
+void koto_indexed_library_set_path(KotoIndexedLibrary *self, gchar *path);
+int process_artists(void *data, int num_columns, char **fields, char **column_names);
+int process_albums(void *data, int num_columns, char **fields, char **column_names);
+int process_tracks(void *data, int num_columns, char **fields, char **column_names);
+void read_from_db(KotoIndexedLibrary *self);
 void start_indexing(KotoIndexedLibrary *self);
 void index_folder(KotoIndexedLibrary *self, gchar *path, guint depth);
 
@@ -61,6 +66,7 @@ void koto_indexed_artist_add_album(KotoIndexedArtist *self, KotoIndexedAlbum *al
 void koto_indexed_artist_commit(KotoIndexedArtist *self);
 guint koto_indexed_artist_find_album_with_name(gconstpointer *album_data, gconstpointer *album_name_data);
 GList* koto_indexed_artist_get_albums(KotoIndexedArtist *self);
+KotoIndexedAlbum* koto_indexed_artist_get_album(KotoIndexedArtist *self, gchar *album_uuid);
 void koto_indexed_artist_remove_album(KotoIndexedArtist *self, KotoIndexedAlbum *album);
 void koto_indexed_artist_remove_album_by_name(KotoIndexedArtist *self, gchar *album_name);
 void koto_indexed_artist_set_artist_name(KotoIndexedArtist *self, const gchar *artist_name);
