@@ -10,6 +10,8 @@ koto_sources = [
 	'pages/music/artist-view.c',
 	'pages/music/disc-view.c',
 	'pages/music/music-local.c',
+	'playlist/current.c',
+	'playlist/playlist.c',
 	'main.c',
 	'koto-button.c',
 	'koto-expander.c',

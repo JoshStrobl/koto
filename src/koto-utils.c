@@ -21,7 +21,7 @@
 GtkWidget* koto_utils_create_image_from_filepath(gchar *filepath, gchar *fallback_icon, guint width, guint height) {
 	GtkWidget* image = NULL;
 
-	if (strcmp(filepath, "") != 0) { // If we have a filepath
+	if ((filepath != NULL) && (strcmp(filepath, "") != 0)) { // If we have a filepath
 		if (g_file_test(filepath, G_FILE_TEST_EXISTS)) { // File exists
 			image = gtk_image_new_from_file(filepath); // Load from the filepath
 		}

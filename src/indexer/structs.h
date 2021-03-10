@@ -90,6 +90,7 @@ void koto_indexed_album_remove_file(KotoIndexedAlbum *self, KotoIndexedFile *fil
 void koto_indexed_album_remove_file_by_name(KotoIndexedAlbum *self, const gchar *file_name);
 void koto_indexed_album_set_album_art(KotoIndexedAlbum *self, const gchar *album_art);
 void koto_indexed_album_set_album_name(KotoIndexedAlbum *self, const gchar *album_name);
+void koto_indexed_album_set_as_current_playlist(KotoIndexedAlbum *self);
 void koto_indexed_album_update_path(KotoIndexedAlbum *self, const gchar *path);
 
 /**

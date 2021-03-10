@@ -19,9 +19,12 @@
 #include <magic.h>
 #include <sqlite3.h>
 #include <stdio.h>
+#include "../playlist/current.h"
+#include "../playlist/playlist.h"
 #include "structs.h"
 #include "koto-utils.h"
 
+extern KotoCurrentPlaylist *current_playlist;
 extern sqlite3 *koto_db;
 
 struct _KotoIndexedAlbum {
@@ -406,6 +409,23 @@ void koto_indexed_album_set_album_name(KotoIndexedAlbum *self, const gchar *albu
 	}
 
 	self->name = g_strdup(album_name);
+}
+
+void koto_indexed_album_set_as_current_playlist(KotoIndexedAlbum *self) {
+	if (self->files == NULL) { // No files to add to the playlist
+		return;
+	}
+
+	KotoPlaylist *new_album_playlist = koto_playlist_new(); // Create a new playlist
+
+	GList *tracks_list_uuids = g_hash_table_get_keys(self->files); // Get the UUIDs
+	for (guint i = 0; i < g_list_length(tracks_list_uuids); i++) { // For each of the tracks
+		koto_playlist_add_track_by_uuid(new_album_playlist, (gchar*) g_list_nth_data(tracks_list_uuids, i)); // Add the UUID
+	}
+
+	g_list_free(tracks_list_uuids); // Free the uuids
+
+	koto_current_playlist_set_playlist(current_playlist, new_album_playlist); // Set our new current playlist
 }
 
 static void koto_indexed_album_set_property(GObject *obj, guint prop_id, const GValue *val, GParamSpec *spec){

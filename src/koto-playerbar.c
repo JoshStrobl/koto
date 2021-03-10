@@ -125,7 +125,7 @@ void koto_playerbar_create_playback_details(KotoPlayerBar* bar) {
 
 void koto_playerbar_create_primary_controls(KotoPlayerBar* bar) {
 	bar->back_button = koto_button_new_with_icon("", "media-skip-backward-symbolic", NULL, KOTO_BUTTON_PIXBUF_SIZE_NORMAL);
-	bar->play_pause_button = koto_button_new_with_icon("", "media-playback-start-symbolic", NULL, KOTO_BUTTON_PIXBUF_SIZE_LARGE); // TODO: Have this take in a state and switch to a different icon if necessary
+	bar->play_pause_button = koto_button_new_with_icon("", "media-playback-start-symbolic", "media-playback-pause-symbolic", KOTO_BUTTON_PIXBUF_SIZE_LARGE); // TODO: Have this take in a state and switch to a different icon if necessary
 	bar->forward_button = koto_button_new_with_icon("", "media-skip-forward-symbolic", NULL, KOTO_BUTTON_PIXBUF_SIZE_NORMAL);
 
 	if (bar->back_button != NULL) {

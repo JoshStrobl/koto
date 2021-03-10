@@ -27,8 +27,12 @@
 
 				& > .album-list {
 					& > flowboxchild > .album-view {
-						& > image {
+						& > overlay {
 							margin-right: $itempadding;
+
+							& > revealer > box { // Inner controls
+								background-color: rgba(0,0,0,0.75);
+							}
 						}
 
 						& > box {

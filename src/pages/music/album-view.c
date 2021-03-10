@@ -17,6 +17,7 @@
 
 #include <glib-2.0/glib.h>
 #include <gtk-4.0/gtk/gtk.h>
+#include "../../koto-button.h"
 #include "../../indexer/structs.h"
 #include "album-view.h"
 #include "disc-view.h"
@@ -29,6 +30,12 @@ struct _KotoAlbumView {
 	GtkWidget *main;
 	GtkWidget *album_tracks_box;
 	GtkWidget *discs;
+
+	GtkWidget *album_overlay_art;
+	GtkWidget *album_overlay_container;
+	GtkWidget *album_overlay_controls;
+	GtkWidget *album_overlay_revealer;
+	KotoButton *play_pause_button;
 
 	GtkWidget *album_label;
 	GHashTable *cd_to_track_listbox;
@@ -79,6 +86,36 @@ static void koto_album_view_init(KotoAlbumView *self) {
 
 	gtk_box_append(GTK_BOX(self->main), self->album_tracks_box); // Add the tracks box to the art info combo box
 	gtk_box_append(GTK_BOX(self->album_tracks_box), self->discs); // Add the discs list box to the albums tracks box
+
+	self->album_overlay_container = gtk_overlay_new(); // Create our overlay container
+	gtk_widget_set_valign(self->album_overlay_container, GTK_ALIGN_START); // Align to top of list for album
+
+	self->album_overlay_art = koto_utils_create_image_from_filepath(NULL, "audio-x-generic-symbolic", 220, 220);
+	gtk_overlay_set_child(GTK_OVERLAY(self->album_overlay_container), self->album_overlay_art); // Add our art as the "child" for the overlay
+
+	self->album_overlay_revealer = gtk_revealer_new(); // Create a new revealer
+	gtk_revealer_set_transition_type(GTK_REVEALER(self->album_overlay_revealer), GTK_REVEALER_TRANSITION_TYPE_CROSSFADE);
+	gtk_revealer_set_transition_duration(GTK_REVEALER(self->album_overlay_revealer), 400);
+
+	self->album_overlay_controls = gtk_center_box_new(); // Create a center box for the controls
+
+	self->play_pause_button = koto_button_new_with_icon("", "media-playback-start-symbolic", "media-playback-pause-symbolic", KOTO_BUTTON_PIXBUF_SIZE_NORMAL);
+	gtk_center_box_set_center_widget(GTK_CENTER_BOX(self->album_overlay_controls), GTK_WIDGET(self->play_pause_button));
+
+	gtk_revealer_set_child(GTK_REVEALER(self->album_overlay_revealer), self->album_overlay_controls);
+	koto_album_view_hide_overlay_controls(NULL, self); // Hide by default
+
+	gtk_overlay_add_overlay(GTK_OVERLAY(self->album_overlay_container), self->album_overlay_revealer); // Add our revealer as the overlay
+	gtk_box_prepend(GTK_BOX(self->main), self->album_overlay_container); // Add our album overlay container
+
+	GtkEventController *motion_controller = gtk_event_controller_motion_new(); // Create our new motion event controller to track mouse leave and enter
+	g_signal_connect(motion_controller, "enter", G_CALLBACK(koto_album_view_show_overlay_controls), self);
+	g_signal_connect(motion_controller, "leave", G_CALLBACK(koto_album_view_hide_overlay_controls), self);
+	gtk_widget_add_controller(self->album_overlay_container, motion_controller);
+
+	GtkGesture *controller = gtk_gesture_click_new(); // Create a new GtkGestureClick
+	g_signal_connect(controller, "pressed", G_CALLBACK(koto_album_view_toggle_album_playback), self);
+	gtk_widget_add_controller(GTK_WIDGET(self->play_pause_button), GTK_EVENT_CONTROLLER(controller));
 }
 
 GtkWidget* koto_album_view_get_main(KotoAlbumView *self) {
@@ -115,6 +152,12 @@ void koto_album_view_add_track_to_listbox(KotoIndexedAlbum *self, KotoIndexedFil
 	(void) self; (void) file;
 }
 
+void koto_album_view_hide_overlay_controls(GtkEventControllerFocus *controller, gpointer data) {
+	(void) controller;
+	KotoAlbumView* self = data;
+	gtk_revealer_set_reveal_child(GTK_REVEALER(self->album_overlay_revealer), FALSE);
+}
+
 void koto_album_view_set_album(KotoAlbumView *self, KotoIndexedAlbum *album) {
 	if (album == NULL) {
 		return;
@@ -123,10 +166,7 @@ void koto_album_view_set_album(KotoAlbumView *self, KotoIndexedAlbum *album) {
 	self->album = album;
 
 	gchar *album_art = koto_indexed_album_get_album_art(self->album); // Get the art for the album
-	GtkWidget *art_image = koto_utils_create_image_from_filepath(album_art, "audio-x-generic-symbolic", 220, 220);
-	gtk_widget_set_valign(art_image, GTK_ALIGN_START); // Align to top of list for album
-
-	gtk_box_prepend(GTK_BOX(self->main), art_image); // Prepend the image to the art info box
+	gtk_image_set_from_file(GTK_IMAGE(self->album_overlay_art), album_art);
 
 	gchar *album_name;
 	g_object_get(album, "name", &album_name, NULL); // Get the album name
@@ -164,6 +204,13 @@ void koto_album_view_set_album(KotoAlbumView *self, KotoIndexedAlbum *album) {
 	g_hash_table_destroy(discs);
 }
 
+void koto_album_view_show_overlay_controls(GtkEventControllerFocus *controller, gpointer data) {
+	(void) controller;
+	KotoAlbumView* self = data;
+
+	gtk_revealer_set_reveal_child(GTK_REVEALER(self->album_overlay_revealer), TRUE);
+}
+
 int koto_album_view_sort_discs(GtkListBoxRow *disc1, GtkListBoxRow *disc2, gpointer user_data) {
 	(void) user_data;
 	KotoDiscView *disc1_item = KOTO_DISC_VIEW(gtk_list_box_row_get_child(disc1));
@@ -182,6 +229,14 @@ int koto_album_view_sort_discs(GtkListBoxRow *disc1, GtkListBoxRow *disc2, gpoin
 	} else {
 		return 1;
 	}
+}
+
+void koto_album_view_toggle_album_playback(GtkGestureClick *gesture, int n_press, double x, double y, gpointer data) {
+	(void) gesture; (void) n_press; (void) x; (void) y;
+	KotoAlbumView* self = data;
+
+	koto_button_show_image(KOTO_BUTTON(self->play_pause_button), TRUE);
+	koto_indexed_album_set_as_current_playlist(self->album); // Set as the current playlist
 }
 
 KotoAlbumView* koto_album_view_new(KotoIndexedAlbum *album) {
