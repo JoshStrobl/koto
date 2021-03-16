@@ -16,11 +16,13 @@
  */
 
 #include <glib/gi18n.h>
+#include "db/cartographer.h"
 #include "db/db.h"
 
 #include "koto-config.h"
 #include "koto-window.h"
 
+extern KotoCartographer *koto_maps;
 extern sqlite3 *koto_db;
 
 static void on_activate (GtkApplication *app) {
@@ -51,7 +53,9 @@ int main (int argc, char *argv[]) {
 	textdomain (GETTEXT_PACKAGE);
 
 	gtk_init();
+	koto_maps = koto_cartographer_new(); // Create our new cartographer and their collection of maps
 	open_db(); // Open our database
+
 	app = gtk_application_new ("com.github.joshstrobl.koto", G_APPLICATION_FLAGS_NONE);
 	g_signal_connect (app, "activate", G_CALLBACK (on_activate), NULL);
 	g_signal_connect(app, "shutdown", G_CALLBACK(on_shutdown), NULL);

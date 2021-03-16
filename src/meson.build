@@ -1,6 +1,7 @@
 add_project_arguments('-Db_sanitize=address', language: 'c')
 
 koto_sources = [
+	'db/cartographer.c',
 	'db/db.c',
 	'indexer/album.c',
 	'indexer/artist.c',
