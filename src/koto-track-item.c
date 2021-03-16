@@ -21,7 +21,7 @@
 
 struct _KotoTrackItem {
 	GtkBox parent_instance;
-	KotoIndexedFile *track;
+	KotoIndexedTrack *track;
 
 	GtkWidget *track_label;
 	KotoButton *add_to_playlist_button;
@@ -54,7 +54,7 @@ static void koto_track_item_class_init(KotoTrackItemClass *c) {
 		"track",
 		"Track",
 		"Track",
-		KOTO_TYPE_INDEXED_FILE,
+		KOTO_TYPE_INDEXED_TRACK,
 		G_PARAM_CONSTRUCT|G_PARAM_EXPLICIT_NOTIFY|G_PARAM_READWRITE
 	);
 
@@ -79,7 +79,7 @@ static void koto_track_item_set_property(GObject *obj, guint prop_id, const GVal
 
 	switch (prop_id) {
 		case PROP_TRACK:
-			koto_track_item_set_track(self, (KotoIndexedFile*) g_value_get_object(val));
+			koto_track_item_set_track(self, (KotoIndexedTrack*) g_value_get_object(val));
 			break;
 		default:
 			G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, prop_id, spec);
@@ -101,21 +101,21 @@ static void koto_track_item_init(KotoTrackItem *self) {
 	gtk_box_append(GTK_BOX(self), GTK_WIDGET(self->add_to_playlist_button));
 }
 
-void koto_track_item_set_track(KotoTrackItem *self, KotoIndexedFile *file) {
-	if (file == NULL) { // Not a file
+void koto_track_item_set_track(KotoTrackItem *self, KotoIndexedTrack *track) {
+	if (track == NULL) { // Not a track
 		return;
 	}
 
-	self->track = file;
+	self->track = track;
 	gchar *track_name;
 	g_object_get(self->track, "parsed-name", &track_name, NULL);
 	gtk_label_set_text(GTK_LABEL(self->track_label), track_name); // Update the text
 }
 
-KotoTrackItem* koto_track_item_new(KotoIndexedFile *file) {
+KotoTrackItem* koto_track_item_new(KotoIndexedTrack *track) {
 	return g_object_new(KOTO_TYPE_TRACK_ITEM,
 		"track",
-		file,
+		track,
 		NULL
 	);
 }

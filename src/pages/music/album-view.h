@@ -29,7 +29,7 @@ G_DECLARE_FINAL_TYPE(KotoAlbumView, koto_album_view, KOTO, ALBUM_VIEW, GObject)
 
 KotoAlbumView* koto_album_view_new(KotoIndexedAlbum *album);
 GtkWidget* koto_album_view_get_main(KotoAlbumView *self);
-void koto_album_view_add_track_to_listbox(KotoIndexedAlbum *self, KotoIndexedFile *file);
+void koto_album_view_add_track_to_listbox(KotoIndexedAlbum *self, KotoIndexedTrack *track);
 void koto_album_view_hide_overlay_controls(GtkEventControllerFocus *controller, gpointer data);
 void koto_album_view_set_album(KotoAlbumView *self, KotoIndexedAlbum *album);
 void koto_album_view_show_overlay_controls(GtkEventControllerFocus *controller, gpointer data);

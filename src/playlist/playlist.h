@@ -35,7 +35,7 @@ G_DECLARE_FINAL_TYPE(KotoPlaylist, koto_playlist, KOTO, PLAYLIST, GObject);
 
 KotoPlaylist* koto_playlist_new();
 KotoPlaylist* koto_playlist_new_with_uuid(const gchar *uuid);
-void koto_playlist_add_track(KotoPlaylist *self, KotoIndexedFile *file);
+void koto_playlist_add_track(KotoPlaylist *self, KotoIndexedTrack *track);
 void koto_playlist_add_track_by_uuid(KotoPlaylist *self, const gchar *uuid);
 void koto_playlist_debug(KotoPlaylist *self);
 void koto_playlist_debug_foreach(gpointer data, gpointer user_data);
@@ -48,7 +48,7 @@ GQueue* koto_playlist_get_tracks(KotoPlaylist *self);
 gchar* koto_playlist_get_uuid(KotoPlaylist *self);
 gchar* koto_playlist_go_to_next(KotoPlaylist *self);
 gchar* koto_playlist_go_to_previous(KotoPlaylist *self);
-void koto_playlist_remove_track(KotoPlaylist *self, KotoIndexedFile *file);
+void koto_playlist_remove_track(KotoPlaylist *self, KotoIndexedTrack *track);
 void koto_playlist_remove_track_by_uuid(KotoPlaylist *self, gchar *uuid);
 void koto_playlist_set_artwork(KotoPlaylist *self, const gchar *path);
 void koto_playlist_save_state(KotoPlaylist *self);

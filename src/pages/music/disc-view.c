@@ -145,16 +145,16 @@ void koto_disc_view_set_album(KotoDiscView *self, KotoIndexedAlbum *album) {
 
 	GList *t;
 	for (t = koto_indexed_album_get_files(self->album); t != NULL; t = t->next) { // For each file / track
-		KotoIndexedFile *file = (KotoIndexedFile*) t->data;
+		KotoIndexedTrack *track = (KotoIndexedTrack*) t->data;
 
 		guint *disc_number;
-		g_object_get(file, "cd", &disc_number, NULL); // get the disc number
+		g_object_get(track, "cd", &disc_number, NULL); // get the disc number
 
 		if (GPOINTER_TO_UINT(self->disc_number) != GPOINTER_TO_UINT(disc_number)) { // Track does not belong to this CD
 			continue;
 		}
 
-		KotoTrackItem *track_item = koto_track_item_new(file); // Create our new track item
+		KotoTrackItem *track_item = koto_track_item_new(track); // Create our new track item
 		gtk_list_box_prepend(GTK_LIST_BOX(self->list), GTK_WIDGET(track_item)); // Add to our tracks list box
 	}
 }
@@ -181,8 +181,8 @@ int koto_album_view_sort_tracks(GtkListBoxRow *track1, GtkListBoxRow *track2, gp
 	KotoTrackItem *track1_item = KOTO_TRACK_ITEM(gtk_list_box_row_get_child(track1));
 	KotoTrackItem *track2_item = KOTO_TRACK_ITEM(gtk_list_box_row_get_child(track2));
 
-	KotoIndexedFile *track1_file;
-	KotoIndexedFile *track2_file;
+	KotoIndexedTrack *track1_file;
+	KotoIndexedTrack *track2_file;
 
 	g_object_get(track1_item, "track", &track1_file, NULL);
 	g_object_get(track2_item, "track", &track2_file, NULL);

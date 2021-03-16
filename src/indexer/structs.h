@@ -34,8 +34,8 @@ G_DECLARE_FINAL_TYPE (KotoIndexedArtist, koto_indexed_artist, KOTO, INDEXED_ARTI
 #define KOTO_TYPE_INDEXED_ALBUM koto_indexed_album_get_type()
 G_DECLARE_FINAL_TYPE (KotoIndexedAlbum, koto_indexed_album, KOTO, INDEXED_ALBUM, GObject);
 
-#define KOTO_TYPE_INDEXED_FILE koto_indexed_file_get_type()
-G_DECLARE_FINAL_TYPE(KotoIndexedFile, koto_indexed_file, KOTO, INDEXED_FILE, GObject);
+#define KOTO_TYPE_INDEXED_TRACK koto_indexed_track_get_type()
+G_DECLARE_FINAL_TYPE(KotoIndexedTrack, koto_indexed_track, KOTO, INDEXED_TRACK, GObject);
 
 /**
  * Library Functions
@@ -80,14 +80,14 @@ void output_artists(gpointer artist_key, gpointer artist_ptr, gpointer data);
 KotoIndexedAlbum* koto_indexed_album_new(KotoIndexedArtist *artist, const gchar *path);
 KotoIndexedAlbum* koto_indexed_album_new_with_uuid(KotoIndexedArtist *artist, const gchar *uuid);
 
-void koto_indexed_album_add_file(KotoIndexedAlbum *self, KotoIndexedFile *file);
+void koto_indexed_album_add_file(KotoIndexedAlbum *self, KotoIndexedTrack *track);
 void koto_indexed_album_commit(KotoIndexedAlbum *self);
 void koto_indexed_album_find_album_art(KotoIndexedAlbum *self);
 void koto_indexed_album_find_tracks(KotoIndexedAlbum *self, magic_t magic_cookie, const gchar *path);
 gchar* koto_indexed_album_get_album_art(KotoIndexedAlbum *self);
 GList* koto_indexed_album_get_files(KotoIndexedAlbum *self);
-void koto_indexed_album_remove_file(KotoIndexedAlbum *self, KotoIndexedFile *file);
-void koto_indexed_album_remove_file_by_name(KotoIndexedAlbum *self, const gchar *file_name);
+void koto_indexed_album_remove_file(KotoIndexedAlbum *self, KotoIndexedTrack *track);
+void koto_indexed_album_remove_file_by_name(KotoIndexedAlbum *self, const gchar *track_name);
 void koto_indexed_album_set_album_art(KotoIndexedAlbum *self, const gchar *album_art);
 void koto_indexed_album_set_album_name(KotoIndexedAlbum *self, const gchar *album_name);
 void koto_indexed_album_set_as_current_playlist(KotoIndexedAlbum *self);
@@ -97,16 +97,16 @@ void koto_indexed_album_update_path(KotoIndexedAlbum *self, const gchar *path);
  * File / Track Functions
 **/
 
-KotoIndexedFile* koto_indexed_file_new(KotoIndexedAlbum *album, const gchar *path, guint *cd);
-KotoIndexedFile* koto_indexed_file_new_with_uuid(const gchar *uuid);
+KotoIndexedTrack* koto_indexed_track_new(KotoIndexedAlbum *album, const gchar *path, guint *cd);
+KotoIndexedTrack* koto_indexed_track_new_with_uuid(const gchar *uuid);
 
-void koto_indexed_file_commit(KotoIndexedFile *self);
-void koto_indexed_file_parse_name(KotoIndexedFile *self);
-void koto_indexed_file_set_file_name(KotoIndexedFile *self, gchar *new_file_name);
-void koto_indexed_file_set_cd(KotoIndexedFile *self, guint cd);
-void koto_indexed_file_set_parsed_name(KotoIndexedFile *self, gchar *new_parsed_name);
-void koto_indexed_file_set_position(KotoIndexedFile *self, guint pos);
-void koto_indexed_file_update_metadata(KotoIndexedFile *self);
-void koto_indexed_file_update_path(KotoIndexedFile *self, const gchar *new_path);
+void koto_indexed_track_commit(KotoIndexedTrack *self);
+void koto_indexed_track_parse_name(KotoIndexedTrack *self);
+void koto_indexed_track_set_file_name(KotoIndexedTrack *self, gchar *new_file_name);
+void koto_indexed_track_set_cd(KotoIndexedTrack *self, guint cd);
+void koto_indexed_track_set_parsed_name(KotoIndexedTrack *self, gchar *new_parsed_name);
+void koto_indexed_track_set_position(KotoIndexedTrack *self, guint pos);
+void koto_indexed_track_update_metadata(KotoIndexedTrack *self);
+void koto_indexed_track_update_path(KotoIndexedTrack *self, const gchar *new_path);
 
 G_END_DECLS

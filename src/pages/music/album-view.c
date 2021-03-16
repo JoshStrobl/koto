@@ -148,8 +148,8 @@ static void koto_album_view_set_property(GObject *obj, guint prop_id, const GVal
 	}
 }
 
-void koto_album_view_add_track_to_listbox(KotoIndexedAlbum *self, KotoIndexedFile *file) {
-	(void) self; (void) file;
+void koto_album_view_add_track_to_listbox(KotoIndexedAlbum *self, KotoIndexedTrack *track) {
+	(void) self; (void) track;
 }
 
 void koto_album_view_hide_overlay_controls(GtkEventControllerFocus *controller, gpointer data) {
@@ -179,9 +179,9 @@ void koto_album_view_set_album(KotoAlbumView *self, KotoIndexedAlbum *album) {
 	GList *tracks = koto_indexed_album_get_files(album); // Get the tracks for this album
 
 	for (guint i = 0; i < g_list_length(tracks); i++) {
-		KotoIndexedFile *file = (KotoIndexedFile*) g_list_nth_data(tracks, i); // Get the
+		KotoIndexedTrack *track = (KotoIndexedTrack*) g_list_nth_data(tracks, i); // Get the
 		guint *disc_number;
-		g_object_get(file, "cd", &disc_number, NULL);
+		g_object_get(track, "cd", &disc_number, NULL);
 		gchar *disc_num_as_str = g_strdup_printf("%u", GPOINTER_TO_UINT(disc_number));
 
 		if (g_hash_table_contains(discs, disc_num_as_str)) { // Already have this added

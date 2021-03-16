@@ -27,7 +27,7 @@ G_BEGIN_DECLS
 
 G_DECLARE_FINAL_TYPE(KotoTrackItem, koto_track_item, KOTO, TRACK_ITEM, GtkBox)
 
-KotoTrackItem* koto_track_item_new(KotoIndexedFile *file);
-void koto_track_item_set_track(KotoTrackItem *self, KotoIndexedFile *file);
+KotoTrackItem* koto_track_item_new(KotoIndexedTrack *track);
+void koto_track_item_set_track(KotoTrackItem *self, KotoIndexedTrack *track);
 
 G_END_DECLS

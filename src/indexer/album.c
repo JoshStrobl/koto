@@ -35,7 +35,7 @@ struct _KotoIndexedAlbum {
 
 	gchar *name;
 	gchar *art_path;
-	GHashTable *files;
+	GHashTable *tracks;
 
 	gboolean has_album_art;
 	gboolean do_initial_index;
@@ -120,24 +120,24 @@ static void koto_indexed_album_init(KotoIndexedAlbum *self) {
 	self->has_album_art = FALSE;
 }
 
-void koto_indexed_album_add_file(KotoIndexedAlbum *self, KotoIndexedFile *file) {
-	if (file == NULL) { // Not a file
+void koto_indexed_album_add_file(KotoIndexedAlbum *self, KotoIndexedTrack *track) {
+	if (track == NULL) { // Not a file
 		return;
 	}
 
-	if (self->files == NULL) { // No HashTable yet
-		self->files = g_hash_table_new(g_str_hash, g_str_equal); // Create a new HashTable
+	if (self->tracks == NULL) { // No HashTable yet
+		self->tracks = g_hash_table_new(g_str_hash, g_str_equal); // Create a new HashTable
 	}
 
-	gchar *file_name;
-	g_object_get(file, "parsed-name", &file_name, NULL);
+	gchar *track_name;
+	g_object_get(track, "parsed-name", &track_name, NULL);
 
-	if (g_hash_table_contains(self->files, file_name)) { // If we have this file already
-		g_free(file_name);
+	if (g_hash_table_contains(self->tracks, track_name)) { // If we have this file already
+		g_free(track_name);
 		return;
 	}
 
-	g_hash_table_insert(self->files, file_name, file); // Add the file
+	g_hash_table_insert(self->tracks, track_name, track); // Add the file
 }
 
 void koto_indexed_album_commit(KotoIndexedAlbum *self) {
@@ -288,8 +288,8 @@ void koto_indexed_album_find_tracks(KotoIndexedAlbum *self, magic_t magic_cookie
 			gchar **possible_cd_split = g_strsplit(full_path, appended_slash_to_path, -1); // Split based on the album path
 			guint *cd = (guint*) 1;
 
-			gchar *file_with_cd_sep = g_strdup(possible_cd_split[1]); // Duplicate
-			gchar **split_on_cd = g_strsplit(file_with_cd_sep, G_DIR_SEPARATOR_S, -1); // Split based on separator (e.g. / )
+			gchar *track_with_cd_sep = g_strdup(possible_cd_split[1]); // Duplicate
+			gchar **split_on_cd = g_strsplit(track_with_cd_sep, G_DIR_SEPARATOR_S, -1); // Split based on separator (e.g. / )
 
 			if (g_strv_length(split_on_cd) > 1) {
 				gchar *cdd = g_strdup(split_on_cd[0]);
@@ -306,15 +306,15 @@ void koto_indexed_album_find_tracks(KotoIndexedAlbum *self, magic_t magic_cookie
 			}
 
 			g_strfreev(split_on_cd);
-			g_free(file_with_cd_sep);
+			g_free(track_with_cd_sep);
 
 			g_strfreev(possible_cd_split);
 			g_free(appended_slash_to_path);
 
-			KotoIndexedFile *file = koto_indexed_file_new(self, full_path, cd);
+			KotoIndexedTrack *track = koto_indexed_track_new(self, full_path, cd);
 
-			if (file != NULL) { // Is a file
-				koto_indexed_album_add_file(self, file); // Add our file
+			if (track != NULL) { // Is a file
+				koto_indexed_album_add_file(self, track); // Add our file
 			}
 		}
 
@@ -355,11 +355,11 @@ gchar* koto_indexed_album_get_album_art(KotoIndexedAlbum *self) {
 }
 
 GList* koto_indexed_album_get_files(KotoIndexedAlbum *self) {
-	if (self->files == NULL) { // No HashTable yet
-		self->files = g_hash_table_new(g_str_hash, g_str_equal); // Create a new HashTable
+	if (self->tracks == NULL) { // No HashTable yet
+		self->tracks = g_hash_table_new(g_str_hash, g_str_equal); // Create a new HashTable
 	}
 
-	return g_hash_table_get_values(self->files);
+	return g_hash_table_get_values(self->tracks);
 }
 
 void koto_indexed_album_set_album_art(KotoIndexedAlbum *self, const gchar *album_art) {
@@ -376,27 +376,27 @@ void koto_indexed_album_set_album_art(KotoIndexedAlbum *self, const gchar *album
 	self->has_album_art = TRUE;
 }
 
-void koto_indexed_album_remove_file(KotoIndexedAlbum *self, KotoIndexedFile *file) {
-	if (file == NULL) { // Not a file
+void koto_indexed_album_remove_file(KotoIndexedAlbum *self, KotoIndexedTrack *track) {
+	if (track == NULL) { // Not a file
 		return;
 	}
 
-	if (self->files == NULL) { // No HashTable yet
-		self->files = g_hash_table_new(g_str_hash, g_str_equal); // Create a new HashTable
+	if (self->tracks == NULL) { // No HashTable yet
+		self->tracks = g_hash_table_new(g_str_hash, g_str_equal); // Create a new HashTable
 	}
 
-	gchar *file_name;
-	g_object_get(file, "parsed-name", &file_name, NULL);
-	g_hash_table_remove(self->files, file_name);
+	gchar *track_name;
+	g_object_get(track, "parsed-name", &track_name, NULL);
+	g_hash_table_remove(self->tracks, track_name);
 }
 
-void koto_indexed_album_remove_file_by_name(KotoIndexedAlbum *self, const gchar *file_name) {
-	if (file_name == NULL) {
+void koto_indexed_album_remove_file_by_name(KotoIndexedAlbum *self, const gchar *track_name) {
+	if (track_name == NULL) {
 		return;
 	}
 
-	KotoIndexedFile *file = g_hash_table_lookup(self->files, file_name); // Get the files
-	koto_indexed_album_remove_file(self, file);
+	KotoIndexedTrack *track = g_hash_table_lookup(self->tracks, track_name); // Get the files
+	koto_indexed_album_remove_file(self, track);
 }
 
 void koto_indexed_album_set_album_name(KotoIndexedAlbum *self, const gchar *album_name) {
@@ -412,13 +412,13 @@ void koto_indexed_album_set_album_name(KotoIndexedAlbum *self, const gchar *albu
 }
 
 void koto_indexed_album_set_as_current_playlist(KotoIndexedAlbum *self) {
-	if (self->files == NULL) { // No files to add to the playlist
+	if (self->tracks == NULL) { // No files to add to the playlist
 		return;
 	}
 
 	KotoPlaylist *new_album_playlist = koto_playlist_new(); // Create a new playlist
 
-	GList *tracks_list_uuids = g_hash_table_get_keys(self->files); // Get the UUIDs
+	GList *tracks_list_uuids = g_hash_table_get_keys(self->tracks); // Get the UUIDs
 	for (guint i = 0; i < g_list_length(tracks_list_uuids); i++) { // For each of the tracks
 		koto_playlist_add_track_by_uuid(new_album_playlist, (gchar*) g_list_nth_data(tracks_list_uuids, i)); // Add the UUID
 	}

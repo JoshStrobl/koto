@@ -122,9 +122,9 @@ static void koto_playlist_init(KotoPlaylist *self) {
 	self->tracks = g_queue_new(); // Set as an empty GQueue
 }
 
-void koto_playlist_add_track(KotoPlaylist *self, KotoIndexedFile *file) {
+void koto_playlist_add_track(KotoPlaylist *self, KotoIndexedTrack *track) {
 	gchar *uuid = NULL;
-	g_object_get(file, "uuid", &uuid, NULL); // Get the UUID
+	g_object_get(track, "uuid", &uuid, NULL); // Get the UUID
 	koto_playlist_add_track_by_uuid(self, uuid); // Add by the file's UUID
 }
 
@@ -195,15 +195,16 @@ gchar* koto_playlist_go_to_previous(KotoPlaylist *self) {
 	return koto_playlist_get_current_uuid(self); // Return the new UUID
 }
 
-void koto_playlist_remove_track(KotoPlaylist *self, KotoIndexedFile *file) {
-	gchar *file_uuid = NULL;
-	g_object_get(file, "uuid", &file_uuid, NULL);
+void koto_playlist_remove_track(KotoPlaylist *self, KotoIndexedTrack *track) {
+	gchar *track_uuid = NULL;
+	g_object_get(track, "uuid", &track_uuid, NULL);
 
-	if (file_uuid == NULL) {
-		return;
+	if (track_uuid != NULL) {
+		koto_playlist_remove_track_by_uuid(self, track_uuid);
+		g_free(track_uuid);
 	}
 
-	koto_playlist_remove_track_by_uuid(self, file_uuid);
+	return;
 }
 
 void koto_playlist_remove_track_by_uuid(KotoPlaylist *self, gchar *uuid) {

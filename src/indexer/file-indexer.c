@@ -244,8 +244,8 @@ int process_tracks(void *data, int num_columns, char **fields, char **column_nam
 	guint *disc_num = (guint*) g_ascii_strtoull(fields[6], NULL, 10);
 	guint *position = (guint*) g_ascii_strtoull(fields[7], NULL, 10);
 
-	KotoIndexedFile *file = koto_indexed_file_new_with_uuid(track_uuid); // Create our file
-	g_object_set(file,
+	KotoIndexedTrack *track = koto_indexed_track_new_with_uuid(track_uuid); // Create our file
+	g_object_set(track,
 		"artist-uuid", artist_uuid,
 		"album-uuid", album_uuid,
 		"path", path,
@@ -255,7 +255,7 @@ int process_tracks(void *data, int num_columns, char **fields, char **column_nam
 		"position", position,
 	NULL);
 
-	koto_indexed_album_add_file(album, file); // Add the file
+	koto_indexed_album_add_file(album, track); // Add the file
 
 	g_free(track_uuid);
 	g_free(path);
@@ -389,16 +389,16 @@ void output_artists(gpointer artist_key, gpointer artist_ptr, gpointer data) {
 		g_debug("Album Art: %s", artwork);
 		g_debug("Album Name: %s", album_name);
 
-		GList *files = koto_indexed_album_get_files(album); // Get the files for the album
-		GList *f;
+		GList *tracks = koto_indexed_album_get_files(album); // Get the files for the album
+		GList *t;
 
-		for (f = files; f != NULL; f = f->next) {
-			KotoIndexedFile *file = (KotoIndexedFile*) f->data;
+		for (t = tracks; t != NULL; t = t->next) {
+			KotoIndexedTrack *track = (KotoIndexedTrack*) t->data;
 			gchar *filepath;
 			gchar *parsed_name;
 			guint *pos;
 
-			g_object_get(file,
+			g_object_get(track,
 				"path", &filepath,
 				"parsed-name", &parsed_name,
 				"position", &pos,
