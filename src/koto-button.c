@@ -338,6 +338,10 @@ void koto_button_set_text(KotoButton *self, gchar *text) {
 }
 
 void koto_button_show_image(KotoButton *self, gboolean use_alt) {
+	if (!KOTO_IS_BUTTON(self)) {
+		return;
+	}
+
 	if (use_alt && ((self->alt_icon_name == NULL) || (strcmp(self->alt_icon_name, "") == 0))) { // Don't have an alt icon set
 		return;
 	} else if (!use_alt && ((self->icon_name == NULL) || (strcmp(self->icon_name, "") == 0))) { // Don't have icon set

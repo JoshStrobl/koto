@@ -58,8 +58,7 @@ static void koto_expander_get_property(GObject *obj, guint prop_id, GValue *val,
 static void koto_expander_set_property(GObject *obj, guint prop_id, const GValue *val, GParamSpec *spec);
 
 static void koto_expander_class_init(KotoExpanderClass *c) {
-	GObjectClass *gobject_class;
-	gobject_class = G_OBJECT_CLASS(c);
+	GObjectClass *gobject_class = G_OBJECT_CLASS(c);
 	gobject_class->set_property = koto_expander_set_property;
 	gobject_class->get_property = koto_expander_get_property;
 

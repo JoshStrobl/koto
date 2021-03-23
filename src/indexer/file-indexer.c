@@ -20,10 +20,12 @@
 #include <stdio.h>
 #include <sys/stat.h>
 #include <taglib/tag_c.h>
+#include "../db/cartographer.h"
 #include "../db/db.h"
-#include "structs.h"
 #include "../koto-utils.h"
+#include "structs.h"
 
+extern KotoCartographer *koto_maps;
 extern sqlite3 *koto_db;
 
 struct _KotoIndexedLibrary {
@@ -76,14 +78,15 @@ void koto_indexed_library_add_artist(KotoIndexedLibrary *self, KotoIndexedArtist
 	koto_indexed_library_get_artists(self); // Call to generate if needed
 
 	gchar *artist_name;
-	g_object_get(artist, "name", &artist_name, NULL);
+	gchar *artist_uuid;
+	g_object_get(artist, "name", &artist_name, "uuid", &artist_uuid, NULL);
 
 	if (g_hash_table_contains(self->music_artists, artist_name)) { // Already have the artist
 		g_free(artist_name);
 		return;
 	}
 
-	g_hash_table_insert(self->music_artists, artist_name, artist); // Add the artist by its name (this needs to be done so we can get the artist when doing the depth of 2 indexing for the album)
+	g_hash_table_insert(self->music_artists, artist_name, artist_uuid); // Add the artist by its name (this needs to be done so we can get the artist when doing the depth of 2 indexing for the album)
 }
 
 KotoIndexedArtist* koto_indexed_library_get_artist(KotoIndexedLibrary *self, gchar *artist_name) {
@@ -93,7 +96,14 @@ KotoIndexedArtist* koto_indexed_library_get_artist(KotoIndexedLibrary *self, gch
 
 	koto_indexed_library_get_artists(self); // Call to generate if needed
 
-	return g_hash_table_lookup(self->music_artists, (KotoIndexedArtist*) artist_name);
+	gchar *artist_uuid = g_hash_table_lookup(self->music_artists, artist_name); // Get the UUID from our music artists
+
+	if (artist_uuid != NULL) {
+		KotoIndexedArtist *artist = koto_cartographer_get_artist_by_uuid(koto_maps, artist_uuid); // Return any artist from cartographer
+		return artist;
+	} else {
+		return NULL;
+	}
 }
 
 GHashTable* koto_indexed_library_get_artists(KotoIndexedLibrary *self) {
@@ -162,10 +172,9 @@ void koto_indexed_library_set_path(KotoIndexedLibrary *self, gchar *path) {
 }
 
 int process_artists(void *data, int num_columns, char **fields, char **column_names) {
-	(void) num_columns; (void) column_names; // Don't need these
+	(void) num_columns; (void) column_names; // Don't need any of the params
 
-	KotoIndexedLibrary *self = (KotoIndexedLibrary*) data;
-
+	KotoIndexedLibrary *library = (KotoIndexedLibrary*) data;
 	gchar *artist_uuid = g_strdup(koto_utils_unquote_string(fields[0])); // First column is UUID
 	gchar *artist_path = g_strdup(koto_utils_unquote_string(fields[1])); // Second column is path
 	gchar *artist_name = g_strdup(koto_utils_unquote_string(fields[3])); // Fourth column is artist name
@@ -177,7 +186,8 @@ int process_artists(void *data, int num_columns, char **fields, char **column_na
 		"name", artist_name,  // Set name
 	NULL);
 
-	koto_indexed_library_add_artist(self, artist); // Add the artist
+	koto_cartographer_add_artist(koto_maps, artist); // Add the artist to our global cartographer
+	koto_indexed_library_add_artist(library, artist);
 
 	int albums_rc = sqlite3_exec(koto_db, g_strdup_printf("SELECT * FROM albums WHERE artist_id=\"%s\"", artist_uuid), process_albums, artist, NULL); // Process our albums
 	if (albums_rc != SQLITE_OK) { // Failed to get our albums
@@ -211,7 +221,8 @@ int process_albums(void *data, int num_columns, char **fields, char **column_nam
 		"art-path", album_art, // Set art path if any
 	NULL);
 
-	koto_indexed_artist_add_album(artist, album); // Add the album
+	koto_cartographer_add_album(koto_maps, album); // Add the album to our global cartographer
+	koto_indexed_artist_add_album(artist, album_uuid); // Add the album
 
 	int tracks_rc = sqlite3_exec(koto_db, g_strdup_printf("SELECT * FROM tracks WHERE album_id=\"%s\"", album_uuid), process_tracks, album, NULL); // Process our tracks
 	if (tracks_rc != SQLITE_OK) { // Failed to get our tracks
@@ -241,8 +252,8 @@ int process_tracks(void *data, int num_columns, char **fields, char **column_nam
 	gchar *album_uuid = g_strdup(koto_utils_unquote_string(fields[4]));
 	gchar *file_name = g_strdup(koto_utils_unquote_string(fields[5]));
 	gchar *name = g_strdup(koto_utils_unquote_string(fields[6]));
-	guint *disc_num = (guint*) g_ascii_strtoull(fields[6], NULL, 10);
-	guint *position = (guint*) g_ascii_strtoull(fields[7], NULL, 10);
+	guint *disc_num = (guint*) g_ascii_strtoull(fields[7], NULL, 10);
+	guint *position = (guint*) g_ascii_strtoull(fields[8], NULL, 10);
 
 	KotoIndexedTrack *track = koto_indexed_track_new_with_uuid(track_uuid); // Create our file
 	g_object_set(track,
@@ -255,7 +266,8 @@ int process_tracks(void *data, int num_columns, char **fields, char **column_nam
 		"position", position,
 	NULL);
 
-	koto_indexed_album_add_file(album, track); // Add the file
+	koto_cartographer_add_track(koto_maps, track); // Add the track to cartographer
+	koto_indexed_album_add_track(album, track); // Add the track
 
 	g_free(track_uuid);
 	g_free(path);
@@ -341,21 +353,25 @@ void index_folder(KotoIndexedLibrary *self, gchar *path, guint depth) {
 					NULL
 				);
 
+				koto_cartographer_add_artist(koto_maps, artist); // Add the artist to cartographer
 				koto_indexed_library_add_artist(self, artist); // Add the artist
 				index_folder(self, full_path, depth); // Index this directory
 				g_free(artist_name);
 			} else if (depth == 2) { // If we are following FOLDER/ARTIST/ALBUM then this would be album
 				gchar *artist_name = g_path_get_basename(path); // Get the last entry from our path which is probably the artist
-
 				KotoIndexedArtist *artist = koto_indexed_library_get_artist(self, artist_name); // Get the artist
 
 				if (artist == NULL) {
+					g_message("Failed to get artist by name of: %s", artist_name);
 					continue;
 				}
 
 				KotoIndexedAlbum *album = koto_indexed_album_new(artist, full_path);
+				koto_cartographer_add_album(koto_maps, album); // Add our album to the cartographer
 
-				koto_indexed_artist_add_album(artist, album); // Add the album
+				gchar *album_uuid = NULL;
+				g_object_get(album, "uuid", &album_uuid, NULL);
+				koto_indexed_artist_add_album(artist, album_uuid); // Add the album
 				g_free(artist_name);
 			}
 		}
@@ -367,9 +383,13 @@ void index_folder(KotoIndexedLibrary *self, gchar *path, guint depth) {
 }
 
 void output_artists(gpointer artist_key, gpointer artist_ptr, gpointer data) {
-	(void)artist_key;
-	(void)data;
-	KotoIndexedArtist *artist = (KotoIndexedArtist*) artist_ptr;
+	(void) artist_ptr; (void) data;
+	KotoIndexedArtist *artist = koto_cartographer_get_artist_by_uuid(koto_maps, (gchar*) artist_key);
+
+	if (artist == NULL) {
+		return;
+	}
+
 	gchar *artist_name;
 	g_object_get(artist, "name", &artist_name, NULL);
 	g_debug("Artist: %s", artist_name);
@@ -382,32 +402,45 @@ void output_artists(gpointer artist_key, gpointer artist_ptr, gpointer data) {
 
 	GList *a;
 	for (a = albums; a != NULL; a = a->next) {
-		KotoIndexedAlbum *album = (KotoIndexedAlbum*) a->data;
+		gchar *album_uuid = a->data;
+		KotoIndexedAlbum *album = koto_cartographer_get_album_by_uuid(koto_maps, album_uuid);
+
+		if (album == NULL) {
+			continue;
+		}
+
 		gchar *artwork = koto_indexed_album_get_album_art(album);
 		gchar *album_name;
 		g_object_get(album, "name", &album_name, NULL);
 		g_debug("Album Art: %s", artwork);
 		g_debug("Album Name: %s", album_name);
 
-		GList *tracks = koto_indexed_album_get_files(album); // Get the files for the album
-		GList *t;
-
-		for (t = tracks; t != NULL; t = t->next) {
-			KotoIndexedTrack *track = (KotoIndexedTrack*) t->data;
-			gchar *filepath;
-			gchar *parsed_name;
-			guint *pos;
-
-			g_object_get(track,
-				"path", &filepath,
-				"parsed-name", &parsed_name,
-				"position", &pos,
-			NULL);
-			g_debug("File Path: %s", filepath);
-			g_debug("Parsed Name: %s", parsed_name);
-			g_debug("Position: %d", GPOINTER_TO_INT(pos));
-			g_free(filepath);
-			g_free(parsed_name);
-		}
+		g_list_foreach(koto_indexed_album_get_tracks(album), output_track, NULL);
 	}
+}
+
+void output_track(gpointer data, gpointer user_data) {
+	(void) user_data;
+
+	g_message("Track UUID: %s", g_strdup(data));
+	KotoIndexedTrack *track = koto_cartographer_get_track_by_uuid(koto_maps, (gchar*) data);
+
+	if (track == NULL) {
+		return;
+	}
+
+	gchar *filepath;
+	gchar *parsed_name;
+	guint *pos;
+
+	g_object_get(track,
+		"path", &filepath,
+		"parsed-name", &parsed_name,
+		"position", &pos,
+	NULL);
+	g_debug("File Path: %s", filepath);
+	g_debug("Parsed Name: %s", parsed_name);
+	g_debug("Position: %d", GPOINTER_TO_INT(pos));
+	g_free(filepath);
+	g_free(parsed_name);
 }

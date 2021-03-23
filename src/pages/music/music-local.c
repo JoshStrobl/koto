@@ -17,10 +17,13 @@
 
 #include <glib-2.0/glib.h>
 #include <gtk-4.0/gtk/gtk.h>
+#include "../../db/cartographer.h"
 #include "../../indexer/structs.h"
 #include "koto-button.h"
 #include "koto-config.h"
 #include "music-local.h"
+
+extern KotoCartographer *koto_maps;
 
 enum {
 	PROP_0,
@@ -175,8 +178,11 @@ void koto_page_music_local_set_library(KotoPageMusicLocal *self, KotoIndexedLibr
 
 	g_hash_table_iter_init(&artist_list_iter, artists);
 	while (g_hash_table_iter_next(&artist_list_iter, &artist_key, &artist_data)) { // For each of the music artists
-		KotoIndexedArtist *artist = (KotoIndexedArtist*) artist_data; // Cast our data as a KotoIndexedArtist
-		koto_page_music_local_add_artist(self, artist);
+		KotoIndexedArtist *artist = koto_cartographer_get_artist_by_uuid(koto_maps, (gchar*) artist_data); // Cast our data as a KotoIndexedArtist
+
+		if (artist != NULL) {
+			koto_page_music_local_add_artist(self, artist);
+		}
 	}
 }
 

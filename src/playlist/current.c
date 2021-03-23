@@ -18,6 +18,14 @@
 #include <glib-2.0/glib-object.h>
 #include "current.h"
 
+enum {
+	PROP_0,
+	PROP_CURRENT_PLAYLIST,
+	N_PROPERTIES
+};
+
+static GParamSpec *props[N_PROPERTIES] = { NULL, };
+
 KotoCurrentPlaylist *current_playlist = NULL;
 
 struct _KotoCurrentPlaylist {
@@ -27,12 +35,54 @@ struct _KotoCurrentPlaylist {
 
 G_DEFINE_TYPE(KotoCurrentPlaylist, koto_current_playlist, G_TYPE_OBJECT);
 
+static void koto_current_playlist_get_property(GObject *obj, guint prop_id, GValue *val, GParamSpec *spec);
+static void koto_current_playlist_set_property(GObject *obj, guint prop_id, const GValue *val, GParamSpec *spec);
+
 static void koto_current_playlist_class_init(KotoCurrentPlaylistClass *c) {
-	(void) c;
+	GObjectClass *gobject_class;
+	gobject_class = G_OBJECT_CLASS(c);
+	gobject_class->set_property = koto_current_playlist_set_property;
+	gobject_class->get_property = koto_current_playlist_get_property;
+
+	props[PROP_CURRENT_PLAYLIST] = g_param_spec_object(
+		"current-playlist",
+		"Current Playlist",
+		"Current Playlist",
+		KOTO_TYPE_PLAYLIST,
+		G_PARAM_EXPLICIT_NOTIFY|G_PARAM_READWRITE
+	);
+
+	g_object_class_install_properties(gobject_class, N_PROPERTIES, props);
 }
 
 static void koto_current_playlist_init(KotoCurrentPlaylist *self) {
 	self->current_playlist = NULL;
+}
+
+void koto_current_playlist_get_property(GObject *obj, guint prop_id, GValue *val, GParamSpec *spec) {
+	KotoCurrentPlaylist *self = KOTO_CURRENT_PLAYLIST(obj);
+
+	switch (prop_id) {
+		case PROP_CURRENT_PLAYLIST:
+			g_value_set_object(val, self->current_playlist);
+			break;
+		default:
+			G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, prop_id, spec);
+			break;
+	}
+}
+
+void koto_current_playlist_set_property(GObject *obj, guint prop_id, const GValue *val, GParamSpec *spec) {
+	KotoCurrentPlaylist *self = KOTO_CURRENT_PLAYLIST(obj);
+
+	switch (prop_id) {
+		case PROP_CURRENT_PLAYLIST:
+			koto_current_playlist_set_playlist(self, (KotoPlaylist*) g_value_get_object(val));
+			break;
+		default:
+			G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, prop_id, spec);
+			break;
+	}
 }
 
 KotoPlaylist* koto_current_playlist_get_playlist(KotoCurrentPlaylist *self) {
@@ -44,15 +94,26 @@ void koto_current_playlist_set_playlist(KotoCurrentPlaylist *self, KotoPlaylist 
 		return;
 	}
 
-	if (KOTO_IS_PLAYLIST(self->current_playlist)) {
-		// TODO: Save current playlist state if needed
+	if (!KOTO_IS_PLAYLIST(playlist)) { // Not a playlist
+		return;
+	}
+
+	if (self->current_playlist != NULL && KOTO_IS_PLAYLIST(self->current_playlist)) {
+		gboolean *is_temp = FALSE;
+		g_object_get(self->current_playlist, "ephemeral", &is_temp, NULL); // Get the current ephemeral value
+
+		if (is_temp) { // Is a temporary playlist
+			koto_playlist_unmap(self->current_playlist); // Unmap the playlist if needed
+		} else { // Not a temporary playlist
+			koto_playlist_commit(self->current_playlist); // Save the current playlist
+		}
+
 		g_object_unref(self->current_playlist); // Unreference
 	}
 
 	self->current_playlist = playlist;
 	g_object_ref(playlist); // Increment the reference
-	g_object_notify(G_OBJECT(self), "current-playlist-changed");
-	koto_playlist_debug(self->current_playlist);
+	g_object_notify_by_pspec(G_OBJECT(self), props[PROP_CURRENT_PLAYLIST]);
 }
 
 KotoCurrentPlaylist* koto_current_playlist_new() {

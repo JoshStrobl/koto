@@ -18,8 +18,10 @@
 #include <glib-2.0/glib.h>
 #include <magic.h>
 #include <sqlite3.h>
+#include "../db/cartographer.h"
 #include "playlist.h"
 
+extern KotoCartographer *koto_maps;
 extern sqlite3 *koto_db;
 
 struct _KotoPlaylist {
@@ -28,8 +30,11 @@ struct _KotoPlaylist {
 	gchar *name;
 	gchar *art_path;
 	guint current_position;
+	gboolean ephemeral;
+	gboolean is_shuffle_enabled;
 
 	GQueue *tracks;
+	GQueue *played_tracks;
 };
 
 G_DEFINE_TYPE(KotoPlaylist, koto_playlist, G_TYPE_OBJECT);
@@ -39,6 +44,7 @@ enum {
 	PROP_UUID,
 	PROP_NAME,
 	PROP_ART_PATH,
+	PROP_EPHEMERAL,
 	N_PROPERTIES,
 };
 
@@ -76,6 +82,14 @@ static void koto_playlist_class_init(KotoPlaylistClass *c) {
 		G_PARAM_CONSTRUCT|G_PARAM_EXPLICIT_NOTIFY|G_PARAM_READWRITE
 	);
 
+	props[PROP_EPHEMERAL] = g_param_spec_boolean(
+		"ephemeral",
+		"Is the playlist ephemeral (temporary)",
+		"Is the playlist ephemeral (temporary)",
+		FALSE,
+		G_PARAM_CONSTRUCT|G_PARAM_EXPLICIT_NOTIFY|G_PARAM_READWRITE
+	);
+
 	g_object_class_install_properties(gobject_class, N_PROPERTIES, props);
 }
 
@@ -91,6 +105,9 @@ static void koto_playlist_get_property(GObject *obj, guint prop_id, GValue *val,
 			break;
 		case PROP_ART_PATH:
 			g_value_set_string(val, self->art_path);
+			break;
+		case PROP_EPHEMERAL:
+			g_value_set_boolean(val, self->ephemeral);
 			break;
 		default:
 			G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, prop_id, spec);
@@ -111,6 +128,9 @@ static void koto_playlist_set_property(GObject *obj, guint prop_id, const GValue
 		case PROP_ART_PATH:
 			koto_playlist_set_artwork(self, g_value_get_string(val));
 			break;
+		case PROP_EPHEMERAL:
+			self->ephemeral = g_value_get_boolean(val);
+			break;
 		default:
 			G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, prop_id, spec);
 			break;
@@ -119,6 +139,7 @@ static void koto_playlist_set_property(GObject *obj, guint prop_id, const GValue
 
 static void koto_playlist_init(KotoPlaylist *self) {
 	self->current_position = 0; // Default to 0
+	self->played_tracks = g_queue_new(); // Set as an empty GQueue
 	self->tracks = g_queue_new(); // Set as an empty GQueue
 }
 
@@ -135,14 +156,45 @@ void koto_playlist_add_track_by_uuid(KotoPlaylist *self, const gchar *uuid) {
 	// TODO: Add to table
 }
 
-void koto_playlist_debug(KotoPlaylist *self) {
-	g_queue_foreach(self->tracks, koto_playlist_debug_foreach, NULL);
+void koto_playlist_commit(KotoPlaylist *self) {
+	if (self->ephemeral) { // Temporary playlist
+		return;
+	}
+
+	gchar *commit_op = g_strdup_printf(
+		"INSERT INTO playlist_meta(id, name, art_path)"
+		"VALUES('%s', quote(\"%s\"), quote(\"%s\")"
+		"ON CONFLICT(id) DO UPDATE SET name=excluded.name, art_path=excluded.art_path;",
+		self->uuid,
+		self->name,
+		self->art_path
+	);
+
+	gchar *commit_op_errmsg = NULL;
+	int rc = sqlite3_exec(koto_db, commit_op, 0, 0, &commit_op_errmsg);
+
+	if (rc != SQLITE_OK) {
+		g_warning("Failed to save playlist: %s", commit_op_errmsg);
+	} else { // Successfully saved our playlist
+		g_queue_foreach(self->tracks, koto_playlist_commit_tracks, self); // Iterate over each track to save it
+	}
+
+	g_free(commit_op);
+	g_free(commit_op_errmsg);
 }
 
-void koto_playlist_debug_foreach(gpointer data, gpointer user_data) {
-	(void) user_data;
-	gchar *uuid = data;
-	g_message("UUID in Playlist: %s", uuid);
+void koto_playlist_commit_tracks(gpointer data, gpointer user_data) {
+	KotoIndexedTrack *track = koto_cartographer_get_track_by_uuid(koto_maps, data); // Get the track
+
+	if (track == NULL) { // Not a track
+		KotoPlaylist *self = user_data;
+		gchar *playlist_uuid = self->uuid; // Get the playlist UUID
+
+		gchar *current_track = g_queue_peek_nth(self->tracks, self->current_position); // Get the UUID of the current track
+		koto_indexed_track_save_to_playlist(track, playlist_uuid, g_queue_index(self->tracks, data), (data == current_track) ? 1 : 0); // Call to save the playlist to the track
+		g_free(playlist_uuid);
+		g_free(current_track);
+	}
 }
 
 gchar* koto_playlist_get_artwork(KotoPlaylist *self) {
@@ -165,6 +217,38 @@ gchar* koto_playlist_get_name(KotoPlaylist *self) {
 	return (self->name == NULL) ? NULL : g_strdup(self->name);
 }
 
+gchar* koto_playlist_get_random_track(KotoPlaylist *self) {
+	gchar *track_uuid = NULL;
+	guint tracks_len = g_queue_get_length(self->tracks);
+
+	if (tracks_len == g_queue_get_length(self->played_tracks)) { // Played all tracks
+		track_uuid = g_list_nth_data(self->tracks->head, 0); // Get the first
+		g_queue_clear(self->played_tracks); // Clear our played tracks
+	} else { // Have not played all tracks
+		GRand* rando_calrissian = g_rand_new(); // Create a new RNG
+		guint attempt = 0;
+
+		while (track_uuid != NULL)  { // Haven't selected a track yet
+			attempt++;
+			gint32 *selected_item = g_rand_int_range(rando_calrissian, 0, (gint32) tracks_len);
+			gchar *selected_track = g_queue_peek_nth(self->tracks, (guint) selected_item); // Get the UUID of the selected item
+
+			if (g_queue_index(self->played_tracks, selected_track) == -1) { // Haven't played the track
+				track_uuid = selected_track;
+				break;
+			} else { // Failed to get the track
+				if (attempt > tracks_len / 2) {
+					break; // Give up
+				}
+			}
+		}
+
+		g_rand_free(rando_calrissian); // Free rando
+	}
+
+	return track_uuid;
+}
+
 GQueue* koto_playlist_get_tracks(KotoPlaylist *self) {
 	return self->tracks;
 }
@@ -174,6 +258,10 @@ gchar* koto_playlist_get_uuid(KotoPlaylist *self) {
 }
 
 gchar* koto_playlist_go_to_next(KotoPlaylist *self) {
+	if (self->is_shuffle_enabled) { // Shuffling enabled
+		return koto_playlist_get_random_track(self); // Get a random track
+	}
+
 	gchar *current_uuid = koto_playlist_get_current_uuid(self); // Get the current UUID
 
 	if (current_uuid == self->tracks->tail->data) { // Current UUID matches the last item in the playlist
@@ -185,6 +273,10 @@ gchar* koto_playlist_go_to_next(KotoPlaylist *self) {
 }
 
 gchar* koto_playlist_go_to_previous(KotoPlaylist *self) {
+	if (self->is_shuffle_enabled) { // Shuffling enabled
+		return koto_playlist_get_random_track(self); // Get a random track
+	}
+
 	gchar *current_uuid = koto_playlist_get_current_uuid(self); // Get the current UUID
 
 	if (current_uuid == self->tracks->head->data) { // Current UUID matches the first item in the playlist
@@ -278,6 +370,10 @@ void koto_playlist_set_uuid(KotoPlaylist *self, const gchar *uuid) {
 
 	self->uuid = g_strdup(uuid); // Set the new UUID
 	return;
+}
+
+void koto_playlist_unmap(KotoPlaylist *self) {
+	koto_cartographer_remove_playlist_by_uuid(koto_maps, self->uuid); // Remove from our cartographer
 }
 
 KotoPlaylist* koto_playlist_new() {

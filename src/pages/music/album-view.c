@@ -17,12 +17,15 @@
 
 #include <glib-2.0/glib.h>
 #include <gtk-4.0/gtk/gtk.h>
-#include "../../koto-button.h"
+#include "../../db/cartographer.h"
 #include "../../indexer/structs.h"
+#include "../../koto-button.h"
 #include "album-view.h"
 #include "disc-view.h"
 #include "koto-config.h"
 #include "koto-utils.h"
+
+extern KotoCartographer *koto_maps;
 
 struct _KotoAlbumView {
 	GObject parent_instance;
@@ -176,10 +179,15 @@ void koto_album_view_set_album(KotoAlbumView *self, KotoIndexedAlbum *album) {
 	gtk_box_prepend(GTK_BOX(self->album_tracks_box), self->album_label); // Prepend our new label to the album + tracks box
 
 	GHashTable *discs = g_hash_table_new(g_str_hash, g_str_equal);
-	GList *tracks = koto_indexed_album_get_files(album); // Get the tracks for this album
+	GList *tracks = koto_indexed_album_get_tracks(album); // Get the tracks for this album
 
 	for (guint i = 0; i < g_list_length(tracks); i++) {
-		KotoIndexedTrack *track = (KotoIndexedTrack*) g_list_nth_data(tracks, i); // Get the
+		KotoIndexedTrack *track = koto_cartographer_get_track_by_uuid(koto_maps, (gchar*) g_list_nth_data(tracks, i)); // Get the track by its UUID
+
+		if (track == NULL) { // Track doesn't exist
+			continue;
+		}
+
 		guint *disc_number;
 		g_object_get(track, "cd", &disc_number, NULL);
 		gchar *disc_num_as_str = g_strdup_printf("%u", GPOINTER_TO_UINT(disc_number));

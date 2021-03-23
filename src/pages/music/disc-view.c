@@ -16,9 +16,12 @@
  */
 
 #include <gtk-4.0/gtk/gtk.h>
+#include "../../db/cartographer.h"
 #include "../../indexer/structs.h"
 #include "../../koto-track-item.h"
 #include "disc-view.h"
+
+extern KotoCartographer *koto_maps;
 
 struct _KotoDiscView {
 	GtkBox parent_instance;
@@ -138,25 +141,26 @@ void koto_disc_view_set_album(KotoDiscView *self, KotoIndexedAlbum *album) {
 
 	self->list = gtk_list_box_new(); // Create our list of our tracks
 	gtk_list_box_set_selection_mode(GTK_LIST_BOX(self->list), GTK_SELECTION_MULTIPLE);
-	gtk_list_box_set_sort_func(GTK_LIST_BOX(self->list), koto_album_view_sort_tracks, NULL, NULL); // Ensure we can sort our tracks
 	gtk_widget_add_css_class(self->list, "track-list");
 	gtk_widget_set_size_request(self->list, 600, -1);
 	gtk_box_append(GTK_BOX(self), self->list);
 
-	GList *t;
-	for (t = koto_indexed_album_get_files(self->album); t != NULL; t = t->next) { // For each file / track
-		KotoIndexedTrack *track = (KotoIndexedTrack*) t->data;
+	g_list_foreach(koto_indexed_album_get_tracks(self->album), koto_disc_view_list_tracks, self);
+}
 
-		guint *disc_number;
-		g_object_get(track, "cd", &disc_number, NULL); // get the disc number
+void koto_disc_view_list_tracks(gpointer data, gpointer selfptr) {
+	KotoDiscView *self = (KotoDiscView*) selfptr;
+	KotoIndexedTrack *track = koto_cartographer_get_track_by_uuid(koto_maps, (gchar*) data); // Get the track by its UUID
 
-		if (GPOINTER_TO_UINT(self->disc_number) != GPOINTER_TO_UINT(disc_number)) { // Track does not belong to this CD
-			continue;
-		}
+	guint *disc_number;
+	g_object_get(track, "cd", &disc_number, NULL); // get the disc number
 
-		KotoTrackItem *track_item = koto_track_item_new(track); // Create our new track item
-		gtk_list_box_prepend(GTK_LIST_BOX(self->list), GTK_WIDGET(track_item)); // Add to our tracks list box
+	if (GPOINTER_TO_UINT(self->disc_number) != GPOINTER_TO_UINT(disc_number)) { // Track does not belong to this CD
+		return;
 	}
+
+	KotoTrackItem *track_item = koto_track_item_new(track); // Create our new track item
+	gtk_list_box_append(GTK_LIST_BOX(self->list), GTK_WIDGET(track_item)); // Add to our tracks list box
 }
 
 void koto_disc_view_set_disc_number(KotoDiscView *self, guint disc_number) {
@@ -174,38 +178,6 @@ void koto_disc_view_set_disc_number(KotoDiscView *self, guint disc_number) {
 
 void koto_disc_view_set_disc_label_visible(KotoDiscView *self, gboolean visible) {
 	(visible) ? gtk_widget_show(self->header) : gtk_widget_hide(self->header);
-}
-
-int koto_album_view_sort_tracks(GtkListBoxRow *track1, GtkListBoxRow *track2, gpointer user_data) {
-	(void) user_data;
-	KotoTrackItem *track1_item = KOTO_TRACK_ITEM(gtk_list_box_row_get_child(track1));
-	KotoTrackItem *track2_item = KOTO_TRACK_ITEM(gtk_list_box_row_get_child(track2));
-
-	KotoIndexedTrack *track1_file;
-	KotoIndexedTrack *track2_file;
-
-	g_object_get(track1_item, "track", &track1_file, NULL);
-	g_object_get(track2_item, "track", &track2_file, NULL);
-
-	guint16 *track1_pos;
-	guint16 *track2_pos;
-
-	g_object_get(track1_file, "position", &track1_pos, NULL);
-	g_object_get(track2_file, "position", &track2_pos, NULL);
-
-	if (track1_pos == track2_pos) { // Identical positions (like reported as 0)
-		gchar *track1_name;
-		gchar *track2_name;
-
-		g_object_get(track1_file, "parsed-name", &track1_name, NULL);
-		g_object_get(track2_file, "parsed-name", &track2_name, NULL);
-
-		return g_utf8_collate(track1_name, track2_name);
-	} else if (track1_pos < track2_pos) {
-		return -1;
-	} else {
-		return 1;
-	}
 }
 
 KotoDiscView* koto_disc_view_new(KotoIndexedAlbum *album, guint *disc_number) {

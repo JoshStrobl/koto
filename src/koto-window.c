@@ -18,6 +18,7 @@
 #include <gtk-4.0/gdk/x11/gdkx.h>
 #include "indexer/structs.h"
 #include "pages/music/music-local.h"
+#include "playback/engine.h"
 #include "playlist/current.h"
 #include "koto-config.h"
 #include "koto-nav.h"
@@ -25,6 +26,7 @@
 #include "koto-window.h"
 
 extern KotoCurrentPlaylist *current_playlist;
+extern KotoPlaybackEngine *playback_engine;
 
 struct _KotoWindow {
 	GtkApplicationWindow  parent_instance;
@@ -51,6 +53,7 @@ static void koto_window_class_init (KotoWindowClass *klass) {
 
 static void koto_window_init (KotoWindow *self) {
 	current_playlist = koto_current_playlist_new();
+	playback_engine = koto_playback_engine_new();
 
 	GtkCssProvider* provider = gtk_css_provider_new();
 	gtk_css_provider_load_from_resource(provider, "/com/github/joshstrobl/koto/style.css");

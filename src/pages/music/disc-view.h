@@ -28,9 +28,9 @@ G_BEGIN_DECLS
 G_DECLARE_FINAL_TYPE(KotoDiscView, koto_disc_view, KOTO, DISC_VIEW, GtkBox)
 
 KotoDiscView* koto_disc_view_new(KotoIndexedAlbum *album, guint *disc);
+void koto_disc_view_list_tracks(gpointer data, gpointer selfptr);
 void koto_disc_view_set_album(KotoDiscView *self, KotoIndexedAlbum *album);
 void koto_disc_view_set_disc_label_visible(KotoDiscView *self, gboolean visible);
 void koto_disc_view_set_disc_number(KotoDiscView *self, guint disc_number);
-int koto_album_view_sort_tracks(GtkListBoxRow *track1, GtkListBoxRow *track2, gpointer user_data);
 
 G_END_DECLS

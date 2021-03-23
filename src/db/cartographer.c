@@ -65,7 +65,7 @@ void koto_cartographer_add_playlist(KotoCartographer *self, KotoPlaylist *playli
 	g_object_get(playlist, "uuid", &playlist_uuid, NULL);
 
 	if ((playlist_uuid != NULL) && (!koto_cartographer_has_playlist_by_uuid(self, playlist_uuid))) { // Don't have this album
-		g_hash_table_replace(self->artists, playlist_uuid, playlist);
+		g_hash_table_replace(self->playlists, playlist_uuid, playlist);
 	}
 }
 
@@ -74,7 +74,7 @@ void koto_cartographer_add_track(KotoCartographer *self, KotoIndexedTrack *track
 	g_object_get(track, "uuid", &track_uuid, NULL);
 
 	if ((track_uuid != NULL) && (!koto_cartographer_has_playlist_by_uuid(self, track_uuid))) { // Don't have this album
-		g_hash_table_replace(self->artists, track_uuid, track);
+		g_hash_table_replace(self->tracks, track_uuid, track);
 	}
 }
 

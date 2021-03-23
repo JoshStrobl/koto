@@ -16,6 +16,7 @@
  */
 
 #include <glib/gi18n.h>
+#include <gstreamer-1.0/gst/gst.h>
 #include "db/cartographer.h"
 #include "db/db.h"
 
@@ -53,6 +54,8 @@ int main (int argc, char *argv[]) {
 	textdomain (GETTEXT_PACKAGE);
 
 	gtk_init();
+	gst_init(&argc, &argv);
+
 	koto_maps = koto_cartographer_new(); // Create our new cartographer and their collection of maps
 	open_db(); // Open our database
 

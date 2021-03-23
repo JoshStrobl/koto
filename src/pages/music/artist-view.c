@@ -17,11 +17,14 @@
 
 #include <glib-2.0/glib.h>
 #include <gtk-4.0/gtk/gtk.h>
+#include "../../db/cartographer.h"
 #include "../../indexer/structs.h"
 #include "album-view.h"
 #include "artist-view.h"
 #include "koto-config.h"
 #include "koto-utils.h"
+
+extern KotoCartographer *koto_maps;
 
 struct _KotoArtistView {
 	GObject parent_instance;
@@ -160,8 +163,11 @@ void koto_artist_view_add_artist(KotoArtistView *self, KotoIndexedArtist *artist
 
 	GList *a;
 	for (a = albums; a != NULL; a = a->next) {
-		KotoIndexedAlbum *album = (KotoIndexedAlbum*) a->data;
-		koto_artist_view_add_album(self, album); // Add the album
+		KotoIndexedAlbum *album = koto_cartographer_get_album_by_uuid(koto_maps, (gchar*) a->data);
+
+		if (album != NULL) {
+			koto_artist_view_add_album(self, album); // Add the album
+		}
 	}
 }
 

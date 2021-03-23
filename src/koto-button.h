@@ -36,8 +36,8 @@ typedef enum {
 #define NUM_BUILTIN_SIZES 7
 
 #define KOTO_TYPE_BUTTON (koto_button_get_type())
-
 G_DECLARE_FINAL_TYPE (KotoButton, koto_button, KOTO, BUTTON, GtkBox)
+#define KOTO_IS_BUTTON(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), KOTO_TYPE_BUTTON))
 
 guint koto_get_pixbuf_size(KotoButtonPixbufSize size);
 

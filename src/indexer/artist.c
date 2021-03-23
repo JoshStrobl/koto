@@ -29,7 +29,7 @@ struct _KotoIndexedArtist {
 
 	gboolean has_artist_art;
 	gchar *artist_name;
-	GHashTable *albums;
+	GList *albums;
 };
 
 G_DEFINE_TYPE(KotoIndexedArtist, koto_indexed_artist, G_TYPE_OBJECT);
@@ -108,7 +108,7 @@ void koto_indexed_artist_commit(KotoIndexedArtist *self) {
 
 static void koto_indexed_artist_init(KotoIndexedArtist *self) {
 	self->has_artist_art = FALSE;
-	self->albums = NULL; // Set to null initially maybe
+	self->albums = NULL; // Create a new GList
 }
 
 static void koto_indexed_artist_get_property(GObject *obj, guint prop_id, GValue *val, GParamSpec *spec) {
@@ -130,7 +130,7 @@ static void koto_indexed_artist_get_property(GObject *obj, guint prop_id, GValue
 	}
 }
 
-static void koto_indexed_artist_set_property(GObject *obj, guint prop_id, const GValue *val, GParamSpec *spec){
+static void koto_indexed_artist_set_property(GObject *obj, guint prop_id, const GValue *val, GParamSpec *spec) {
 	KotoIndexedArtist *self = KOTO_INDEXED_ARTIST(obj);
 
 	switch (prop_id) {
@@ -150,45 +150,20 @@ static void koto_indexed_artist_set_property(GObject *obj, guint prop_id, const 
 	}
 }
 
-void koto_indexed_artist_add_album(KotoIndexedArtist *self, KotoIndexedAlbum *album) {
-	if (album == NULL) { // No album really defined
+void koto_indexed_artist_add_album(KotoIndexedArtist *self, gchar *album_uuid) {
+	if ((album_uuid == NULL) || (strcmp(album_uuid, "") == 0)) { // No album UUID really defined
 		return;
 	}
 
-	if (self->albums == NULL) { // No HashTable yet
-		self->albums = g_hash_table_new(g_str_hash, g_str_equal); // Create a new HashTable
+	gchar *uuid = g_strdup(album_uuid); // Duplicate our UUID
+
+	if (g_list_index(self->albums, uuid) == -1) {
+		self->albums = g_list_append(self->albums, uuid); // Push to end of list
 	}
-
-	gchar *album_uuid;
-	g_object_get(album, "uuid", &album_uuid, NULL);
-
-	if (album_uuid == NULL) {
-		g_free(album_uuid);
-		return;
-	}
-
-	if (g_hash_table_contains(self->albums, album_uuid)) { // If we have this album already
-		g_free(album_uuid);
-		return;
-	}
-
-	g_hash_table_insert(self->albums, album_uuid, album); // Add the album
 }
 
 GList* koto_indexed_artist_get_albums(KotoIndexedArtist *self) {
-	if (self->albums == NULL) { // No HashTable yet
-		self->albums = g_hash_table_new(g_str_hash, g_str_equal); // Create a new HashTable
-	}
-
-	return g_hash_table_get_values(self->albums);
-}
-
-KotoIndexedAlbum* koto_indexed_artist_get_album(KotoIndexedArtist *self, gchar *album_uuid) {
-	if (self->albums == NULL) {
-		return NULL;
-	}
-
-	return g_hash_table_lookup(self->albums, album_uuid);
+	return g_list_copy(self->albums);
 }
 
 void koto_indexed_artist_remove_album(KotoIndexedArtist *self, KotoIndexedAlbum *album) {
@@ -196,14 +171,9 @@ void koto_indexed_artist_remove_album(KotoIndexedArtist *self, KotoIndexedAlbum 
 		return;
 	}
 
-	if (self->albums == NULL) { // No HashTable yet
-		self->albums = g_hash_table_new(g_str_hash, g_str_equal); // Create a new HashTable
-	}
-
 	gchar *album_uuid;
 	g_object_get(album, "uuid", &album_uuid, NULL);
-
-	g_hash_table_remove(self->albums, album_uuid);
+	self->albums = g_list_remove(self->albums, album_uuid);
 }
 
 void koto_indexed_artist_update_path(KotoIndexedArtist *self, const gchar *new_path) {

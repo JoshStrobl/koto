@@ -11,6 +11,7 @@ koto_sources = [
 	'pages/music/artist-view.c',
 	'pages/music/disc-view.c',
 	'pages/music/music-local.c',
+	'playback/engine.c',
 	'playlist/current.c',
 	'playlist/playlist.c',
 	'main.c',
@@ -26,6 +27,8 @@ koto_sources = [
 koto_deps = [
 	dependency('glib-2.0', version: '>= 2.66'),
 	dependency('gio-2.0', version: '>= 2.66'),
+	dependency('gstreamer-1.0', version: '>= 1.18'),
+	dependency('gstreamer-player-1.0', version: '>= 1.18'),
 	dependency('gtk4', version: '>= 4.0'),
 	dependency('libmagic', version: '>=5.39'),
 	dependency('sqlite3', version: '>=3.34'),
