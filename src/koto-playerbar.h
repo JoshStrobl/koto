@@ -33,12 +33,18 @@ void koto_playerbar_create_primary_controls(KotoPlayerBar* bar);
 void koto_playerbar_create_secondary_controls(KotoPlayerBar* bar);
 void koto_playerbar_go_backwards(GtkGestureClick *gesture, int n_press, double x, double y, gpointer data);
 void koto_playerbar_go_forwards(GtkGestureClick *gesture, int n_press, double x, double y, gpointer data);
-void koto_playerbar_handle_duration_change(KotoPlaybackEngine *engine, gpointer user_data);
-void koto_playerbar_handle_engine_state_change(KotoPlaybackEngine *engine, gpointer user_data);
-void koto_playerbar_handle_progress_change(KotoPlaybackEngine *engine, gpointer user_data);
+void koto_playerbar_handle_is_playing(KotoPlaybackEngine *engine, gpointer user_data);
+void koto_playerbar_handle_is_paused(KotoPlaybackEngine *engine, gpointer user_data);
+void koto_playerbar_handle_progressbar_pressed(GtkGestureClick *gesture, int n_press, double x, double y, gpointer data);
+void koto_playerbar_handle_progressbar_released(GtkGestureClick *gesture, double x, double y, guint button, GdkEventSequence *seq, gpointer data);
+void koto_playerbar_handle_progressbar_value_changed(GtkRange *progress_bar, gpointer data);
+void koto_playerbar_handle_tick_duration(KotoPlaybackEngine *engine, gpointer user_data);
+void koto_playerbar_handle_tick_track(KotoPlaybackEngine *engine, gpointer user_data);
+void koto_playerbar_handle_volume_button_change(GtkScaleButton *button, double value, gpointer user_data);
 void koto_playerbar_reset_progressbar(KotoPlayerBar* bar);
 void koto_playerbar_set_progressbar_duration(KotoPlayerBar* bar, gint64 duration);
 void koto_playerbar_set_progressbar_value(KotoPlayerBar* bar, gint64 progress);
 void koto_playerbar_toggle_play_pause(GtkGestureClick *gesture, int n_press, double x, double y, gpointer data);
+void koto_playerbar_update_track_info(KotoPlaybackEngine *engine, gpointer user_data);
 
 G_END_DECLS

@@ -17,11 +17,13 @@
 
 #include <gstreamer-1.0/gst/gst.h>
 #include <gtk-4.0/gtk/gtk.h>
+#include "db/cartographer.h"
 #include "playback/engine.h"
 #include "koto-button.h"
 #include "koto-config.h"
 #include "koto-playerbar.h"
 
+extern KotoCartographer* koto_maps;
 extern KotoPlaybackEngine *playback_engine;
 
 struct _KotoPlayerBar {
@@ -53,6 +55,10 @@ struct _KotoPlayerBar {
 	GtkWidget *playback_title;
 	GtkWidget *playback_album;
 	GtkWidget *playback_artist;
+
+	gint64 last_recorded_duration;
+
+	gboolean is_progressbar_seeking;
 };
 
 struct _KotoPlayerBarClass {
@@ -77,6 +83,14 @@ static void koto_playerbar_constructed(GObject *obj) {
 	gtk_scale_set_draw_value(GTK_SCALE(self->progress_bar), FALSE);
 	gtk_scale_set_digits(GTK_SCALE(self->progress_bar), 0);
 	gtk_range_set_increments(GTK_RANGE(self->progress_bar), 1, 1);
+	gtk_range_set_round_digits(GTK_RANGE(self->progress_bar), 1);
+
+	GtkGesture *press_controller = gtk_gesture_click_new(); // Create a new GtkGestureLongPress
+	g_signal_connect(press_controller, "pressed", G_CALLBACK(koto_playerbar_handle_progressbar_pressed), self);
+	g_signal_connect(press_controller, "unpaired-release", G_CALLBACK(koto_playerbar_handle_progressbar_released), self);
+	gtk_widget_add_controller(GTK_WIDGET(self->progress_bar), GTK_EVENT_CONTROLLER(press_controller));
+
+	g_signal_connect(GTK_RANGE(self->progress_bar), "value-changed", G_CALLBACK(koto_playerbar_handle_progressbar_value_changed), self);
 
 	self->controls = gtk_center_box_new();
 	gtk_center_box_set_baseline_position(GTK_CENTER_BOX(self->controls), GTK_BASELINE_POSITION_CENTER);
@@ -101,13 +115,16 @@ static void koto_playerbar_constructed(GObject *obj) {
 
 	// Set up the bindings
 
-	g_signal_connect(playback_engine, "duration-changed", G_CALLBACK(koto_playerbar_handle_duration_change), self);
-	g_signal_connect(playback_engine, "play-state-changed", G_CALLBACK(koto_playerbar_handle_engine_state_change), self);
-	g_signal_connect(playback_engine, "progress-changed", G_CALLBACK(koto_playerbar_handle_progress_change), self);
+	g_signal_connect(playback_engine, "is-playing", G_CALLBACK(koto_playerbar_handle_is_playing), self);
+	g_signal_connect(playback_engine, "is-paused", G_CALLBACK(koto_playerbar_handle_is_paused), self);
+	g_signal_connect(playback_engine, "tick-duration", G_CALLBACK(koto_playerbar_handle_tick_duration), self);
+	g_signal_connect(playback_engine, "tick-track", G_CALLBACK(koto_playerbar_handle_tick_track), self);
+	g_signal_connect(playback_engine, "track-changed", G_CALLBACK(koto_playerbar_update_track_info), self);
 }
 
 static void koto_playerbar_init(KotoPlayerBar *self) {
-	(void) self;
+	self->last_recorded_duration = 0;
+	self->is_progressbar_seeking = FALSE;
 }
 
 KotoPlayerBar* koto_playerbar_new(void) {
@@ -182,7 +199,10 @@ void koto_playerbar_create_secondary_controls(KotoPlayerBar* bar) {
 	bar->playlist_button = koto_button_new_with_icon("", "playlist-symbolic", NULL, KOTO_BUTTON_PIXBUF_SIZE_NORMAL);
 	bar->eq_button = koto_button_new_with_icon("", "multimedia-equalizer-symbolic", NULL, KOTO_BUTTON_PIXBUF_SIZE_NORMAL);
 	bar->volume_button = gtk_volume_button_new(); // Have this take in a state and switch to a different icon if necessary
+	g_object_set(bar->volume_button, "use-symbolic", TRUE, NULL);
 	gtk_scale_button_set_value(GTK_SCALE_BUTTON(bar->volume_button), 0.5);
+
+	g_signal_connect(GTK_SCALE_BUTTON(bar->volume_button), "value-changed", G_CALLBACK(koto_playerbar_handle_volume_button_change), bar);
 
 	if (bar->repeat_button != NULL) {
 		gtk_box_append(GTK_BOX(bar->secondary_controls_section), GTK_WIDGET(bar->repeat_button));
@@ -217,16 +237,7 @@ void koto_playerbar_go_forwards(GtkGestureClick *gesture, int n_press, double x,
 	koto_playback_engine_forwards(playback_engine);
 }
 
-void koto_playerbar_handle_duration_change(KotoPlaybackEngine *engine, gpointer user_data) {
-	if (!KOTO_IS_PLAYBACK_ENGINE(engine)) {
-		return;
-	}
-
-	KotoPlayerBar *bar = user_data;
-	koto_playerbar_set_progressbar_duration(bar, koto_playback_engine_get_duration(engine));
-}
-
-void koto_playerbar_handle_engine_state_change(KotoPlaybackEngine *engine, gpointer user_data) {
+void koto_playerbar_handle_is_playing(KotoPlaybackEngine *engine, gpointer user_data) {
 	if (!KOTO_IS_PLAYBACK_ENGINE(engine)) {
 		return;
 	}
@@ -237,22 +248,96 @@ void koto_playerbar_handle_engine_state_change(KotoPlaybackEngine *engine, gpoin
 		return;
 	}
 
-	GstState new_state = koto_playback_engine_get_state(playback_engine);
-
-	if (new_state == GST_STATE_PLAYING) { // Now playing
-		koto_button_show_image(bar->play_pause_button, TRUE); // Set to TRUE to show pause as the next action
-	} else if (new_state == GST_STATE_PAUSED) { // Now paused
-		koto_button_show_image(bar->play_pause_button, FALSE); // Set to FALSE to show play as the next action
-	}
+	koto_button_show_image(bar->play_pause_button, TRUE); // Set to TRUE to show pause as the next action
 }
 
-void koto_playerbar_handle_progress_change(KotoPlaybackEngine *engine, gpointer user_data) {
+void koto_playerbar_handle_is_paused(KotoPlaybackEngine *engine, gpointer user_data) {
 	if (!KOTO_IS_PLAYBACK_ENGINE(engine)) {
 		return;
 	}
 
 	KotoPlayerBar *bar = user_data;
-	koto_playerbar_set_progressbar_value(bar, koto_playback_engine_get_progress(engine));
+
+	if (!KOTO_IS_PLAYERBAR(bar)) {
+		return;
+	}
+
+	koto_button_show_image(bar->play_pause_button, FALSE); // Set to FALSE to show play as the next action
+}
+
+void koto_playerbar_handle_progressbar_pressed(GtkGestureClick *gesture, int n_press, double x, double y, gpointer data) {
+	(void) gesture; (void) n_press; (void) x; (void) y;
+	KotoPlayerBar *bar = data;
+
+	if (!KOTO_IS_PLAYERBAR(bar)) {
+		return;
+	}
+
+	bar->is_progressbar_seeking = TRUE;
+}
+
+void koto_playerbar_handle_progressbar_released(GtkGestureClick *gesture, double x, double y, guint button, GdkEventSequence *seq, gpointer data) {
+	(void) gesture; (void) x; (void) y; (void) button; (void) seq;
+	KotoPlayerBar *bar = data;
+
+	if (!KOTO_IS_PLAYERBAR(bar)) {
+		return;
+	}
+
+	bar->is_progressbar_seeking = FALSE;
+}
+
+
+void koto_playerbar_handle_progressbar_value_changed(GtkRange *progress_bar, gpointer data) {
+	KotoPlayerBar *bar = data;
+
+	if (!KOTO_IS_PLAYERBAR(bar)) {
+		return;
+	}
+
+	if (!bar->is_progressbar_seeking) {
+		return;
+	}
+
+	int desired_position = (int) gtk_range_get_value(progress_bar);
+
+	koto_playback_engine_set_position(playback_engine, desired_position); // Update our position
+}
+
+void koto_playerbar_handle_tick_duration(KotoPlaybackEngine *engine, gpointer user_data) {
+	if (!KOTO_IS_PLAYBACK_ENGINE(engine)) {
+		return;
+	}
+
+	KotoPlayerBar *bar = user_data;
+
+	if (!KOTO_IS_PLAYERBAR(bar)) {
+		return;
+	}
+
+	koto_playerbar_set_progressbar_duration(bar, koto_playback_engine_get_duration(engine));
+}
+
+
+void koto_playerbar_handle_tick_track(KotoPlaybackEngine *engine, gpointer user_data) {
+	if (!KOTO_IS_PLAYBACK_ENGINE(engine)) {
+		return;
+	}
+
+	KotoPlayerBar *bar = user_data;
+
+	if (!KOTO_IS_PLAYERBAR(bar)) {
+		return;
+	}
+
+	if (!bar->is_progressbar_seeking) {
+		koto_playerbar_set_progressbar_value(bar, koto_playback_engine_get_progress(engine));
+	}
+}
+
+void koto_playerbar_handle_volume_button_change(GtkScaleButton *button, double value, gpointer user_data) {
+	(void) button; (void) user_data;
+	koto_playback_engine_set_volume(playback_engine, value);
 }
 
 void koto_playerbar_reset_progressbar(KotoPlayerBar* bar) {
@@ -261,18 +346,17 @@ void koto_playerbar_reset_progressbar(KotoPlayerBar* bar) {
 }
 
 void koto_playerbar_set_progressbar_duration(KotoPlayerBar* bar, gint64 duration) {
-	if (duration < 0) {
+	if (duration <= 0) {
 		return;
 	}
 
-	gtk_range_set_range(GTK_RANGE(bar->progress_bar), 0, duration);
+	if (duration != bar->last_recorded_duration) { // Duration is different than what we recorded
+		bar->last_recorded_duration = duration;
+		gtk_range_set_range(GTK_RANGE(bar->progress_bar), 0, bar->last_recorded_duration);
+	}
 }
 
 void koto_playerbar_set_progressbar_value(KotoPlayerBar* bar, gint64 progress) {
-	if (progress < 0) {
-		return;
-	}
-
 	gtk_range_set_value(GTK_RANGE(bar->progress_bar), progress);
 }
 
@@ -280,6 +364,71 @@ void koto_playerbar_toggle_play_pause(GtkGestureClick *gesture, int n_press, dou
 	(void) gesture; (void) n_press; (void) x; (void) y; (void) data;
 
 	koto_playback_engine_toggle(playback_engine);
+}
+
+void koto_playerbar_update_track_info(KotoPlaybackEngine *engine, gpointer user_data) {
+	if (!KOTO_IS_PLAYBACK_ENGINE(engine)) {
+		return;
+	}
+
+	KotoPlayerBar *bar = user_data;
+
+	if (!KOTO_IS_PLAYERBAR(bar)) {
+		return;
+	}
+
+	KotoIndexedTrack *current_track = koto_playback_engine_get_current_track(playback_engine); // Get the current track from the playback engine
+
+	if (!KOTO_IS_INDEXED_TRACK(current_track)) {
+		return;
+	}
+
+	gchar *track_name = NULL;
+	gchar *artist_uuid = NULL;
+	gchar *album_uuid = NULL;
+
+	g_object_get(current_track, "parsed-name", &track_name, "artist-uuid", &artist_uuid, "album-uuid", &album_uuid, NULL);
+
+	KotoIndexedArtist *artist = koto_cartographer_get_artist_by_uuid(koto_maps, artist_uuid);
+	KotoIndexedAlbum *album = koto_cartographer_get_album_by_uuid(koto_maps, album_uuid);
+
+	g_free(artist_uuid);
+	g_free(album_uuid);
+
+	if ((track_name != NULL) && (strcmp(track_name, "") != 0)) { // Have a track name
+		gtk_label_set_text(GTK_LABEL(bar->playback_title), track_name); // Set the label
+	}
+
+	if (KOTO_IS_INDEXED_ARTIST(artist)) {
+		gchar *artist_name = NULL;
+		g_object_get(artist, "name", &artist_name, NULL);
+
+		if ((artist_name != NULL) && (strcmp(artist_name, "") != 0)) { // Have an artist name
+			gtk_label_set_text(GTK_LABEL(bar->playback_artist), artist_name);
+			gtk_widget_show(bar->playback_artist);
+		} else { // Don't have an artist name somehow
+			gtk_widget_hide(bar->playback_artist);
+		}
+	}
+
+	if (KOTO_IS_INDEXED_ALBUM(album)) {
+		gchar *album_name = NULL;
+		gchar *art_path = NULL;
+		g_object_get(album, "name", &album_name, "art-path", &art_path, NULL); // Get album name and art path
+
+		if ((album_name != NULL) && (strcmp(album_name, "") != 0)) { // Have an album name
+			gtk_label_set_text(GTK_LABEL(bar->playback_album), album_name);
+			gtk_widget_show(bar->playback_album);
+		} else {
+			gtk_widget_hide(bar->playback_album);
+		}
+
+		if ((art_path != NULL) && g_path_is_absolute(art_path)) { // Have an album artist path
+			gtk_image_set_from_file(GTK_IMAGE(bar->artwork), art_path); // Update the art
+		} else {
+			gtk_image_set_from_icon_name(GTK_IMAGE(bar->artwork), "audio-x-generic-symbolic"); // Use generic instead
+		}
+	}
 }
 
 GtkWidget* koto_playerbar_get_main(KotoPlayerBar* bar) {

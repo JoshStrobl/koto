@@ -24,9 +24,12 @@
 #include "engine.h"
 
 enum {
-	SIGNAL_DURATION_CHANGE,
+	SIGNAL_IS_PLAYING,
+	SIGNAL_IS_PAUSED,
 	SIGNAL_PLAY_STATE_CHANGE,
-	SIGNAL_PROGRESS_CHANGE,
+	SIGNAL_TICK_DURATION,
+	SIGNAL_TICK_TRACK,
+	SIGNAL_TRACK_CHANGE,
 	N_SIGNALS
 };
 
@@ -43,15 +46,19 @@ struct _KotoPlaybackEngine {
 	GstElement *player;
 	GstElement *playbin;
 	GstElement *suppress_video;
-
 	GstBus *monitor;
 
-	gboolean is_paused;
-	gboolean is_playing;
+	KotoIndexedTrack *current_track;
+
 	gboolean is_muted;
 	gboolean is_repeat_enabled;
 	gboolean is_shuffle_enabled;
-	gboolean requested_playing;
+
+	gboolean is_playing;
+
+	gboolean tick_duration_timer_running;
+	gboolean tick_track_timer_running;
+
 	guint playback_position;
 	gdouble volume;
 };
@@ -59,9 +66,12 @@ struct _KotoPlaybackEngine {
 struct _KotoPlaybackEngineClass {
 	GObjectClass parent_class;
 
-	void (* duration_changed) (KotoPlaybackEngine *engine, gint64 duration);
+	void (* is_playing) (KotoPlaybackEngine *engine);
+	void (* is_paused) (KotoPlaybackEngine *engine);
 	void (* play_state_changed) (KotoPlaybackEngine *engine);
-	void (* progress_changed) (KotoPlaybackEngine *engine, gint64 progress);
+	void (* tick_duration) (KotoPlaybackEngine *engine);
+	void (* tick_track) (KotoPlaybackEngine *engine);
+	void (* track_changed) (KotoPlaybackEngine *engine);
 };
 
 G_DEFINE_TYPE(KotoPlaybackEngine, koto_playback_engine, G_TYPE_OBJECT);
@@ -72,11 +82,23 @@ static void koto_playback_engine_class_init(KotoPlaybackEngineClass *c) {
 	GObjectClass *gobject_class;
 	gobject_class = G_OBJECT_CLASS(c);
 
-	playback_engine_signals[SIGNAL_DURATION_CHANGE] = g_signal_new(
-		"duration-changed",
+	playback_engine_signals[SIGNAL_IS_PLAYING] = g_signal_new(
+		"is-playing",
 		G_TYPE_FROM_CLASS(gobject_class),
 		G_SIGNAL_RUN_FIRST | G_SIGNAL_ACTION,
-		G_STRUCT_OFFSET(KotoPlaybackEngineClass, duration_changed),
+		G_STRUCT_OFFSET(KotoPlaybackEngineClass, play_state_changed),
+		NULL,
+		NULL,
+		NULL,
+		G_TYPE_NONE,
+		0
+	);
+
+	playback_engine_signals[SIGNAL_IS_PAUSED] = g_signal_new(
+		"is-paused",
+		G_TYPE_FROM_CLASS(gobject_class),
+		G_SIGNAL_RUN_FIRST | G_SIGNAL_ACTION,
+		G_STRUCT_OFFSET(KotoPlaybackEngineClass, play_state_changed),
 		NULL,
 		NULL,
 		NULL,
@@ -96,11 +118,35 @@ static void koto_playback_engine_class_init(KotoPlaybackEngineClass *c) {
 		0
 	);
 
-	playback_engine_signals[SIGNAL_PROGRESS_CHANGE] = g_signal_new(
-		"progress-changed",
+	playback_engine_signals[SIGNAL_TICK_DURATION] = g_signal_new(
+		"tick-duration",
 		G_TYPE_FROM_CLASS(gobject_class),
 		G_SIGNAL_RUN_FIRST | G_SIGNAL_ACTION,
-		G_STRUCT_OFFSET(KotoPlaybackEngineClass, progress_changed),
+		G_STRUCT_OFFSET(KotoPlaybackEngineClass, tick_duration),
+		NULL,
+		NULL,
+		NULL,
+		G_TYPE_NONE,
+		0
+	);
+
+	playback_engine_signals[SIGNAL_TICK_TRACK] = g_signal_new(
+		"tick-track",
+		G_TYPE_FROM_CLASS(gobject_class),
+		G_SIGNAL_RUN_FIRST | G_SIGNAL_ACTION,
+		G_STRUCT_OFFSET(KotoPlaybackEngineClass, tick_track),
+		NULL,
+		NULL,
+		NULL,
+		G_TYPE_NONE,
+		0
+	);
+
+	playback_engine_signals[SIGNAL_TRACK_CHANGE] = g_signal_new(
+		"track-changed",
+		G_TYPE_FROM_CLASS(gobject_class),
+		G_SIGNAL_RUN_FIRST | G_SIGNAL_ACTION,
+		G_STRUCT_OFFSET(KotoPlaybackEngineClass, track_changed),
 		NULL,
 		NULL,
 		NULL,
@@ -110,27 +156,28 @@ static void koto_playback_engine_class_init(KotoPlaybackEngineClass *c) {
 }
 
 static void koto_playback_engine_init(KotoPlaybackEngine *self) {
+	self->current_track = NULL;
+
 	self->player = gst_pipeline_new("player");
 	self->playbin = gst_element_factory_make("playbin", NULL);
 	self->suppress_video = gst_element_factory_make("fakesink", "suppress-video");
 
 	g_object_set(self->playbin, "video-sink", self->suppress_video, NULL);
-	g_object_set(self->playbin, "volume", 0.5, NULL);
+	koto_playback_engine_set_volume(self, 0.5);
 
 	gst_bin_add(GST_BIN(self->player), self->playbin);
 	self->monitor = gst_bus_new(); // Get the bus for the playbin
 
 	if (GST_IS_BUS(self->monitor)) {
 		gst_bus_add_watch(self->monitor, koto_playback_engine_monitor_changed, self);
-		gst_element_set_bus(self->playbin, self->monitor); // Set our bus to monitor changes
+		gst_element_set_bus(self->player, self->monitor); // Set our bus to monitor changes
 	}
 
 	self->is_muted = FALSE;
-	self->is_playing = FALSE;
-	self->is_paused = FALSE;
 	self->is_repeat_enabled = FALSE;
 	self->is_shuffle_enabled = FALSE;
-	self->requested_playing = FALSE;
+	self->tick_duration_timer_running = FALSE;
+	self->tick_track_timer_running = FALSE;
 
 	if (KOTO_IS_CURRENT_PLAYLIST(current_playlist)) {
 		g_signal_connect(current_playlist, "notify::current-playlist", G_CALLBACK(koto_playback_engine_current_playlist_changed), NULL);
@@ -171,9 +218,13 @@ void koto_playback_engine_forwards(KotoPlaybackEngine *self) {
 	koto_playback_engine_set_track_by_uuid(self, koto_playlist_go_to_next(playlist));
 }
 
+KotoIndexedTrack* koto_playback_engine_get_current_track(KotoPlaybackEngine *self) {
+	return self->current_track;
+}
+
 gint64 koto_playback_engine_get_duration(KotoPlaybackEngine *self) {
 	gint64 duration = 0;
-	if (gst_element_query_duration(self->playbin, GST_FORMAT_TIME, &duration)) {
+	if (gst_element_query_duration(self->player, GST_FORMAT_TIME, &duration)) {
 		duration = duration / NS; // Divide by NS to get seconds
 	}
 
@@ -182,18 +233,14 @@ gint64 koto_playback_engine_get_duration(KotoPlaybackEngine *self) {
 
 GstState koto_playback_engine_get_state(KotoPlaybackEngine *self) {
 	GstState current_state;
-	GstStateChangeReturn ret = gst_element_get_state(self->playbin, &current_state, NULL, GST_SECOND); // Get the current state, allowing up to a second to get it
-
-	if (ret != GST_STATE_CHANGE_SUCCESS) { // Got the data we need
-		return GST_STATE_NULL;
-	}
+	gst_element_get_state(self->player, &current_state, NULL, GST_SECOND); // Get the current state, allowing up to a second to get it
 
 	return current_state;
 }
 
 gint64 koto_playback_engine_get_progress(KotoPlaybackEngine *self) {
 	gint64 progress = 0;
-	if (gst_element_query_position(self->playbin, GST_FORMAT_TIME, &progress)) {
+	if (gst_element_query_position(self->player, GST_FORMAT_TIME, &progress)) {
 		progress = progress / NS; // Divide by NS to get seconds
 	}
 
@@ -205,34 +252,24 @@ gboolean koto_playback_engine_monitor_changed(GstBus *bus, GstMessage *msg, gpoi
 	KotoPlaybackEngine *self = user_data;
 
 	switch (GST_MESSAGE_TYPE(msg)) {
-		case GST_MESSAGE_ASYNC_DONE: { // Finished loading
-			if (self->requested_playing) {
-				self->is_playing = TRUE;
-				self->is_paused = FALSE;
-				g_timeout_add(50, koto_playback_engine_update_progress, self);
-				gst_element_set_state(self->playbin, GST_STATE_PLAYING); // Make double sure the state is playing
-				g_signal_emit(self, playback_engine_signals[SIGNAL_DURATION_CHANGE], 0); // Emit our duration signal
-				g_signal_emit(self, playback_engine_signals[SIGNAL_PLAY_STATE_CHANGE], 0); // Emit our playing signal
-			}
+		case GST_MESSAGE_DURATION_CHANGED: { // Duration changed
+			koto_playback_engine_tick_duration(self);
 			break;
 		}
 		case GST_MESSAGE_STATE_CHANGED: { // State changed
 			GstState old_state;
-			GstState requested_state;
 			GstState new_state;
-			gst_message_parse_state_changed(msg, &old_state, &requested_state, &new_state);
+			GstState pending_state;
+			gst_message_parse_state_changed(msg, &old_state, &new_state, &pending_state);
 
-			if ((old_state == GST_STATE_PLAYING) && (requested_state == GST_STATE_PAUSED)) {
-				self->is_playing = FALSE;
-				self->is_paused = TRUE;
+			if (new_state == GST_STATE_PLAYING) { // Now playing
+				g_signal_emit(self, playback_engine_signals[SIGNAL_IS_PLAYING], 0); // Emit our is playing state signal
+			} else if (new_state == GST_STATE_PAUSED) { // Now paused
+				g_signal_emit(self, playback_engine_signals[SIGNAL_IS_PAUSED], 0); // Emit our is paused state signal
+			}
 
-				g_signal_emit(self, playback_engine_signals[SIGNAL_PLAY_STATE_CHANGE], 0); // Emit our paused signal
-			} else if (requested_state == GST_STATE_PLAYING && !self->is_playing) {
-				self->is_playing = TRUE;
-				self->is_paused = FALSE;
-				g_signal_emit(self, playback_engine_signals[SIGNAL_PLAY_STATE_CHANGE], 0); // Emit our paused signal
-			} else if (((old_state == GST_STATE_PLAYING) || (old_state == GST_STATE_PAUSED)) && (new_state == GST_STATE_NULL)) { // If we're freeing resources
-				gst_bus_post(self->monitor, gst_message_new_reset_time(GST_OBJECT(self->playbin), 0));
+			if (new_state != GST_STATE_VOID_PENDING) {
+				g_signal_emit(self, playback_engine_signals[SIGNAL_PLAY_STATE_CHANGE], 0); // Emit our play state signal
 			}
 
 			break;
@@ -248,13 +285,27 @@ gboolean koto_playback_engine_monitor_changed(GstBus *bus, GstMessage *msg, gpoi
 }
 
 void koto_playback_engine_play(KotoPlaybackEngine *self) {
-	self->requested_playing = TRUE;
-	gst_element_set_state(self->playbin, GST_STATE_PLAYING); // Set our state to play
+	self->is_playing = TRUE;
+	gst_element_set_state(self->player, GST_STATE_PLAYING); // Set our state to play
+
+	if (!self->tick_duration_timer_running) {
+		self->tick_duration_timer_running = TRUE;
+		g_timeout_add(1000, koto_playback_engine_tick_duration, self); // Create a 1s duration tick
+	}
+
+	if (!self->tick_track_timer_running) {
+		self->tick_track_timer_running = TRUE;
+		g_timeout_add(100, koto_playback_engine_tick_track, self); // Create a 100ms track tick
+	}
 }
 
 void koto_playback_engine_pause(KotoPlaybackEngine *self) {
-	self->requested_playing = FALSE;
-	gst_element_set_state(self->playbin, GST_STATE_PAUSED); // Set our state to paused
+	self->is_playing = FALSE;
+	gst_element_change_state(self->player, GST_STATE_CHANGE_PLAYING_TO_PAUSED);
+}
+
+void koto_playback_engine_set_position(KotoPlaybackEngine *self, int position) {
+	gst_element_seek_simple(self->playbin, GST_FORMAT_TIME, GST_SEEK_FLAG_FLUSH, position * NS);
 }
 
 void koto_playback_engine_set_track_by_uuid(KotoPlaybackEngine *self, gchar *track_uuid) {
@@ -268,6 +319,8 @@ void koto_playback_engine_set_track_by_uuid(KotoPlaybackEngine *self, gchar *tra
 		return;
 	}
 
+	self->current_track = track;
+
 	gchar *track_file_path = NULL;
 	g_object_get(track, "path", &track_file_path, NULL); // Get the path to the track
 
@@ -279,10 +332,19 @@ void koto_playback_engine_set_track_by_uuid(KotoPlaybackEngine *self, gchar *tra
 	g_free(gst_filename); // Free the filename
 
 	koto_playback_engine_play(self); // Play the new track
+
+	// TODO: Add prior position state setting here, like picking up at a specific part of an audiobook or podcast
+	koto_playback_engine_set_position(self, 0);
+
+	g_signal_emit(self, playback_engine_signals[SIGNAL_TRACK_CHANGE], 0); // Emit our track change signal
+}
+
+void koto_playback_engine_set_volume(KotoPlaybackEngine *self, gdouble volume) {
+	g_object_set(self->playbin, "volume", volume, NULL);
 }
 
 void koto_playback_engine_stop(KotoPlaybackEngine *self) {
-	gst_element_set_state(self->playbin, GST_STATE_NULL);
+	gst_element_set_state(self->player, GST_STATE_NULL);
 	GstPad *pad = gst_element_get_static_pad(self->playbin, "audio-sink"); // Get the static pad of the audio element
 
 	if (!GST_IS_PAD(pad)) {
@@ -293,17 +355,32 @@ void koto_playback_engine_stop(KotoPlaybackEngine *self) {
 }
 
 void koto_playback_engine_toggle(KotoPlaybackEngine *self) {
-	if (koto_playback_engine_get_state(self) == GST_STATE_PLAYING) { // Currently playing
+	if (self->is_playing) { // Currently playing
 		koto_playback_engine_pause(self); // Pause
 	} else {
 		koto_playback_engine_play(self); // Play
 	}
 }
 
-gboolean koto_playback_engine_update_progress(gpointer user_data) {
+gboolean koto_playback_engine_tick_duration(gpointer user_data) {
 	KotoPlaybackEngine *self = user_data;
+
 	if (self->is_playing) { // Is playing
-		g_signal_emit(self, playback_engine_signals[SIGNAL_PROGRESS_CHANGE], 0); // Emit our progress change signal
+		g_signal_emit(self, playback_engine_signals[SIGNAL_TICK_DURATION], 0); // Emit our 1s track tick
+	} else { // Not playing so exiting timer
+		self->tick_duration_timer_running = FALSE;
+	}
+
+	return self->is_playing;
+}
+
+gboolean koto_playback_engine_tick_track(gpointer user_data) {
+	KotoPlaybackEngine *self = user_data;
+
+	if (self->is_playing) { // Is playing
+		g_signal_emit(self, playback_engine_signals[SIGNAL_TICK_TRACK], 0); // Emit our 100ms track tick
+	} else {
+		self->tick_track_timer_running = FALSE;
 	}
 
 	return self->is_playing;
