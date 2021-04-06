@@ -1,4 +1,4 @@
-/* koto-utils.h
+/* mimes.h
  *
  * Copyright 2021 Joshua Strobl
  *
@@ -17,13 +17,12 @@
 
 #pragma once
 #include <glib-2.0/glib.h>
-#include <gtk-4.0/gtk/gtk.h>
+#include <gstreamer-1.0/gst/gst.h>
 
 G_BEGIN_DECLS
 
-GtkWidget* koto_utils_create_image_from_filepath(gchar *filepath, gchar *fallback_icon, guint width, guint height);
-gchar* koto_utils_get_filename_without_extension(gchar *filename);
-gchar *koto_utils_replace_string_all(gchar *str, gchar *find, gchar *repl);
-gchar* koto_utils_unquote_string(gchar *s);
+gboolean koto_bplayback_engine_gst_caps_iter(GstCapsFeatures *features, GstStructure *structure, gpointer user_data);
+void koto_playback_engine_gst_pad_iter(gpointer list_data, gpointer user_data);
+void koto_playback_engine_get_supported_mimetypes(GList *mimes);
 
 G_END_DECLS

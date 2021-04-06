@@ -68,6 +68,18 @@ gchar* koto_utils_get_filename_without_extension(gchar *filename) {
 	return stripped_file_name;
 }
 
+gchar *koto_utils_replace_string_all(gchar *str, gchar *find, gchar *repl) {
+	gchar *cleaned_string = "";
+	gchar **split = g_strsplit(str, find, -1); // Split on find
+
+	for (guint i = 0; i < g_strv_length(split); i++) { // For each split
+		cleaned_string = g_strjoin(repl, cleaned_string, split[i], NULL); // Join the strings with our replace string
+	}
+
+	g_strfreev(split);
+	return cleaned_string;
+}
+
 gchar* koto_utils_unquote_string(gchar *s) {
 	gchar *new_s = NULL;
 

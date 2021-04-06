@@ -49,17 +49,19 @@ KotoIndexedTrack* koto_playback_engine_get_current_track(KotoPlaybackEngine *sel
 gint64 koto_playback_engine_get_duration(KotoPlaybackEngine *self);
 GstState koto_playback_engine_get_state(KotoPlaybackEngine *self);
 gint64 koto_playback_engine_get_progress(KotoPlaybackEngine *self);
+gboolean koto_playback_engine_get_track_repeat(KotoPlaybackEngine *self);
 void koto_playback_engine_mute(KotoPlaybackEngine *self);
 gboolean koto_playback_engine_monitor_changed(GstBus *bus, GstMessage *msg, gpointer user_data);
 void koto_playback_engine_pause(KotoPlaybackEngine *self);
 void koto_playback_engine_play(KotoPlaybackEngine *self);
 void koto_playback_engine_toggle(KotoPlaybackEngine *self);
 void koto_playback_engine_set_position(KotoPlaybackEngine *self, int position);
-void koto_playback_engine_set_repeat(KotoPlaybackEngine *self, gboolean enable);
-void koto_playback_engine_set_shuffle(KotoPlaybackEngine *self, gboolean enable);
+void koto_playback_engine_set_track_repeat(KotoPlaybackEngine *self, gboolean enable);
 void koto_playback_engine_set_track_by_uuid(KotoPlaybackEngine *self, gchar *track_uuid);
 void koto_playback_engine_set_volume(KotoPlaybackEngine *self, gdouble volume);
 void koto_playback_engine_stop(KotoPlaybackEngine *self);
+void koto_playback_engine_toggle_track_repeat(KotoPlaybackEngine *self);
 void koto_playback_engine_update_duration(KotoPlaybackEngine *self);
+
 gboolean koto_playback_engine_tick_duration(gpointer user_data);
 gboolean koto_playback_engine_tick_track(gpointer user_data);

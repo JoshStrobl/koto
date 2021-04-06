@@ -12,6 +12,8 @@ koto_sources = [
 	'pages/music/disc-view.c',
 	'pages/music/music-local.c',
 	'playback/engine.c',
+	'playback/mimes.c',
+	'playback/mpris.c',
 	'playlist/current.c',
 	'playlist/playlist.c',
 	'main.c',

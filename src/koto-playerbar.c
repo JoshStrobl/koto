@@ -18,11 +18,14 @@
 #include <gstreamer-1.0/gst/gst.h>
 #include <gtk-4.0/gtk/gtk.h>
 #include "db/cartographer.h"
+#include "playlist/current.h"
+#include "playlist/playlist.h"
 #include "playback/engine.h"
 #include "koto-button.h"
 #include "koto-config.h"
 #include "koto-playerbar.h"
 
+extern KotoCurrentPlaylist *current_playlist;
 extern KotoCartographer* koto_maps;
 extern KotoPlaybackEngine *playback_engine;
 
@@ -85,9 +88,18 @@ static void koto_playerbar_constructed(GObject *obj) {
 	gtk_range_set_increments(GTK_RANGE(self->progress_bar), 1, 1);
 	gtk_range_set_round_digits(GTK_RANGE(self->progress_bar), 1);
 
+	GtkEventController *scroll_controller = gtk_event_controller_scroll_new(GTK_EVENT_CONTROLLER_SCROLL_HORIZONTAL);
+	g_signal_connect(scroll_controller, "scroll-begin", G_CALLBACK(koto_playerbar_handle_progressbar_scroll_begin), self);
+	gtk_widget_add_controller(GTK_WIDGET(self->progress_bar), scroll_controller);
+
 	GtkGesture *press_controller = gtk_gesture_click_new(); // Create a new GtkGestureLongPress
+	gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(press_controller), 1); // Set to left click
+
+	g_signal_connect(GTK_GESTURE(press_controller), "begin", G_CALLBACK(koto_playerbar_handle_progressbar_gesture_begin), self);
+	g_signal_connect(GTK_GESTURE(press_controller), "end", G_CALLBACK(koto_playerbar_handle_progressbar_gesture_end), self);
 	g_signal_connect(press_controller, "pressed", G_CALLBACK(koto_playerbar_handle_progressbar_pressed), self);
-	g_signal_connect(press_controller, "unpaired-release", G_CALLBACK(koto_playerbar_handle_progressbar_released), self);
+	//g_signal_connect(press_controller, "unpaired-release", G_CALLBACK(koto_playerbar_handle_progressbar_unpaired_release), self);
+
 	gtk_widget_add_controller(GTK_WIDGET(self->progress_bar), GTK_EVENT_CONTROLLER(press_controller));
 
 	g_signal_connect(GTK_RANGE(self->progress_bar), "value-changed", G_CALLBACK(koto_playerbar_handle_progressbar_value_changed), self);
@@ -167,30 +179,29 @@ void koto_playerbar_create_primary_controls(KotoPlayerBar* bar) {
 	bar->play_pause_button = koto_button_new_with_icon("", "media-playback-start-symbolic", "media-playback-pause-symbolic", KOTO_BUTTON_PIXBUF_SIZE_LARGE); // TODO: Have this take in a state and switch to a different icon if necessary
 	bar->forward_button = koto_button_new_with_icon("", "media-skip-forward-symbolic", NULL, KOTO_BUTTON_PIXBUF_SIZE_NORMAL);
 
-	if (bar->back_button != NULL) {
+	if (KOTO_IS_BUTTON(bar->back_button)) {
 		gtk_box_append(GTK_BOX(bar->primary_controls_section), GTK_WIDGET(bar->back_button));
+
+		GtkGesture *back_controller = gtk_gesture_click_new(); // Create a new GtkGestureClick
+		g_signal_connect(back_controller, "pressed", G_CALLBACK(koto_playerbar_go_backwards), NULL);
+		gtk_widget_add_controller(GTK_WIDGET(bar->back_button), GTK_EVENT_CONTROLLER(back_controller));
 	}
 
-	if (bar->play_pause_button != NULL) {
+	if (KOTO_IS_BUTTON(bar->play_pause_button)) {
 		gtk_box_append(GTK_BOX(bar->primary_controls_section), GTK_WIDGET(bar->play_pause_button));
+
+		GtkGesture *controller = gtk_gesture_click_new(); // Create a new GtkGestureClick
+		g_signal_connect(controller, "pressed", G_CALLBACK(koto_playerbar_toggle_play_pause), NULL);
+		gtk_widget_add_controller(GTK_WIDGET(bar->play_pause_button), GTK_EVENT_CONTROLLER(controller));
 	}
 
-	if (bar->forward_button != NULL) {
+	if (KOTO_IS_BUTTON(bar->forward_button)) {
 		gtk_box_append(GTK_BOX(bar->primary_controls_section), GTK_WIDGET(bar->forward_button));
+
+		GtkGesture *forwards_controller = gtk_gesture_click_new(); // Create a new GtkGestureClick
+		g_signal_connect(forwards_controller, "pressed", G_CALLBACK(koto_playerbar_go_forwards), NULL);
+		gtk_widget_add_controller(GTK_WIDGET(bar->forward_button), GTK_EVENT_CONTROLLER(forwards_controller));
 	}
-
-
-	GtkGesture *back_controller = gtk_gesture_click_new(); // Create a new GtkGestureClick
-	g_signal_connect(back_controller, "pressed", G_CALLBACK(koto_playerbar_go_backwards), NULL);
-	gtk_widget_add_controller(GTK_WIDGET(bar->back_button), GTK_EVENT_CONTROLLER(back_controller));
-
-	GtkGesture *controller = gtk_gesture_click_new(); // Create a new GtkGestureClick
-	g_signal_connect(controller, "pressed", G_CALLBACK(koto_playerbar_toggle_play_pause), NULL);
-	gtk_widget_add_controller(GTK_WIDGET(bar->play_pause_button), GTK_EVENT_CONTROLLER(controller));
-
-	GtkGesture *forwards_controller = gtk_gesture_click_new(); // Create a new GtkGestureClick
-	g_signal_connect(forwards_controller, "pressed", G_CALLBACK(koto_playerbar_go_forwards), NULL);
-	gtk_widget_add_controller(GTK_WIDGET(bar->forward_button), GTK_EVENT_CONTROLLER(forwards_controller));
 }
 
 void koto_playerbar_create_secondary_controls(KotoPlayerBar* bar) {
@@ -198,30 +209,42 @@ void koto_playerbar_create_secondary_controls(KotoPlayerBar* bar) {
 	bar->shuffle_button = koto_button_new_with_icon("", "media-playlist-shuffle-symbolic", NULL, KOTO_BUTTON_PIXBUF_SIZE_NORMAL);
 	bar->playlist_button = koto_button_new_with_icon("", "playlist-symbolic", NULL, KOTO_BUTTON_PIXBUF_SIZE_NORMAL);
 	bar->eq_button = koto_button_new_with_icon("", "multimedia-equalizer-symbolic", NULL, KOTO_BUTTON_PIXBUF_SIZE_NORMAL);
+
 	bar->volume_button = gtk_volume_button_new(); // Have this take in a state and switch to a different icon if necessary
-	g_object_set(bar->volume_button, "use-symbolic", TRUE, NULL);
-	gtk_scale_button_set_value(GTK_SCALE_BUTTON(bar->volume_button), 0.5);
 
-	g_signal_connect(GTK_SCALE_BUTTON(bar->volume_button), "value-changed", G_CALLBACK(koto_playerbar_handle_volume_button_change), bar);
-
-	if (bar->repeat_button != NULL) {
+	if (KOTO_IS_BUTTON(bar->repeat_button)) {
 		gtk_box_append(GTK_BOX(bar->secondary_controls_section), GTK_WIDGET(bar->repeat_button));
+
+		GtkGesture *controller = gtk_gesture_click_new(); // Create a new GtkGestureClick
+		g_signal_connect(controller, "pressed", G_CALLBACK(koto_playerbar_toggle_track_repeat), bar);
+		gtk_widget_add_controller(GTK_WIDGET(bar->repeat_button), GTK_EVENT_CONTROLLER(controller));
 	}
 
-	if (bar->shuffle_button != NULL) {
+	if (KOTO_IS_BUTTON(bar->shuffle_button)) {
 		gtk_box_append(GTK_BOX(bar->secondary_controls_section), GTK_WIDGET(bar->shuffle_button));
+
+		GtkGesture *controller = gtk_gesture_click_new(); // Create a new GtkGestureClick
+		g_signal_connect(controller, "pressed", G_CALLBACK(koto_playerbar_toggle_playlist_shuffle), bar);
+		gtk_widget_add_controller(GTK_WIDGET(bar->shuffle_button), GTK_EVENT_CONTROLLER(controller));
 	}
 
-	if (bar->playlist_button != NULL) {
+	if (KOTO_IS_BUTTON(bar->playlist_button)) {
 		gtk_box_append(GTK_BOX(bar->secondary_controls_section), GTK_WIDGET(bar->playlist_button));
 	}
 
-	if (bar->eq_button != NULL) {
+	if (KOTO_IS_BUTTON(bar->eq_button)) {
 		gtk_box_append(GTK_BOX(bar->secondary_controls_section), GTK_WIDGET(bar->eq_button));
 	}
 
-	if (bar->volume_button != NULL) {
+	if (GTK_IS_VOLUME_BUTTON(bar->volume_button)) {
+		GtkAdjustment *granular_volume_change = gtk_adjustment_new(0.5, 0, 1.0, 0.02, 0.02, 0.02);
+		g_object_set(bar->volume_button, "use-symbolic", TRUE, NULL);
+		gtk_range_set_round_digits(GTK_RANGE(bar->volume_button), FALSE);
+		gtk_scale_button_set_adjustment(GTK_SCALE_BUTTON(bar->volume_button), granular_volume_change); // Set our adjustment
 		gtk_box_append(GTK_BOX(bar->secondary_controls_section), bar->volume_button);
+
+		g_signal_connect(GTK_SCALE_BUTTON(bar->volume_button), "value-changed", G_CALLBACK(koto_playerbar_handle_volume_button_change), bar);
+
 	}
 }
 
@@ -265,6 +288,35 @@ void koto_playerbar_handle_is_paused(KotoPlaybackEngine *engine, gpointer user_d
 	koto_button_show_image(bar->play_pause_button, FALSE); // Set to FALSE to show play as the next action
 }
 
+void koto_playerbar_handle_progressbar_scroll_begin(GtkEventControllerScroll *controller, gpointer data){
+	(void) controller;
+	g_message("scroll-begin");
+}
+
+void koto_playerbar_handle_progressbar_gesture_begin(GtkGesture *gesture, GdkEventSequence *seq, gpointer data) {
+	(void) gesture; (void) seq;
+	KotoPlayerBar *bar = data;
+
+	if (!KOTO_IS_PLAYERBAR(bar)) {
+		return;
+	}
+
+	g_message("Begin");
+	bar->is_progressbar_seeking = TRUE;
+}
+
+void koto_playerbar_handle_progressbar_gesture_end(GtkGesture *gesture, GdkEventSequence *seq, gpointer data) {
+	(void) gesture; (void) seq;
+	KotoPlayerBar *bar = data;
+
+	g_message("Ended");
+
+	if (!KOTO_IS_PLAYERBAR(bar)) {
+		return;
+	}
+	bar->is_progressbar_seeking = FALSE;
+}
+
 void koto_playerbar_handle_progressbar_pressed(GtkGestureClick *gesture, int n_press, double x, double y, gpointer data) {
 	(void) gesture; (void) n_press; (void) x; (void) y;
 	KotoPlayerBar *bar = data;
@@ -273,20 +325,9 @@ void koto_playerbar_handle_progressbar_pressed(GtkGestureClick *gesture, int n_p
 		return;
 	}
 
+	g_message("Pressed");
 	bar->is_progressbar_seeking = TRUE;
 }
-
-void koto_playerbar_handle_progressbar_released(GtkGestureClick *gesture, double x, double y, guint button, GdkEventSequence *seq, gpointer data) {
-	(void) gesture; (void) x; (void) y; (void) button; (void) seq;
-	KotoPlayerBar *bar = data;
-
-	if (!KOTO_IS_PLAYERBAR(bar)) {
-		return;
-	}
-
-	bar->is_progressbar_seeking = FALSE;
-}
-
 
 void koto_playerbar_handle_progressbar_value_changed(GtkRange *progress_bar, gpointer data) {
 	KotoPlayerBar *bar = data;
@@ -301,6 +342,7 @@ void koto_playerbar_handle_progressbar_value_changed(GtkRange *progress_bar, gpo
 
 	int desired_position = (int) gtk_range_get_value(progress_bar);
 
+	g_message("value changed");
 	koto_playback_engine_set_position(playback_engine, desired_position); // Update our position
 }
 
@@ -364,6 +406,41 @@ void koto_playerbar_toggle_play_pause(GtkGestureClick *gesture, int n_press, dou
 	(void) gesture; (void) n_press; (void) x; (void) y; (void) data;
 
 	koto_playback_engine_toggle(playback_engine);
+}
+
+void koto_playerbar_toggle_playlist_shuffle(GtkGestureClick *gesture, int n_press, double x, double y, gpointer data) {
+	(void) gesture; (void) n_press; (void) x; (void) y;
+	KotoPlayerBar *bar = data;
+
+	if (!KOTO_IS_PLAYERBAR(bar)) {
+		return;
+	}
+
+	KotoPlaylist *playlist = koto_current_playlist_get_playlist(current_playlist);
+
+	if (!KOTO_IS_PLAYLIST(playlist)) { // Don't have a playlist currently
+		gtk_widget_remove_css_class(GTK_WIDGET(bar->shuffle_button), "active"); // Remove active state
+		return;
+	}
+
+	gboolean currently_shuffling = FALSE;
+	g_object_get(playlist, "is-shuffle-enabled", &currently_shuffling, NULL); // Get the current is-shuffle-enabled
+
+	(currently_shuffling) ? gtk_widget_remove_css_class(GTK_WIDGET(bar->shuffle_button), "active") : gtk_widget_add_css_class(GTK_WIDGET(bar->shuffle_button), "active");
+	g_object_set(playlist, "is-shuffle-enabled", !currently_shuffling, NULL); // Provide inverse value
+}
+
+void koto_playerbar_toggle_track_repeat(GtkGestureClick *gesture, int n_press, double x, double y, gpointer data) {
+	(void) gesture; (void) n_press; (void) x; (void) y;
+	KotoPlayerBar *bar = data;
+
+	if (koto_playback_engine_get_track_repeat(playback_engine)) { // Toggled on at the moment
+		gtk_widget_remove_css_class(GTK_WIDGET(bar->repeat_button), "active"); // Remove active CSS class
+	} else {
+		gtk_widget_add_css_class(GTK_WIDGET(bar->repeat_button), "active"); // Add active CSS class
+	}
+
+	koto_playback_engine_toggle_track_repeat(playback_engine); // Toggle the state
 }
 
 void koto_playerbar_update_track_info(KotoPlaybackEngine *engine, gpointer user_data) {

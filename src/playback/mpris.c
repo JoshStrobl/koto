@@ -1,0 +1,357 @@
+/* mpris.c
+ *
+ * Copyright 2021 Joshua Strobl
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * 	http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+// Huge thanks to the GLib folks for providing an example server test
+
+#include <glib-2.0/glib.h>
+#include <glib-2.0/gio/gio.h>
+#include <gtk-4.0/gtk/gtk.h>
+#include "../db/cartographer.h"
+#include "../playlist/current.h"
+#include "../playlist/playlist.h"
+#include "mimes.h"
+#include "engine.h"
+
+extern KotoCartographer *koto_maps;
+extern KotoCurrentPlaylist *current_playlist;
+extern GtkApplication *app;
+extern GtkWindow *main_window;
+extern KotoPlaybackEngine *playback_engine;
+extern GList *supported_mimes;
+
+GDBusConnection *dbus_conn = NULL;
+guint mpris_bus_id = 0;
+GDBusNodeInfo *introspection_data = NULL;
+
+static const gchar introspection_xml[] =
+"<node>"
+"	<interface name='org.mpris.MediaPlayer2'>"
+"		<method name='Raise' />"
+"		<method name='Quit' />"
+"		<property type='b' name='CanQuit' access='read' />"
+"		<property type='b' name='CanRaise' access='read' />"
+"		<property type='b' name='HasTrackList' access='read' />"
+"		<property type='s' name='Identity' access='read' />"
+"		<property type='s' name='DesktopEntry' access='read' />"
+"		<property type='as' name='SupportedUriSchemas' access='read' />"
+"		<property type='as' name='SupportedMimeTypes' access='read' />"
+"	</interface>"
+"	<interface name='org.mpris.MediaPlayer2.Player'>"
+"		<method name='Next' />"
+"		<method name='Previous' />"
+"		<method name='Pause' />"
+"		<method name='PlayPause' />"
+"		<method name='Stop' />"
+"		<method name='Play' />"
+"		<method name='Seek'>"
+"			<arg type='x' name='offset' />"
+"		</method>"
+"		<method name='SetPosition'>"
+"			<arg type='o' name='track_id' />"
+"			<arg type='x' name='pos' />"
+"		</method>"
+"		<property type='s' name='PlaybackStatus' access='read' />"
+"		<property type='s' name='LoopStatus' access='readwrite' />"
+"		<property type='d' name='Rate' access='readwrite' />"
+"		<property type='b' name='Shuffle' access='readwrite' />"
+"		<property type='a{sv}' name='Metadata' access='read' />"
+"		<property type='d' name='Volume' access='readwrite' />"
+"		<property type='x' name='Position' access='read' />"
+"		<property type='d' name='MinimumRate' access='read' />"
+"		<property type='d' name='MaximumRate' access='read' />"
+"		<property type='b' name='CanGoNext' access='read' />"
+"		<property type='b' name='CanGoPrevious' access='read' />"
+"		<property type='b' name='CanPlay' access='read' />"
+"		<property type='b' name='CanPause' access='read' />"
+"		<property type='b' name='CanSeek' access='read' />"
+"		<property type='b' name='CanControl' access='read' />"
+"	</interface>"
+"</node>";
+
+void handle_main_mpris_method_call(
+	GDBusConnection *connection,
+	const gchar *sender,
+	const gchar *object_path,
+	const gchar *interface_name,
+	const gchar *method_name,
+	GVariant *parameters,
+	GDBusMethodInvocation *invocation,
+	gpointer user_data
+) {
+	if (g_strcmp0(interface_name, "org.mpris.MediaPlayer2") == 0) { // Root mediaplayer2 interface
+		if (g_strcmp0(method_name, "Raise") == 0) { // Raise the window
+			gtk_window_unminimize(main_window); // Ensure we unminimize the window
+			gtk_window_present(main_window); // Present our main window
+			return;
+		}
+
+		if (g_strcmp0(method_name, "Quit") == 0) { // Quit the application
+			gtk_application_remove_window(app, main_window); // Remove the window, thereby closing the app
+			return;
+		}
+	} else if (g_strcmp0(interface_name, "org.mpris.MediaPlayer2.koto") == 0) { // Root mediaplayer2 interface
+		if (g_strcmp0(method_name, "Next") == 0) { // Next track
+			koto_playback_engine_forwards(playback_engine);
+			return;
+		}
+
+		if (g_strcmp0(method_name, "Previous") == 0) { // Previous track
+			koto_playback_engine_backwards(playback_engine);
+			return;
+		}
+	}
+}
+
+GVariant* handle_get_property(
+	GDBusConnection *connection,
+	const gchar *sender,
+	const gchar *object_path,
+	const gchar *interface_name,
+	const gchar *property_name,
+	GError **error,
+	gpointer user_data
+) {
+	GVariant *ret;
+	ret = NULL;
+
+	g_message("asking for %s", property_name);
+
+	if (g_strcmp0(property_name, "CanQuit") == 0) { // If property is CanQuit
+		ret = g_variant_new_boolean(TRUE); // Allow quitting. You can escape Hotel California for now.
+	}
+
+	if (g_strcmp0(property_name, "CanRaise") == 0) { // If property is CanRaise
+		ret = g_variant_new_boolean(TRUE); // Allow raising.
+	}
+
+	if (g_strcmp0(property_name, "HasTrackList") == 0) { // If property is HasTrackList
+		KotoPlaylist *playlist = koto_current_playlist_get_playlist(current_playlist);
+		if (KOTO_IS_PLAYLIST(playlist)) {
+			ret = g_variant_new_boolean(koto_playlist_get_length(playlist) > 0);
+		} else { // Don't have a playlist
+			ret = g_variant_new_boolean(FALSE);
+		}
+	}
+
+	if (g_strcmp0(property_name, "Identity") == 0) { // Want identity
+		ret = g_variant_new_string("Koto"); // Not Jason Bourne but close enough
+	}
+
+	if (g_strcmp0(property_name, "DesktopEntry") == 0) { // Desktop Entry
+		ret = g_variant_new_string("com.github.joshstrobl.koto");
+	}
+
+	if (g_strcmp0(property_name, "SupportedUriSchemas") == 0) { // Supported URI Schemas
+		GVariantBuilder *builder = g_variant_builder_new(G_VARIANT_TYPE("as")); // Array of strings
+		g_variant_builder_add(builder, "s", "file");
+		ret = g_variant_new("as", builder);
+		g_variant_builder_unref(builder); // Unref builder since we no longer need it
+	}
+
+	if (g_strcmp0(property_name, "SupportedMimeTypes") == 0) { // Supported mimetypes
+		GVariantBuilder *builder = g_variant_builder_new(G_VARIANT_TYPE("as")); // Array of strings
+		GList *mimes;
+		mimes = NULL;
+
+		for (mimes = supported_mimes; mimes != NULL; mimes = mimes->next) { // For each mimetype
+			g_variant_builder_add(builder, "s", mimes->data); // Add the mime as a string
+		}
+
+		ret = g_variant_new("as", builder);
+		g_variant_builder_unref(builder);
+		g_list_free(mimes);
+	}
+
+	if (g_strcmp0(property_name, "Metadata") == 0) { // Metadata
+		GVariantBuilder *builder = g_variant_builder_new(G_VARIANT_TYPE_VARDICT);
+
+		KotoIndexedTrack *current_track = koto_playback_engine_get_current_track(playback_engine);
+
+		if (KOTO_IS_INDEXED_TRACK(current_track)) { // Currently playing a track
+			koto_push_track_info_to_builder(builder, current_track);
+		}
+
+		ret = g_variant_builder_end(builder);
+	}
+
+	if (
+			(g_strcmp0(property_name, "CanPlay") == 0) ||
+			(g_strcmp0(property_name, "CanPause") == 0) ||
+			(g_strcmp0(property_name, "CanSeek") == 0)
+	) {
+		KotoIndexedTrack *current_track = koto_playback_engine_get_current_track(playback_engine);
+		ret = g_variant_new_boolean(KOTO_IS_INDEXED_TRACK(current_track));
+	}
+
+	if (g_strcmp0(property_name, "CanGoNext") == 0) { // Can Go Next
+		// TODO: Add some actual logic here
+		ret = g_variant_new_boolean(TRUE);
+	}
+
+	if (g_strcmp0(property_name, "CanGoPrevious") == 0) { // Can Go Previous
+		// TODO: Add some actual logic here
+		ret = g_variant_new_boolean(TRUE);
+	}
+
+	if (g_strcmp0(property_name, "CanControl")  == 0){ // Can Control
+		ret = g_variant_new_boolean(TRUE);
+	}
+
+	if (g_strcmp0(property_name, "PlaybackStatus") == 0) { // Get our playback status
+		GstState current_state = koto_playback_engine_get_state(playback_engine); // Get the current state
+
+		if (current_state == GST_STATE_PLAYING) {
+			ret = g_variant_new_string("Playing");
+		} else if (current_state == GST_STATE_PAUSED) {
+			ret = g_variant_new_string("Paused");
+		} else {
+			ret = g_variant_new_string("Stopped");
+		}
+	}
+
+	return ret;
+}
+
+void koto_push_track_info_to_builder(GVariantBuilder *builder, KotoIndexedTrack *track) {
+	if (!KOTO_IS_INDEXED_TRACK(track)) {
+		return;
+	}
+
+	gchar *album_art_path = NULL;
+	gchar *album_name = NULL;
+	gchar *album_uuid = NULL;
+	gchar *artist_uuid = NULL;
+	gchar *artist_name = NULL;
+	gchar *track_name = NULL;
+	gchar *track_path = NULL;
+	gchar *track_uuid = NULL;
+	guint track_position = 0;
+	guint track_disc = 0;
+
+	g_object_get(track,
+		"album-uuid", &album_uuid,
+		"artist-uuid", &artist_uuid,
+		"cd", &track_disc,
+		"path", &track_path,
+		"parsed-name", &track_name,
+		"position", &track_position,
+		"uuid", &track_uuid,
+	NULL);
+
+	KotoIndexedArtist *artist = koto_cartographer_get_artist_by_uuid(koto_maps, artist_uuid);
+	KotoIndexedAlbum *album = koto_cartographer_get_album_by_uuid(koto_maps, album_uuid);
+
+	g_object_get(album,
+		"art-path", &album_art_path,
+		"name", &album_name,
+	NULL);
+
+	g_object_get(artist,
+		"name", &artist_name,
+	NULL);
+
+	g_variant_builder_add(builder, "{sv}", "mpris:trackid", g_variant_new_string(track_uuid));
+
+	g_message("Art path: %s", album_art_path);
+	if (g_strcmp0(album_art_path, "") != 0) { // Not empty
+		album_art_path = g_strconcat("file://", album_art_path); // Prepend with file://
+		g_variant_builder_add(builder, "{sv}", "mpris:artUrl", g_variant_new_string(album_art_path));
+	}
+
+	g_variant_builder_add(builder, "{sv}", "xesam:album", g_variant_new_string(album_name));
+
+	if (g_strcmp0(artist_name, "") != 0) { // Got artist name
+		GVariant *artist_name_variant;
+		GVariantBuilder *artist_list_builder = g_variant_builder_new(G_VARIANT_TYPE("as"));
+		g_variant_builder_add(artist_list_builder, "s", artist_name);
+		artist_name_variant = g_variant_new("as", artist_list_builder);
+		g_variant_builder_unref(artist_list_builder);
+
+		g_variant_builder_add(builder, "{sv}", "xesam:artist", artist_name_variant);
+	}
+
+	g_variant_builder_add(builder, "{sv}", "xesam:discNumber", g_variant_new_uint64(track_disc));
+	g_variant_builder_add(builder, "{sv}", "xesam:title", g_variant_new_string(track_name));
+	g_variant_builder_add(builder, "{sv}", "xesam:url", g_variant_new_string(track_path));
+	g_variant_builder_add(builder, "{sv}", "xesam:trackNumber", g_variant_new_uint64(track_position));
+}
+
+void koto_update_mpris_info_for_track(KotoIndexedTrack *track) {
+	if (!KOTO_IS_INDEXED_TRACK(track)) {
+		return;
+	}
+
+	GVariantBuilder *builder = g_variant_builder_new(G_VARIANT_TYPE_ARRAY);
+	GVariantBuilder *metadata_builder = g_variant_builder_new(G_VARIANT_TYPE_VARDICT);
+	GError *error = NULL;
+
+	koto_push_track_info_to_builder(metadata_builder, track);
+	GVariant *metadata_ret = g_variant_builder_end(metadata_builder);
+	g_variant_builder_add(builder, "{sv}", "Metadata", metadata_ret);
+
+	g_dbus_connection_emit_signal(dbus_conn,
+		NULL,
+		"/org/mpris/MediaPlayer2",
+		"org.freedesktop.DBus.Properties",
+		"PropertiesChanged",
+		g_variant_new("(sa{sv}as)", "org.mpris.MediaPlayer2.Player", builder, NULL),
+		&error
+	);
+}
+
+static const GDBusInterfaceVTable main_mpris_interface_vtable = {
+	handle_main_mpris_method_call,
+	handle_get_property,
+};
+
+void on_main_mpris_bus_acquired(GDBusConnection *connection, const gchar *name, gpointer user_data) {
+	dbus_conn = connection;
+	g_dbus_connection_register_object(dbus_conn,
+		"/org/mpris/MediaPlayer2",
+		introspection_data->interfaces[0],
+		&main_mpris_interface_vtable,
+		NULL,
+		NULL,
+		NULL
+	);
+
+	g_dbus_connection_register_object(dbus_conn,
+		"/org/mpris/MediaPlayer2",
+		introspection_data->interfaces[1],
+		&main_mpris_interface_vtable,
+		NULL,
+		NULL,
+		NULL
+	);
+}
+
+void setup_mpris_interfaces() {
+	introspection_data = g_dbus_node_info_new_for_xml(introspection_xml, NULL);
+	g_assert(introspection_data != NULL);
+
+	mpris_bus_id = g_bus_own_name(G_BUS_TYPE_SESSION,
+		"org.mpris.MediaPlayer2.koto",
+		G_BUS_NAME_OWNER_FLAGS_NONE,
+		on_main_mpris_bus_acquired,
+		NULL,
+		NULL,
+		NULL,
+		NULL
+	);
+
+	g_assert(mpris_bus_id > 0);
+}

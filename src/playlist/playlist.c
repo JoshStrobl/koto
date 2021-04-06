@@ -29,7 +29,7 @@ struct _KotoPlaylist {
 	gchar *uuid;
 	gchar *name;
 	gchar *art_path;
-	guint current_position;
+	gint current_position;
 	gboolean ephemeral;
 	gboolean is_shuffle_enabled;
 
@@ -45,6 +45,7 @@ enum {
 	PROP_NAME,
 	PROP_ART_PATH,
 	PROP_EPHEMERAL,
+	PROP_IS_SHUFFLE_ENABLED,
 	N_PROPERTIES,
 };
 
@@ -90,6 +91,14 @@ static void koto_playlist_class_init(KotoPlaylistClass *c) {
 		G_PARAM_CONSTRUCT|G_PARAM_EXPLICIT_NOTIFY|G_PARAM_READWRITE
 	);
 
+	props[PROP_IS_SHUFFLE_ENABLED] = g_param_spec_boolean(
+		"is-shuffle-enabled",
+		"Is shuffling enabled",
+		"Is shuffling enabled",
+		FALSE,
+		G_PARAM_CONSTRUCT|G_PARAM_EXPLICIT_NOTIFY|G_PARAM_READWRITE
+	);
+
 	g_object_class_install_properties(gobject_class, N_PROPERTIES, props);
 }
 
@@ -108,6 +117,9 @@ static void koto_playlist_get_property(GObject *obj, guint prop_id, GValue *val,
 			break;
 		case PROP_EPHEMERAL:
 			g_value_set_boolean(val, self->ephemeral);
+			break;
+		case PROP_IS_SHUFFLE_ENABLED:
+			g_value_set_boolean(val, self->is_shuffle_enabled);
 			break;
 		default:
 			G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, prop_id, spec);
@@ -131,6 +143,9 @@ static void koto_playlist_set_property(GObject *obj, guint prop_id, const GValue
 		case PROP_EPHEMERAL:
 			self->ephemeral = g_value_get_boolean(val);
 			break;
+		case PROP_IS_SHUFFLE_ENABLED:
+			self->is_shuffle_enabled = g_value_get_boolean(val);
+			break;
 		default:
 			G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, prop_id, spec);
 			break;
@@ -138,9 +153,18 @@ static void koto_playlist_set_property(GObject *obj, guint prop_id, const GValue
 }
 
 static void koto_playlist_init(KotoPlaylist *self) {
-	self->current_position = 0; // Default to 0
+	self->current_position = -1; // Default to -1 so first time incrementing puts it at 0
+	self->is_shuffle_enabled = FALSE;
 	self->played_tracks = g_queue_new(); // Set as an empty GQueue
 	self->tracks = g_queue_new(); // Set as an empty GQueue
+}
+
+void koto_playlist_add_to_played_tracks(KotoPlaylist *self, gchar *uuid) {
+	if (g_queue_index(self->played_tracks, uuid) != -1) { // Already added
+		return;
+	}
+
+	g_queue_push_tail(self->played_tracks, uuid); // Add to end
 }
 
 void koto_playlist_add_track(KotoPlaylist *self, KotoIndexedTrack *track) {
@@ -228,12 +252,13 @@ gchar* koto_playlist_get_random_track(KotoPlaylist *self) {
 		GRand* rando_calrissian = g_rand_new(); // Create a new RNG
 		guint attempt = 0;
 
-		while (track_uuid != NULL)  { // Haven't selected a track yet
+		while (track_uuid == NULL)  { // Haven't selected a track yet
 			attempt++;
 			gint32 *selected_item = g_rand_int_range(rando_calrissian, 0, (gint32) tracks_len);
 			gchar *selected_track = g_queue_peek_nth(self->tracks, (guint) selected_item); // Get the UUID of the selected item
 
 			if (g_queue_index(self->played_tracks, selected_track) == -1) { // Haven't played the track
+				self->current_position = (int) selected_item;
 				track_uuid = selected_track;
 				break;
 			} else { // Failed to get the track
@@ -259,7 +284,9 @@ gchar* koto_playlist_get_uuid(KotoPlaylist *self) {
 
 gchar* koto_playlist_go_to_next(KotoPlaylist *self) {
 	if (self->is_shuffle_enabled) { // Shuffling enabled
-		return koto_playlist_get_random_track(self); // Get a random track
+		gchar *random_track_uuid = koto_playlist_get_random_track(self); // Get a random track
+		koto_playlist_add_to_played_tracks(self, random_track_uuid);
+		return random_track_uuid;
 	}
 
 	gchar *current_uuid = koto_playlist_get_current_uuid(self); // Get the current UUID
@@ -269,7 +296,9 @@ gchar* koto_playlist_go_to_next(KotoPlaylist *self) {
 	}
 
 	self->current_position++; // Increment our position
-	return koto_playlist_get_current_uuid(self); // Return the new UUID
+	current_uuid = koto_playlist_get_current_uuid(self); // Return the new UUID
+	koto_playlist_add_to_played_tracks(self, current_uuid);
+	return current_uuid;
 }
 
 gchar* koto_playlist_go_to_previous(KotoPlaylist *self) {
@@ -285,6 +314,10 @@ gchar* koto_playlist_go_to_previous(KotoPlaylist *self) {
 
 	self->current_position--; // Decrement our position
 	return koto_playlist_get_current_uuid(self); // Return the new UUID
+}
+
+void koto_playlist_remove_from_played_tracks(KotoPlaylist *self, gchar *uuid) {
+	g_queue_remove(self->played_tracks, uuid);
 }
 
 void koto_playlist_remove_track(KotoPlaylist *self, KotoIndexedTrack *track) {

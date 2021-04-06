@@ -2,4 +2,8 @@
 	& > image {
 		margin-right: 10px;
 	}
+
+	&.active > image {
+		color: $green;
+	}
 }

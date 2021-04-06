@@ -1,7 +1,7 @@
 {
     "app-id" : "com.github.joshstrobl.koto",
     "runtime" : "org.gnome.Platform",
-    "runtime-version" : "3.38",
+    "runtime-version" : "40",
     "sdk" : "org.gnome.Sdk",
     "command" : "com.github.joshstrobl.koto",
     "finish-args" : [
@@ -29,9 +29,12 @@
             "sources" : [
                 {
                     "type" : "git",
-                    "url" : "file:///home/joshua/Code/Personal/Koto"
+                    "url" : "https://github.com/JoshStrobl/koto.git"
                 }
             ]
         }
-    ]
+    ],
+    "build-options" : {
+        "env" : {        }
+    }
 }

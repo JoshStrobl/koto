@@ -22,6 +22,7 @@
 #include "../playlist/current.h"
 #include "../indexer/structs.h"
 #include "engine.h"
+#include "mpris.h"
 
 enum {
 	SIGNAL_IS_PLAYING,
@@ -52,7 +53,6 @@ struct _KotoPlaybackEngine {
 
 	gboolean is_muted;
 	gboolean is_repeat_enabled;
-	gboolean is_shuffle_enabled;
 
 	gboolean is_playing;
 
@@ -163,6 +163,7 @@ static void koto_playback_engine_init(KotoPlaybackEngine *self) {
 	self->suppress_video = gst_element_factory_make("fakesink", "suppress-video");
 
 	g_object_set(self->playbin, "video-sink", self->suppress_video, NULL);
+	self->volume = 0.5;
 	koto_playback_engine_set_volume(self, 0.5);
 
 	gst_bin_add(GST_BIN(self->player), self->playbin);
@@ -175,7 +176,6 @@ static void koto_playback_engine_init(KotoPlaybackEngine *self) {
 
 	self->is_muted = FALSE;
 	self->is_repeat_enabled = FALSE;
-	self->is_shuffle_enabled = FALSE;
 	self->tick_duration_timer_running = FALSE;
 	self->tick_track_timer_running = FALSE;
 
@@ -205,7 +205,7 @@ void koto_playback_engine_current_playlist_changed() {
 		return;
 	}
 
-	koto_playback_engine_set_track_by_uuid(playback_engine, koto_playlist_get_current_uuid(playlist)); // Get the current UUID
+	koto_playback_engine_set_track_by_uuid(playback_engine, koto_playlist_go_to_next(playlist)); // Go to "next" which is the first track
 }
 
 void koto_playback_engine_forwards(KotoPlaybackEngine *self) {
@@ -215,7 +215,11 @@ void koto_playback_engine_forwards(KotoPlaybackEngine *self) {
 		return;
 	}
 
-	koto_playback_engine_set_track_by_uuid(self, koto_playlist_go_to_next(playlist));
+	if (self->is_repeat_enabled) { // Is repeat enabled
+		koto_playback_engine_set_position(self, 0); // Set position back to 0 to repeat the track
+	} else { // Repeat not enabled
+		koto_playback_engine_set_track_by_uuid(self, koto_playlist_go_to_next(playlist));
+	}
 }
 
 KotoIndexedTrack* koto_playback_engine_get_current_track(KotoPlaybackEngine *self) {
@@ -231,13 +235,6 @@ gint64 koto_playback_engine_get_duration(KotoPlaybackEngine *self) {
 	return duration;
 }
 
-GstState koto_playback_engine_get_state(KotoPlaybackEngine *self) {
-	GstState current_state;
-	gst_element_get_state(self->player, &current_state, NULL, GST_SECOND); // Get the current state, allowing up to a second to get it
-
-	return current_state;
-}
-
 gint64 koto_playback_engine_get_progress(KotoPlaybackEngine *self) {
 	gint64 progress = 0;
 	if (gst_element_query_position(self->player, GST_FORMAT_TIME, &progress)) {
@@ -247,13 +244,26 @@ gint64 koto_playback_engine_get_progress(KotoPlaybackEngine *self) {
 	return progress;
 }
 
+GstState koto_playback_engine_get_state(KotoPlaybackEngine *self) {
+	GstState current_state;
+	gst_element_get_state(self->player, &current_state, NULL, GST_SECOND); // Get the current state, allowing up to a second to get it
+
+	return current_state;
+}
+
+gboolean koto_playback_engine_get_track_repeat(KotoPlaybackEngine *self) {
+	return self->is_repeat_enabled;
+}
+
 gboolean koto_playback_engine_monitor_changed(GstBus *bus, GstMessage *msg, gpointer user_data) {
 	(void) bus;
 	KotoPlaybackEngine *self = user_data;
 
 	switch (GST_MESSAGE_TYPE(msg)) {
+		case GST_MESSAGE_ASYNC_DONE:
 		case GST_MESSAGE_DURATION_CHANGED: { // Duration changed
 			koto_playback_engine_tick_duration(self);
+			koto_playback_engine_tick_track(self);
 			break;
 		}
 		case GST_MESSAGE_STATE_CHANGED: { // State changed
@@ -263,6 +273,7 @@ gboolean koto_playback_engine_monitor_changed(GstBus *bus, GstMessage *msg, gpoi
 			gst_message_parse_state_changed(msg, &old_state, &new_state, &pending_state);
 
 			if (new_state == GST_STATE_PLAYING) { // Now playing
+				koto_playback_engine_tick_duration(self);
 				g_signal_emit(self, playback_engine_signals[SIGNAL_IS_PLAYING], 0); // Emit our is playing state signal
 			} else if (new_state == GST_STATE_PAUSED) { // Now paused
 				g_signal_emit(self, playback_engine_signals[SIGNAL_IS_PAUSED], 0); // Emit our is paused state signal
@@ -308,6 +319,10 @@ void koto_playback_engine_set_position(KotoPlaybackEngine *self, int position) {
 	gst_element_seek_simple(self->playbin, GST_FORMAT_TIME, GST_SEEK_FLAG_FLUSH, position * NS);
 }
 
+void koto_playback_engine_set_track_repeat(KotoPlaybackEngine *self, gboolean enable) {
+	self->is_repeat_enabled = enable;
+}
+
 void koto_playback_engine_set_track_by_uuid(KotoPlaybackEngine *self, gchar *track_uuid) {
 	if (track_uuid == NULL) {
 		return;
@@ -335,17 +350,20 @@ void koto_playback_engine_set_track_by_uuid(KotoPlaybackEngine *self, gchar *tra
 
 	// TODO: Add prior position state setting here, like picking up at a specific part of an audiobook or podcast
 	koto_playback_engine_set_position(self, 0);
+	koto_playback_engine_set_volume(self, self->volume); // Re-enforce our volume on the updated playbin
 
 	g_signal_emit(self, playback_engine_signals[SIGNAL_TRACK_CHANGE], 0); // Emit our track change signal
+	koto_update_mpris_info_for_track(self->current_track);
 }
 
 void koto_playback_engine_set_volume(KotoPlaybackEngine *self, gdouble volume) {
-	g_object_set(self->playbin, "volume", volume, NULL);
+	self->volume = volume;
+	g_object_set(self->playbin, "volume", self->volume, NULL);
 }
 
 void koto_playback_engine_stop(KotoPlaybackEngine *self) {
 	gst_element_set_state(self->player, GST_STATE_NULL);
-	GstPad *pad = gst_element_get_static_pad(self->playbin, "audio-sink"); // Get the static pad of the audio element
+	GstPad *pad = gst_element_get_static_pad(self->player, "sink"); // Get the static pad of the audio element
 
 	if (!GST_IS_PAD(pad)) {
 		return;
@@ -384,6 +402,10 @@ gboolean koto_playback_engine_tick_track(gpointer user_data) {
 	}
 
 	return self->is_playing;
+}
+
+void koto_playback_engine_toggle_track_repeat(KotoPlaybackEngine *self) {
+	self->is_repeat_enabled = !self->is_repeat_enabled;
 }
 
 KotoPlaybackEngine* koto_playback_engine_new() {
