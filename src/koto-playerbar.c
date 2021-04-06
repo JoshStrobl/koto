@@ -132,6 +132,8 @@ static void koto_playerbar_constructed(GObject *obj) {
 	g_signal_connect(playback_engine, "tick-duration", G_CALLBACK(koto_playerbar_handle_tick_duration), self);
 	g_signal_connect(playback_engine, "tick-track", G_CALLBACK(koto_playerbar_handle_tick_track), self);
 	g_signal_connect(playback_engine, "track-changed", G_CALLBACK(koto_playerbar_update_track_info), self);
+	g_signal_connect(playback_engine, "track-repeat-changed", G_CALLBACK(koto_playerbar_handle_track_repeat), self);
+	g_signal_connect(playback_engine, "track-shuffle-changed", G_CALLBACK(koto_playerbar_handle_track_shuffle), self);
 }
 
 static void koto_playerbar_init(KotoPlayerBar *self) {
@@ -290,7 +292,6 @@ void koto_playerbar_handle_is_paused(KotoPlaybackEngine *engine, gpointer user_d
 
 void koto_playerbar_handle_progressbar_scroll_begin(GtkEventControllerScroll *controller, gpointer data){
 	(void) controller;
-	g_message("scroll-begin");
 }
 
 void koto_playerbar_handle_progressbar_gesture_begin(GtkGesture *gesture, GdkEventSequence *seq, gpointer data) {
@@ -301,15 +302,12 @@ void koto_playerbar_handle_progressbar_gesture_begin(GtkGesture *gesture, GdkEve
 		return;
 	}
 
-	g_message("Begin");
 	bar->is_progressbar_seeking = TRUE;
 }
 
 void koto_playerbar_handle_progressbar_gesture_end(GtkGesture *gesture, GdkEventSequence *seq, gpointer data) {
 	(void) gesture; (void) seq;
 	KotoPlayerBar *bar = data;
-
-	g_message("Ended");
 
 	if (!KOTO_IS_PLAYERBAR(bar)) {
 		return;
@@ -325,7 +323,6 @@ void koto_playerbar_handle_progressbar_pressed(GtkGestureClick *gesture, int n_p
 		return;
 	}
 
-	g_message("Pressed");
 	bar->is_progressbar_seeking = TRUE;
 }
 
@@ -342,7 +339,6 @@ void koto_playerbar_handle_progressbar_value_changed(GtkRange *progress_bar, gpo
 
 	int desired_position = (int) gtk_range_get_value(progress_bar);
 
-	g_message("value changed");
 	koto_playback_engine_set_position(playback_engine, desired_position); // Update our position
 }
 
@@ -374,6 +370,42 @@ void koto_playerbar_handle_tick_track(KotoPlaybackEngine *engine, gpointer user_
 
 	if (!bar->is_progressbar_seeking) {
 		koto_playerbar_set_progressbar_value(bar, koto_playback_engine_get_progress(engine));
+	}
+}
+
+void koto_playerbar_handle_track_repeat(KotoPlaybackEngine *engine, gpointer user_data) {
+	if (!KOTO_IS_PLAYBACK_ENGINE(engine)) {
+		return;
+	}
+
+	KotoPlayerBar *bar = user_data;
+
+	if (!KOTO_IS_PLAYERBAR(bar)) {
+		return;
+	}
+
+	if (koto_playback_engine_get_track_repeat(engine)) { // Is repeating
+		gtk_widget_add_css_class(GTK_WIDGET(bar->repeat_button), "active"); // Add active CSS class
+	} else { // Is not repeating
+		gtk_widget_remove_css_class(GTK_WIDGET(bar->repeat_button), "active"); // Remove active CSS class
+	}
+}
+
+void koto_playerbar_handle_track_shuffle(KotoPlaybackEngine *engine, gpointer user_data) {
+	if (!KOTO_IS_PLAYBACK_ENGINE(engine)) {
+		return;
+	}
+
+	KotoPlayerBar *bar = user_data;
+
+	if (!KOTO_IS_PLAYERBAR(bar)) {
+		return;
+	}
+
+	if (koto_playback_engine_get_track_shuffle(engine)) { // Is repeating
+		gtk_widget_add_css_class(GTK_WIDGET(bar->shuffle_button), "active"); // Add active CSS class
+	} else { // Is not repeating
+		gtk_widget_remove_css_class(GTK_WIDGET(bar->shuffle_button), "active"); // Remove active CSS class
 	}
 }
 
@@ -409,38 +441,14 @@ void koto_playerbar_toggle_play_pause(GtkGestureClick *gesture, int n_press, dou
 }
 
 void koto_playerbar_toggle_playlist_shuffle(GtkGestureClick *gesture, int n_press, double x, double y, gpointer data) {
-	(void) gesture; (void) n_press; (void) x; (void) y;
-	KotoPlayerBar *bar = data;
+	(void) gesture; (void) n_press; (void) x; (void) y; (void) data;
 
-	if (!KOTO_IS_PLAYERBAR(bar)) {
-		return;
-	}
-
-	KotoPlaylist *playlist = koto_current_playlist_get_playlist(current_playlist);
-
-	if (!KOTO_IS_PLAYLIST(playlist)) { // Don't have a playlist currently
-		gtk_widget_remove_css_class(GTK_WIDGET(bar->shuffle_button), "active"); // Remove active state
-		return;
-	}
-
-	gboolean currently_shuffling = FALSE;
-	g_object_get(playlist, "is-shuffle-enabled", &currently_shuffling, NULL); // Get the current is-shuffle-enabled
-
-	(currently_shuffling) ? gtk_widget_remove_css_class(GTK_WIDGET(bar->shuffle_button), "active") : gtk_widget_add_css_class(GTK_WIDGET(bar->shuffle_button), "active");
-	g_object_set(playlist, "is-shuffle-enabled", !currently_shuffling, NULL); // Provide inverse value
+	koto_playback_engine_toggle_track_shuffle(playback_engine); // Call our playback engine's toggle track shuffle function
 }
 
 void koto_playerbar_toggle_track_repeat(GtkGestureClick *gesture, int n_press, double x, double y, gpointer data) {
-	(void) gesture; (void) n_press; (void) x; (void) y;
-	KotoPlayerBar *bar = data;
-
-	if (koto_playback_engine_get_track_repeat(playback_engine)) { // Toggled on at the moment
-		gtk_widget_remove_css_class(GTK_WIDGET(bar->repeat_button), "active"); // Remove active CSS class
-	} else {
-		gtk_widget_add_css_class(GTK_WIDGET(bar->repeat_button), "active"); // Add active CSS class
-	}
-
-	koto_playback_engine_toggle_track_repeat(playback_engine); // Toggle the state
+	(void) gesture; (void) n_press; (void) x; (void) y; (void) data;
+	koto_playback_engine_toggle_track_repeat(playback_engine); // Call our playback engine's toggle track repeat function
 }
 
 void koto_playerbar_update_track_info(KotoPlaybackEngine *engine, gpointer user_data) {

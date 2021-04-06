@@ -70,18 +70,9 @@ int main (int argc, char *argv[]) {
 	supported_mimes = NULL; // Ensure our mimes GList is initialized
 	koto_playback_engine_get_supported_mimetypes(supported_mimes);
 
-	g_message("Length: %d", g_list_length(supported_mimes));
-
 	koto_maps = koto_cartographer_new(); // Create our new cartographer and their collection of maps
 	open_db(); // Open our database
 	setup_mpris_interfaces(); // Set up our MPRIS interfaces
-
-	GList *md;
-	md = NULL;
-	for (md = supported_mimes; md != NULL; md = md->next) {
-		g_message("Mimetype: %s", (gchar*) md->data);
-	}
-	g_list_free(md);
 
 	app = gtk_application_new ("com.github.joshstrobl.koto", G_APPLICATION_FLAGS_NONE);
 	g_signal_connect (app, "activate", G_CALLBACK (on_activate), NULL);

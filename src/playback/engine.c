@@ -31,6 +31,8 @@ enum {
 	SIGNAL_TICK_DURATION,
 	SIGNAL_TICK_TRACK,
 	SIGNAL_TRACK_CHANGE,
+	SIGNAL_TRACK_REPEAT_CHANGE,
+	SIGNAL_TRACK_SHUFFLE_CHANGE,
 	N_SIGNALS
 };
 
@@ -72,6 +74,8 @@ struct _KotoPlaybackEngineClass {
 	void (* tick_duration) (KotoPlaybackEngine *engine);
 	void (* tick_track) (KotoPlaybackEngine *engine);
 	void (* track_changed) (KotoPlaybackEngine *engine);
+	void (* track_repeat_changed) (KotoPlaybackEngine *engine);
+	void (* track_shuffle_changed) (KotoPlaybackEngine *engine);
 };
 
 G_DEFINE_TYPE(KotoPlaybackEngine, koto_playback_engine, G_TYPE_OBJECT);
@@ -147,6 +151,30 @@ static void koto_playback_engine_class_init(KotoPlaybackEngineClass *c) {
 		G_TYPE_FROM_CLASS(gobject_class),
 		G_SIGNAL_RUN_FIRST | G_SIGNAL_ACTION,
 		G_STRUCT_OFFSET(KotoPlaybackEngineClass, track_changed),
+		NULL,
+		NULL,
+		NULL,
+		G_TYPE_NONE,
+		0
+	);
+
+	playback_engine_signals[SIGNAL_TRACK_REPEAT_CHANGE] = g_signal_new(
+		"track-repeat-changed",
+		G_TYPE_FROM_CLASS(gobject_class),
+		G_SIGNAL_RUN_FIRST | G_SIGNAL_ACTION,
+		G_STRUCT_OFFSET(KotoPlaybackEngineClass, track_repeat_changed),
+		NULL,
+		NULL,
+		NULL,
+		G_TYPE_NONE,
+		0
+	);
+
+	playback_engine_signals[SIGNAL_TRACK_SHUFFLE_CHANGE] = g_signal_new(
+		"track-shuffle-changed",
+		G_TYPE_FROM_CLASS(gobject_class),
+		G_SIGNAL_RUN_FIRST | G_SIGNAL_ACTION,
+		G_STRUCT_OFFSET(KotoPlaybackEngineClass, track_shuffle_changed),
 		NULL,
 		NULL,
 		NULL,
@@ -255,6 +283,20 @@ gboolean koto_playback_engine_get_track_repeat(KotoPlaybackEngine *self) {
 	return self->is_repeat_enabled;
 }
 
+gboolean koto_playback_engine_get_track_shuffle(KotoPlaybackEngine *self) {
+	(void) self;
+	KotoPlaylist *playlist = koto_current_playlist_get_playlist(current_playlist);
+
+	if (!KOTO_IS_PLAYLIST(playlist)) { // Don't have a playlist currently
+		return FALSE;
+	}
+
+	gboolean currently_shuffling = FALSE;
+	g_object_get(playlist, "is-shuffle-enabled", &currently_shuffling, NULL); // Get the current is-shuffle-enabled
+
+	return currently_shuffling;
+}
+
 gboolean koto_playback_engine_monitor_changed(GstBus *bus, GstMessage *msg, gpointer user_data) {
 	(void) bus;
 	KotoPlaybackEngine *self = user_data;
@@ -308,19 +350,34 @@ void koto_playback_engine_play(KotoPlaybackEngine *self) {
 		self->tick_track_timer_running = TRUE;
 		g_timeout_add(100, koto_playback_engine_tick_track, self); // Create a 100ms track tick
 	}
+
+	koto_update_mpris_playback_state(GST_STATE_PLAYING);
 }
 
 void koto_playback_engine_pause(KotoPlaybackEngine *self) {
 	self->is_playing = FALSE;
 	gst_element_change_state(self->player, GST_STATE_CHANGE_PLAYING_TO_PAUSED);
+	koto_update_mpris_playback_state(GST_STATE_PAUSED);
 }
 
 void koto_playback_engine_set_position(KotoPlaybackEngine *self, int position) {
 	gst_element_seek_simple(self->playbin, GST_FORMAT_TIME, GST_SEEK_FLAG_FLUSH, position * NS);
 }
 
-void koto_playback_engine_set_track_repeat(KotoPlaybackEngine *self, gboolean enable) {
-	self->is_repeat_enabled = enable;
+void koto_playback_engine_set_track_repeat(KotoPlaybackEngine *self, gboolean enable_repeat) {
+	self->is_repeat_enabled = enable_repeat;
+	g_signal_emit(self, playback_engine_signals[SIGNAL_TRACK_REPEAT_CHANGE], 0); // Emit our track repeat changed event
+}
+
+void koto_playback_engine_set_track_shuffle(KotoPlaybackEngine *self, gboolean enable_shuffle) {
+	KotoPlaylist *playlist = koto_current_playlist_get_playlist(current_playlist);
+
+	if (!KOTO_IS_PLAYLIST(playlist)) { // Don't have a playlist currently
+		return;
+	}
+
+	g_object_set(playlist, "is-shuffle-enabled", enable_shuffle, NULL); // Set the is-shuffle-enabled on any existing playlist
+	g_signal_emit(self, playback_engine_signals[SIGNAL_TRACK_SHUFFLE_CHANGE], 0); // Emit our track shuffle changed event
 }
 
 void koto_playback_engine_set_track_by_uuid(KotoPlaybackEngine *self, gchar *track_uuid) {
@@ -370,6 +427,7 @@ void koto_playback_engine_stop(KotoPlaybackEngine *self) {
 	}
 
 	gst_pad_set_offset(pad, 0); // Change offset
+	koto_update_mpris_playback_state(GST_STATE_NULL);
 }
 
 void koto_playback_engine_toggle(KotoPlaybackEngine *self) {
@@ -405,7 +463,11 @@ gboolean koto_playback_engine_tick_track(gpointer user_data) {
 }
 
 void koto_playback_engine_toggle_track_repeat(KotoPlaybackEngine *self) {
-	self->is_repeat_enabled = !self->is_repeat_enabled;
+	koto_playback_engine_set_track_repeat(self, !self->is_repeat_enabled);
+}
+
+void koto_playback_engine_toggle_track_shuffle(KotoPlaybackEngine *self) {
+	koto_playback_engine_set_track_shuffle(self, !koto_playback_engine_get_track_shuffle(self)); // Invert the currently shuffling vale
 }
 
 KotoPlaybackEngine* koto_playback_engine_new() {
