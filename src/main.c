@@ -19,6 +19,7 @@
 #include <gstreamer-1.0/gst/gst.h>
 #include "db/cartographer.h"
 #include "db/db.h"
+#include "playback/media-keys.h"
 #include "playback/mimes.h"
 #include "playback/mpris.h"
 
@@ -43,6 +44,8 @@ static void on_activate (GtkApplication *app) {
 	main_window = gtk_application_get_active_window (app);
 	if (main_window == NULL) {
 		main_window = g_object_new(KOTO_TYPE_WINDOW,  "application", app,  "default-width", 1200,  "default-height", 675, NULL);
+		setup_mpris_interfaces(); // Set up our MPRIS interfaces
+		setup_mediakeys_interface(); // Set up our media key support
 	}
 
 	gtk_window_present(main_window);
@@ -72,7 +75,6 @@ int main (int argc, char *argv[]) {
 
 	koto_maps = koto_cartographer_new(); // Create our new cartographer and their collection of maps
 	open_db(); // Open our database
-	setup_mpris_interfaces(); // Set up our MPRIS interfaces
 
 	app = gtk_application_new ("com.github.joshstrobl.koto", G_APPLICATION_FLAGS_NONE);
 	g_signal_connect (app, "activate", G_CALLBACK (on_activate), NULL);

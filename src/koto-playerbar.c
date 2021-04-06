@@ -88,10 +88,6 @@ static void koto_playerbar_constructed(GObject *obj) {
 	gtk_range_set_increments(GTK_RANGE(self->progress_bar), 1, 1);
 	gtk_range_set_round_digits(GTK_RANGE(self->progress_bar), 1);
 
-	GtkEventController *scroll_controller = gtk_event_controller_scroll_new(GTK_EVENT_CONTROLLER_SCROLL_HORIZONTAL);
-	g_signal_connect(scroll_controller, "scroll-begin", G_CALLBACK(koto_playerbar_handle_progressbar_scroll_begin), self);
-	gtk_widget_add_controller(GTK_WIDGET(self->progress_bar), scroll_controller);
-
 	GtkGesture *press_controller = gtk_gesture_click_new(); // Create a new GtkGestureLongPress
 	gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(press_controller), 1); // Set to left click
 
@@ -241,7 +237,6 @@ void koto_playerbar_create_secondary_controls(KotoPlayerBar* bar) {
 	if (GTK_IS_VOLUME_BUTTON(bar->volume_button)) {
 		GtkAdjustment *granular_volume_change = gtk_adjustment_new(0.5, 0, 1.0, 0.02, 0.02, 0.02);
 		g_object_set(bar->volume_button, "use-symbolic", TRUE, NULL);
-		gtk_range_set_round_digits(GTK_RANGE(bar->volume_button), FALSE);
 		gtk_scale_button_set_adjustment(GTK_SCALE_BUTTON(bar->volume_button), granular_volume_change); // Set our adjustment
 		gtk_box_append(GTK_BOX(bar->secondary_controls_section), bar->volume_button);
 
@@ -288,10 +283,6 @@ void koto_playerbar_handle_is_paused(KotoPlaybackEngine *engine, gpointer user_d
 	}
 
 	koto_button_show_image(bar->play_pause_button, FALSE); // Set to FALSE to show play as the next action
-}
-
-void koto_playerbar_handle_progressbar_scroll_begin(GtkEventControllerScroll *controller, gpointer data){
-	(void) controller;
 }
 
 void koto_playerbar_handle_progressbar_gesture_begin(GtkGesture *gesture, GdkEventSequence *seq, gpointer data) {
