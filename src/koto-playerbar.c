@@ -26,7 +26,7 @@
 #include "koto-playerbar.h"
 
 extern KotoCurrentPlaylist *current_playlist;
-extern KotoCartographer* koto_maps;
+extern KotoCartographer *koto_maps;
 extern KotoPlaybackEngine *playback_engine;
 
 struct _KotoPlayerBar {
@@ -91,8 +91,8 @@ static void koto_playerbar_constructed(GObject *obj) {
 	GtkGesture *press_controller = gtk_gesture_click_new(); // Create a new GtkGestureLongPress
 	gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(press_controller), 1); // Set to left click
 
-	g_signal_connect(GTK_GESTURE(press_controller), "begin", G_CALLBACK(koto_playerbar_handle_progressbar_gesture_begin), self);
-	g_signal_connect(GTK_GESTURE(press_controller), "end", G_CALLBACK(koto_playerbar_handle_progressbar_gesture_end), self);
+	g_signal_connect(press_controller, "begin", G_CALLBACK(koto_playerbar_handle_progressbar_gesture_begin), self);
+	g_signal_connect(press_controller, "end", G_CALLBACK(koto_playerbar_handle_progressbar_gesture_end), self);
 	g_signal_connect(press_controller, "pressed", G_CALLBACK(koto_playerbar_handle_progressbar_pressed), self);
 	//g_signal_connect(press_controller, "unpaired-release", G_CALLBACK(koto_playerbar_handle_progressbar_unpaired_release), self);
 

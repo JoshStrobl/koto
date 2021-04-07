@@ -25,8 +25,11 @@ G_BEGIN_DECLS
 
 G_DECLARE_FINAL_TYPE (KotoWindow, koto_window, KOTO, WINDOW, GtkApplicationWindow)
 
-G_END_DECLS
+void koto_window_show_create_playlist_dialog(KotoWindow *self);
+void koto_window_hide_create_playlist_dialog(KotoWindow *self);
 
 void create_new_headerbar(KotoWindow *self);
 void load_library(KotoWindow *self);
 void set_optimal_default_window_size(KotoWindow *self);
+
+G_END_DECLS

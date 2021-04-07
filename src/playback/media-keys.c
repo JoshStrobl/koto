@@ -101,10 +101,12 @@ void handle_media_keys_signal(GDBusProxy *proxy, const gchar *sender_name, const
 }
 
 void handle_window_enter(GtkEventControllerFocus *controller, gpointer user_data) {
+	(void) controller; (void) user_data;
 	grab_media_keys(); // Grab our media keys
 }
 
 void handle_window_leave(GtkEventControllerFocus *controller, gpointer user_data) {
+	(void) controller; (void) user_data;
 	release_media_keys(); // Release our media keys
 }
 

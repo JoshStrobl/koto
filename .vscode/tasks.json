@@ -1,0 +1,73 @@
+{
+	// See https://go.microsoft.com/fwlink/?LinkId=733558
+	// for the documentation about the tasks.json format
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Clean builddir",
+			"type": "shell",
+			"command": "rm",
+			"args": [
+				"-rf",
+				"builddir"
+			],
+			"problemMatcher": []
+		},
+		{
+			"label": "Meson Configure",
+			"type": "shell",
+			"command": "meson",
+			"args": [
+				"--prefix=/usr",
+				"--libdir=\"libdir\"",
+				"--sysconfdir=/etc",
+				"builddir"
+			],
+			"problemMatcher": []
+		},
+		{
+			"label": "Meson Compile",
+			"type": "shell",
+			"command": "meson",
+			"args": [
+				"compile",
+				"-C",
+				"builddir"
+			],
+			"problemMatcher": [],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			}
+		},
+		{
+			"label": "Meson Dist",
+			"type": "shell",
+			"command": "meson",
+			"args": [
+				"dist",
+				"-C",
+				"builddir",
+				"--formats",
+				"xztar",
+				"--include-subprojects"
+			],
+			"problemMatcher": []
+		},
+		{
+			"label": "Meson Install",
+			"type": "shell",
+			"command": "sudo",
+			"args": [
+				"meson",
+				"install",
+				"-C",
+				"builddir",
+				"--destdir",
+				"/",
+				"--no-rebuild"
+			],
+			"problemMatcher": []
+		}
+	]
+}

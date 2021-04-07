@@ -28,6 +28,8 @@ KotoNav* koto_nav_new (void);
 void koto_nav_create_audiobooks_section(KotoNav *self);
 void koto_nav_create_music_section(KotoNav *self);
 void koto_nav_create_podcasts_section(KotoNav *self);
+void koto_nav_handle_playlist_add_click(GtkGestureClick *gesture, int n_press, double x, double y, gpointer user_data);
+
 GtkWidget* koto_nav_get_nav(KotoNav *self);
 
 G_END_DECLS

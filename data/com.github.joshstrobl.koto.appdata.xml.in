@@ -2,7 +2,32 @@
 <component type="desktop">
 	<id>com.github.joshstrobl.koto.desktop</id>
 	<metadata_license>CC0-1.0</metadata_license>
-	<project_license></project_license>
+	<project_license>Apache-2.0</project_license>
+	<name>Koto</name>
+	<summary>Koto is an in-development audiobook, music, and podcast manager.</summary>
 	<description>
+		<p>Koto is an in-development audiobook, music, and podcast manager that is designed for and caters to a modern desktop Linux experience.</p>
 	</description>
+	<launchable type="desktop-id">com.github.joshstrobl.koto.desktop</launchable>
+	<url type="homepage">https://github.com/JoshStrobl/koto</url>
+	<url type="bugtracker">https://github.com/JoshStrobl/koto/issues</url>
+	<url type="donation">https://patreon.com/joshuastrobl</url>
+	<url type="donation">https://liberapay.com/joshuastrobl</url>
+	<developer_name>Joshua Strobl</developer_name>
+	<update_contact>joshua.strobl_AT_outlook.com</update_contact>
+	<content_rating type="oars-1.0">
+		<content_attribute id="language-humor">mild</content_attribute>
+	</content_rating>
+	<provides>
+		<binary>com.github.joshstrobl.koto</binary>
+	</provides>
+	<recommends>
+		<control>pointing</control>
+		<control>touch</control>
+		<display_length compare="ge">1600</display_length>
+	</recommends>
+	<requires>
+		<control>keyboard</control>
+		<display_length compare="ge">1366</display_length>
+	</requires>
 </component>

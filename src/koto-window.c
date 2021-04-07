@@ -20,6 +20,7 @@
 #include "pages/music/music-local.h"
 #include "playback/engine.h"
 #include "playlist/current.h"
+#include "playlist/create-dialog.h"
 #include "koto-config.h"
 #include "koto-nav.h"
 #include "koto-playerbar.h"
@@ -33,6 +34,9 @@ struct _KotoWindow {
 	KotoIndexedLibrary *library;
 	KotoCurrentPlaylist *current_playlist;
 
+	KotoCreatePlaylistDialog *playlist_create_dialog;
+
+	GtkWidget *overlay;
 	GtkWidget        *header_bar;
 	GtkWidget *menu_button;
 	GtkWidget *search_entry;
@@ -61,10 +65,15 @@ static void koto_window_init (KotoWindow *self) {
 
 	create_new_headerbar(self); // Create our headerbar
 
+	self->overlay = gtk_overlay_new(); // Create our overlay
+	self->playlist_create_dialog = koto_create_playlist_dialog_new(); // Create our Create Playlist dialog
+
 	self->primary_layout = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
 	gtk_widget_add_css_class(self->primary_layout, "primary-layout");
 	gtk_widget_set_hexpand(self->primary_layout, TRUE);
 	gtk_widget_set_vexpand(self->primary_layout, TRUE);
+
+	gtk_overlay_set_child(GTK_OVERLAY(self->overlay), self->primary_layout); // Add our primary layout to the overlay
 
 	self->content_layout = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
 	gtk_widget_add_css_class(self->content_layout, "content-layout");
@@ -95,7 +104,7 @@ static void koto_window_init (KotoWindow *self) {
 		gtk_box_append(GTK_BOX(self->primary_layout), playerbar_main);
 	}
 
-	gtk_window_set_child(GTK_WINDOW(self), self->primary_layout);
+	gtk_window_set_child(GTK_WINDOW(self), self->overlay);
 #ifdef GDK_WINDOWING_X11
 	set_optimal_default_window_size(self);
 #endif
@@ -125,6 +134,14 @@ void create_new_headerbar(KotoWindow *self) {
 	gtk_header_bar_set_title_widget(GTK_HEADER_BAR(self->header_bar), self->search_entry);
 
 	gtk_window_set_titlebar(GTK_WINDOW(self), self->header_bar);
+}
+
+void koto_window_hide_create_playlist_dialog(KotoWindow *self) {
+	gtk_overlay_remove_overlay(GTK_OVERLAY(self->overlay), koto_create_playlist_dialog_get_content(self->playlist_create_dialog));
+}
+
+void koto_window_show_create_playlist_dialog(KotoWindow *self) {
+	gtk_overlay_add_overlay(GTK_OVERLAY(self->overlay), koto_create_playlist_dialog_get_content(self->playlist_create_dialog));
 }
 
 void load_library(KotoWindow *self) {

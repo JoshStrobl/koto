@@ -93,7 +93,7 @@ void handle_method_call(
 	GDBusMethodInvocation *invocation,
 	gpointer user_data
 ) {
-	(void) connection; (void) sender; (void) object_path; (void) invocation; (void) user_data;
+	(void) connection; (void) sender; (void) object_path; (void) parameters; (void) invocation; (void) user_data;
 
 	if (g_strcmp0(interface_name, "org.mpris.MediaPlayer2") == 0) { // Root mediaplayer2 interface
 		if (g_strcmp0(method_name, "Raise") == 0) { // Raise the window
@@ -386,6 +386,7 @@ static const GDBusInterfaceVTable main_mpris_interface_vtable = {
 	handle_method_call,
 	handle_get_property,
 	handle_set_property,
+	{ 0 }
 };
 
 void on_main_mpris_bus_acquired(GDBusConnection *connection, const gchar *name, gpointer user_data) {

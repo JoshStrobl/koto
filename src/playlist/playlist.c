@@ -254,11 +254,11 @@ gchar* koto_playlist_get_random_track(KotoPlaylist *self) {
 
 		while (track_uuid == NULL)  { // Haven't selected a track yet
 			attempt++;
-			gint32 *selected_item = g_rand_int_range(rando_calrissian, 0, (gint32) tracks_len);
+			gint32 selected_item = g_rand_int_range(rando_calrissian, 0, (gint32) tracks_len);
 			gchar *selected_track = g_queue_peek_nth(self->tracks, (guint) selected_item); // Get the UUID of the selected item
 
 			if (g_queue_index(self->played_tracks, selected_track) == -1) { // Haven't played the track
-				self->current_position = (int) selected_item;
+				self->current_position = (gint) selected_item;
 				track_uuid = selected_track;
 				break;
 			} else { // Failed to get the track

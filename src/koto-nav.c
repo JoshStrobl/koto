@@ -20,6 +20,9 @@
 #include "koto-button.h"
 #include "koto-expander.h"
 #include "koto-nav.h"
+#include "koto-window.h"
+
+extern KotoWindow *main_window;
 
 struct _KotoNav {
 	GObject parent_instance;
@@ -93,6 +96,11 @@ static void koto_nav_init(KotoNav *self) {
 		self->playlists_expander = pl_expander;
 		gtk_box_append(GTK_BOX(self->content), GTK_WIDGET(self->playlists_expander));
 	}
+
+	GtkGesture *playlist_add_gesture = gtk_gesture_click_new(); // Create a gesture for clicking on the playlist add
+	gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(playlist_add_gesture), 1); // Only allow left click
+	g_signal_connect(playlist_add_gesture, "pressed", G_CALLBACK(koto_nav_handle_playlist_add_click), NULL);
+	gtk_widget_add_controller(GTK_WIDGET(playlist_add_button), GTK_EVENT_CONTROLLER(playlist_add_gesture));
 }
 
 void koto_nav_create_audiobooks_section(KotoNav *self) {
@@ -143,6 +151,12 @@ void koto_nav_create_podcasts_section(KotoNav *self) {
 	gtk_box_append(GTK_BOX(new_content), GTK_WIDGET(self->podcasts_discover));
 
 	koto_expander_set_content(p_expander, new_content);
+}
+
+void koto_nav_handle_playlist_add_click(GtkGestureClick *gesture, int n_press, double x, double y, gpointer user_data) {
+	(void) gesture; (void) n_press; (void) x; (void) y; (void) user_data;
+	g_message("plz");
+	koto_window_show_create_playlist_dialog(main_window);
 }
 
 GtkWidget* koto_nav_get_nav(KotoNav *self) {

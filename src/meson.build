@@ -15,6 +15,7 @@ koto_sources = [
 	'playback/media-keys.c',
 	'playback/mimes.c',
 	'playback/mpris.c',
+	'playlist/create-dialog.c',
 	'playlist/current.c',
 	'playlist/playlist.c',
 	'main.c',
