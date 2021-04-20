@@ -14,6 +14,13 @@
 			"problemMatcher": []
 		},
 		{
+			"label": "Meson Configure and Build",
+			"type": "shell",
+			"command": "",
+			"dependsOrder": "sequence",
+			"dependsOn": ["Meson Configure", "Meson Compile"]
+		},
+		{
 			"label": "Meson Configure",
 			"type": "shell",
 			"command": "meson",
