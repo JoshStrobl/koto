@@ -373,14 +373,46 @@ static void koto_indexed_album_set_property(GObject *obj, guint prop_id, const G
 }
 
 gchar* koto_indexed_album_get_album_art(KotoIndexedAlbum *self) {
-	return g_strdup((self->has_album_art && (self->art_path != NULL) && (strcmp(self->art_path, "") != 0)) ? self->art_path : "");
+	if (!KOTO_IS_INDEXED_ALBUM(self)) { // Not an album
+		return g_strdup("");
+	}
+
+	return g_strdup((self->has_album_art && (self->art_path != NULL) && (g_strcmp0(self->art_path, "") != 0)) ? self->art_path : "");
+}
+
+gchar *koto_indexed_album_get_album_name(KotoIndexedAlbum *self) {
+	if (!KOTO_IS_INDEXED_ALBUM(self)) { // Not an album
+		return NULL;
+	}
+
+	if ((self->name == NULL) || g_strcmp0(self->name, "") == 0) { // Not set
+		return NULL;
+	}
+
+	return g_strdup(self->name); // Return duplicate of the name
+}
+
+gchar* koto_indexed_album_get_album_uuid(KotoIndexedAlbum *self) {
+	if ((self->uuid == NULL) || g_strcmp0(self->uuid, "") == 0) { // Not set
+		return NULL;
+	}
+
+	return g_strdup(self->uuid); // Return a duplicate of the UUID
 }
 
 GList* koto_indexed_album_get_tracks(KotoIndexedAlbum *self) {
+	if (!KOTO_IS_INDEXED_ALBUM(self)) { // Not an album
+		return NULL;
+	}
+
 	return self->tracks; // Return
 }
 
 void koto_indexed_album_set_album_art(KotoIndexedAlbum *self, const gchar *album_art) {
+	if (!KOTO_IS_INDEXED_ALBUM(self)) { // Not an album
+		return;
+	}
+
 	if (album_art == NULL) { // Not valid album art
 		return;
 	}
@@ -395,6 +427,10 @@ void koto_indexed_album_set_album_art(KotoIndexedAlbum *self, const gchar *album
 }
 
 void koto_indexed_album_remove_file(KotoIndexedAlbum *self, KotoIndexedTrack *track) {
+	if (!KOTO_IS_INDEXED_ALBUM(self)) { // Not an album
+		return;
+	}
+
 	if (track == NULL) { // Not a file
 		return;
 	}
@@ -405,6 +441,10 @@ void koto_indexed_album_remove_file(KotoIndexedAlbum *self, KotoIndexedTrack *tr
 }
 
 void koto_indexed_album_set_album_name(KotoIndexedAlbum *self, const gchar *album_name) {
+	if (!KOTO_IS_INDEXED_ALBUM(self)) { // Not an album
+		return;
+	}
+
 	if (album_name == NULL) { // Not valid album name
 		return;
 	}
@@ -417,6 +457,10 @@ void koto_indexed_album_set_album_name(KotoIndexedAlbum *self, const gchar *albu
 }
 
 void koto_indexed_album_set_artist_uuid(KotoIndexedAlbum *self, const gchar *artist_uuid) {
+	if (!KOTO_IS_INDEXED_ALBUM(self)) { // Not an album
+		return;
+	}
+
 	if (artist_uuid == NULL) {
 		return;
 	}
@@ -429,6 +473,10 @@ void koto_indexed_album_set_artist_uuid(KotoIndexedAlbum *self, const gchar *art
 }
 
 void koto_indexed_album_set_as_current_playlist(KotoIndexedAlbum *self) {
+	if (!KOTO_IS_INDEXED_ALBUM(self)) { // Not an album
+		return;
+	}
+
 	if (self->tracks == NULL) { // No files to add to the playlist
 		return;
 	}
@@ -436,11 +484,23 @@ void koto_indexed_album_set_as_current_playlist(KotoIndexedAlbum *self) {
 	KotoPlaylist *new_album_playlist = koto_playlist_new(); // Create a new playlist
 	g_object_set(new_album_playlist, "ephemeral", TRUE, NULL); // Set as ephemeral / temporary
 
+	// The following section effectively reverses our tracks, so the first is now last.
+	// It then adds them in reverse order, since our playlist add function will prepend to our queue
+	// This enables the preservation and defaulting of "newest" first everywhere else, while in albums preserving the rightful order of the album
+	// e.g. first track (0) being added last is actually first in the playlist's tracks
+	GList *reversed_tracks = g_list_copy(self->tracks); // Copy our tracks so we can reverse the order
+	reversed_tracks = g_list_reverse(reversed_tracks); // Actually reverse it
+
 	GList *t;
-	for (t = self->tracks; t != NULL; t = t->next) { // For each of the tracks
-		koto_playlist_add_track_by_uuid(new_album_playlist, (gchar*) t->data); // Add the UUID
+	for (t = reversed_tracks; t != NULL; t = t->next) { // For each of the tracks
+		gchar* track_uuid = t->data;
+		koto_playlist_add_track_by_uuid(new_album_playlist, track_uuid, FALSE, FALSE); // Add the UUID, skip commit to table since it is temporary
 	}
 
+	g_list_free(t);
+	g_list_free(reversed_tracks);
+
+	koto_playlist_apply_model(new_album_playlist, KOTO_PREFERRED_MODEL_TYPE_DEFAULT); // Ensure we are using our default model
 	koto_current_playlist_set_playlist(current_playlist, new_album_playlist); // Set our new current playlist
 }
 
@@ -491,16 +551,19 @@ gint koto_indexed_album_sort_tracks(gconstpointer track1_uuid, gconstpointer tra
 }
 
 void koto_indexed_album_update_path(KotoIndexedAlbum *self, const gchar* new_path) {
-	if (new_path == NULL) {
+	if (!KOTO_IS_INDEXED_ALBUM(self)) { // Not an album
 		return;
 	}
 
-	if (self->path != NULL) {
+	if ((new_path == NULL) || g_strcmp0(new_path, "") == 0) {
+		return;
+	}
+
+	if ((self->path != NULL) && g_strcmp0(self->path, "") != 0) {
 		g_free(self->path);
 	}
 
 	self->path = g_strdup(new_path);
-
 	koto_indexed_album_set_album_name(self, g_path_get_basename(self->path)); // Update our album name based on the base name
 
 	if (!self->do_initial_index) { // Not doing our initial index

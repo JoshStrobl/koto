@@ -123,7 +123,7 @@ static void koto_expander_set_property(GObject *obj, guint prop_id, const GValue
 		KotoExpander *self = KOTO_EXPANDER(obj);
 
 		if (!GTK_IS_WIDGET(self->header_button)) { // Header Button is not a widget
-			KotoButton *new_button = koto_button_new_with_icon("Temporary Text", "emblem-favorite-symbolic", NULL, KOTO_BUTTON_PIXBUF_SIZE_SMALL);
+			KotoButton *new_button = koto_button_new_with_icon(NULL, "emblem-favorite-symbolic", NULL, KOTO_BUTTON_PIXBUF_SIZE_SMALL);
 
 			if (GTK_IS_WIDGET(new_button)) { // Created our widget successfully
 				self->header_button = new_button;
@@ -175,9 +175,7 @@ static void koto_expander_init(KotoExpander *self) {
 
 	self->constructed = TRUE;
 
-	GtkGesture *controller = gtk_gesture_click_new(); // Create a new GtkGestureClick
-	g_signal_connect(controller, "pressed", G_CALLBACK(koto_expander_toggle_content), self);
-	gtk_widget_add_controller(GTK_WIDGET(self->header_expand_button), GTK_EVENT_CONTROLLER(controller));
+	koto_button_add_click_handler(self->header_expand_button, KOTO_BUTTON_CLICK_TYPE_PRIMARY, G_CALLBACK(koto_expander_toggle_content), self);
 }
 
 void koto_expander_set_secondary_button(KotoExpander *self, KotoButton *new_button) {
@@ -213,6 +211,10 @@ void koto_expander_set_content(KotoExpander *self, GtkWidget *new_content) {
 	gtk_revealer_set_child(GTK_REVEALER(self->revealer), self->content);
 
 	g_object_notify_by_pspec(G_OBJECT(self), expander_props[PROP_CONTENT]);
+}
+
+GtkWidget* koto_expander_get_content(KotoExpander *self) {
+	return self->content;
 }
 
 void koto_expander_toggle_content(GtkGestureClick *gesture, int n_press, double x, double y, gpointer data) {

@@ -1,5 +1,10 @@
 {
 	"files.associations": {
-		"glib.h": "c"
+		"glib.h": "c",
+		"ios": "c",
+		"__node_handle": "c",
+		"gtk.h": "c",
+		"gtktreeview.h": "c",
+		"cartographer.h": "c"
 	}
 }

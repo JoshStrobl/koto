@@ -1,0 +1,63 @@
+@import '../vars';
+
+@mixin selected-row-styling {
+	color: $midnight;
+	background-color: $green;
+	border: 0; // Don't have a border
+	border-image: none; // GTK uses an image which is weird
+	border-image-width: 0;
+	outline: none;
+	outline-offset: 0;
+	outline-style: none;
+}
+
+button {
+	&.destructive-action {
+		background-color: $red;
+		background-image: none;
+	}
+
+	&.suggested-action { // Adwaita makes it blue but we want it green
+		color: $midnight;
+		background-color: $green;
+		background-image: none;
+	}
+}
+
+listview {
+	background-color: transparent;
+}
+
+list:not(.discs-list), listview {
+	&:not(.track-list) > row { // Rows which are now in the track list
+		&:active, &:selected { // Active or selected
+			@include selected-row-styling;
+		}
+	}
+
+	&.track-list > row {
+		&:selected { // Only selected rows
+			@include selected-row-styling;
+		}
+	}
+}
+
+range {
+	&.dragging { // Dragging a range
+		& > trough {
+			& > slider {
+				background-color: $green;
+			}
+		}
+	}
+}
+
+scale { // Progress bar
+	highlight {
+		background-color: $green;
+	}
+
+	slider { // Slider
+		outline-color: $green;
+	}
+}

@@ -22,6 +22,7 @@
 #include <taglib/tag_c.h>
 #include "../db/cartographer.h"
 #include "../db/db.h"
+#include "../playlist/playlist.h"
 #include "../koto-utils.h"
 #include "structs.h"
 
@@ -242,6 +243,57 @@ int process_albums(void *data, int num_columns, char **fields, char **column_nam
 	return 0;
 }
 
+int process_playlists(void *data, int num_columns, char **fields, char **column_names) {
+	(void) data; (void) num_columns; (void) column_names; // Don't need any of the params
+
+	gchar *playlist_uuid = g_strdup(koto_utils_unquote_string(fields[0])); // First column is UUID
+	gchar *playlist_name = g_strdup(koto_utils_unquote_string(fields[1])); // Second column is playlist name
+	gchar *playlist_art_path = g_strdup(koto_utils_unquote_string(fields[2])); // Third column is any art path
+
+	KotoPlaylist *playlist = koto_playlist_new_with_uuid(playlist_uuid); // Create a playlist using the existing UUID
+	koto_playlist_set_name(playlist, playlist_name); // Add the playlist name
+	koto_playlist_set_artwork(playlist, playlist_art_path); // Add the playlist art path
+
+	koto_cartographer_add_playlist(koto_maps, playlist); // Add to cartographer
+
+	int playlist_tracks_rc = sqlite3_exec(koto_db, g_strdup_printf("SELECT * FROM playlist_tracks WHERE playlist_id=\"%s\" ORDER BY position ASC", playlist_uuid), process_playlists_tracks, playlist, NULL); // Process our playlist tracks
+	if (playlist_tracks_rc != SQLITE_OK) { // Failed to get our playlist tracks
+		g_critical("Failed to read our playlist tracks: %s", sqlite3_errmsg(koto_db));
+		return 1;
+	}
+
+	koto_playlist_mark_as_finalized(playlist); // Mark as finalized since loading should be complete
+
+	g_free(playlist_uuid);
+	g_free(playlist_name);
+	g_free(playlist_art_path);
+
+	return 0;
+}
+
+int process_playlists_tracks(void *data, int num_columns, char **fields, char **column_names) {
+	(void) data; (void) num_columns; (void) column_names; // Don't need these
+
+	gchar *playlist_uuid = g_strdup(koto_utils_unquote_string(fields[1]));
+	gchar *track_uuid = g_strdup(koto_utils_unquote_string(fields[2]));
+	gboolean current = g_strcmp0(koto_utils_unquote_string(fields[3]), "0");
+
+	KotoPlaylist *playlist = koto_cartographer_get_playlist_by_uuid(koto_maps, playlist_uuid); // Get the playlist
+	KotoIndexedTrack *track = koto_cartographer_get_track_by_uuid(koto_maps, track_uuid); // Get the track
+
+	if (!KOTO_IS_PLAYLIST(playlist)) {
+		goto freeforret;
+	}
+
+	koto_playlist_add_track(playlist, track, current, FALSE); // Add the track to the playlist but don't re-commit to the table
+
+freeforret:
+	g_free(playlist_uuid);
+	g_free(track_uuid);
+
+	return 0;
+}
+
 int process_tracks(void *data, int num_columns, char **fields, char **column_names) {
 	(void) num_columns; (void) column_names; // Don't need these
 
@@ -287,6 +339,12 @@ void read_from_db(KotoIndexedLibrary *self) {
 	}
 
 	g_hash_table_foreach(self->music_artists, output_artists, NULL);
+
+	int playlist_rc = sqlite3_exec(koto_db, "SELECT * FROM playlist_meta", process_playlists, self, NULL); // Process our playlists
+	if (playlist_rc != SQLITE_OK) { // Failed to get our playlists
+		g_critical("Failed to read our playlists: %s", sqlite3_errmsg(koto_db));
+		return;
+	}
 }
 
 void start_indexing(KotoIndexedLibrary *self) {
@@ -362,7 +420,6 @@ void index_folder(KotoIndexedLibrary *self, gchar *path, guint depth) {
 				KotoIndexedArtist *artist = koto_indexed_library_get_artist(self, artist_name); // Get the artist
 
 				if (artist == NULL) {
-					g_message("Failed to get artist by name of: %s", artist_name);
 					continue;
 				}
 
@@ -422,7 +479,6 @@ void output_artists(gpointer artist_key, gpointer artist_ptr, gpointer data) {
 void output_track(gpointer data, gpointer user_data) {
 	(void) user_data;
 
-	g_message("Track UUID: %s", g_strdup(data));
 	KotoIndexedTrack *track = koto_cartographer_get_track_by_uuid(koto_maps, (gchar*) data);
 
 	if (track == NULL) {

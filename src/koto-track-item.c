@@ -16,15 +16,18 @@
  */
 
 #include <gtk-4.0/gtk/gtk.h>
+#include "indexer/structs.h"
+#include "playlist/add-remove-track-popover.h"
 #include "koto-button.h"
 #include "koto-track-item.h"
+
+extern KotoAddRemoveTrackPopover *koto_add_remove_track_popup;
 
 struct _KotoTrackItem {
 	GtkBox parent_instance;
 	KotoIndexedTrack *track;
 
 	GtkWidget *track_label;
-	KotoButton *add_to_playlist_button;
 };
 
 struct _KotoTrackItemClass {
@@ -91,14 +94,15 @@ static void koto_track_item_init(KotoTrackItem *self) {
 	self->track_label = gtk_label_new(NULL); // Create with no track name
 	gtk_label_set_xalign(GTK_LABEL(self->track_label), 0.0);
 
-	self->add_to_playlist_button = koto_button_new_with_icon(NULL, "playlist-symbolic", NULL, KOTO_BUTTON_PIXBUF_SIZE_TINY);
-
 	gtk_widget_add_css_class(GTK_WIDGET(self), "track-item");
 	gtk_widget_set_hexpand(GTK_WIDGET(self), TRUE);
 	gtk_widget_set_hexpand(GTK_WIDGET(self->track_label), TRUE);
 
 	gtk_box_prepend(GTK_BOX(self), self->track_label);
-	gtk_box_append(GTK_BOX(self), GTK_WIDGET(self->add_to_playlist_button));
+}
+
+KotoIndexedTrack* koto_track_item_get_track(KotoTrackItem *self) {
+	return self->track;
 }
 
 void koto_track_item_set_track(KotoTrackItem *self, KotoIndexedTrack *track) {

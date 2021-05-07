@@ -82,9 +82,11 @@ static void koto_album_view_init(KotoAlbumView *self) {
 
 	self->discs = gtk_list_box_new(); // Create our list of our tracks
 	gtk_list_box_set_selection_mode(GTK_LIST_BOX(self->discs), GTK_SELECTION_NONE);
+	gtk_list_box_set_show_separators(GTK_LIST_BOX(self->discs), FALSE);
 	gtk_list_box_set_sort_func(GTK_LIST_BOX(self->discs), koto_album_view_sort_discs, NULL, NULL); // Ensure we can sort our discs
 	gtk_widget_add_css_class(self->discs, "discs-list");
 	gtk_widget_set_can_focus(self->discs, FALSE);
+	gtk_widget_set_focusable(self->discs, FALSE);
 	gtk_widget_set_size_request(self->discs, 600, -1);
 
 	gtk_box_append(GTK_BOX(self->main), self->album_tracks_box); // Add the tracks box to the art info combo box
@@ -116,9 +118,7 @@ static void koto_album_view_init(KotoAlbumView *self) {
 	g_signal_connect(motion_controller, "leave", G_CALLBACK(koto_album_view_hide_overlay_controls), self);
 	gtk_widget_add_controller(self->album_overlay_container, motion_controller);
 
-	GtkGesture *controller = gtk_gesture_click_new(); // Create a new GtkGestureClick
-	g_signal_connect(controller, "pressed", G_CALLBACK(koto_album_view_toggle_album_playback), self);
-	gtk_widget_add_controller(GTK_WIDGET(self->play_pause_button), GTK_EVENT_CONTROLLER(controller));
+	koto_button_add_click_handler(self->play_pause_button, KOTO_BUTTON_CLICK_TYPE_PRIMARY, G_CALLBACK(koto_album_view_toggle_album_playback), self);
 }
 
 GtkWidget* koto_album_view_get_main(KotoAlbumView *self) {

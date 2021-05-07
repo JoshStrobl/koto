@@ -38,8 +38,8 @@ int create_db_tables() {
 	char *tables_creation_queries = "CREATE TABLE IF NOT EXISTS artists(id string UNIQUE PRIMARY KEY, path string, type int, name string, art_path string);"
 		"CREATE TABLE IF NOT EXISTS albums(id string UNIQUE PRIMARY KEY, path string, artist_id string, name string, art_path string, FOREIGN KEY(artist_id) REFERENCES artists(id) ON DELETE CASCADE);"
 		"CREATE TABLE IF NOT EXISTS tracks(id string UNIQUE PRIMARY KEY, path string, type int, artist_id string, album_id string, file_name string, name string, disc int, position int, FOREIGN KEY(artist_id) REFERENCES artists(id) ON DELETE CASCADE);"
-		"CREATE TABLE IF NOT EXISTS playlist_meta(id string UNIQUE PRIMARY KEY, name string, art_path string);"
-		"CREATE TABLE IF NOT EXISTS playlist_tracks(playlist_id string PRIMARY KEY, track_id string, position int, current int, FOREIGN KEY(playlist_id) REFERENCES playlist_meta(id), FOREIGN KEY(track_id) REFERENCES tracks(id) ON DELETE CASCADE);";
+		"CREATE TABLE IF NOT EXISTS playlist_meta(id string UNIQUE PRIMARY KEY, name string, art_path string, preferred_model int);"
+		"CREATE TABLE IF NOT EXISTS playlist_tracks(position INTEGER PRIMARY KEY AUTOINCREMENT, playlist_id string, track_id string, current int, FOREIGN KEY(playlist_id) REFERENCES playlist_meta(id), FOREIGN KEY(track_id) REFERENCES tracks(id) ON DELETE CASCADE);";
 
 	gchar *create_tables_errmsg = NULL;
 	int rc = sqlite3_exec(koto_db, tables_creation_queries, 0,0, &create_tables_errmsg);

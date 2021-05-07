@@ -14,7 +14,7 @@
 			"cwd": "${workspaceFolder}",
 			"environment": [
 				{"name" : "G_MESSAGES_DEBUG", "value": "all" },
-				{ "name": "GTK_THEME", "value": "Default:dark" }
+				{ "name": "GTK_THEME", "value": "Adwaita:dark" }
 			],
 			"externalConsole": false,
 			"MIMode": "gdb",
@@ -37,7 +37,7 @@
 			"cwd": "${workspaceFolder}",
 			"environment": [
 				{"name" : "G_MESSAGES_DEBUG", "value": "all" },
-				{ "name": "GTK_THEME", "value": "Default:dark" }
+				{ "name": "GTK_THEME", "value": "Adwaita:dark" }
 			],
 			"externalConsole": false,
 			"linux": {

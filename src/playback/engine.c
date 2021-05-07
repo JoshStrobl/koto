@@ -36,7 +36,6 @@ enum {
 	N_SIGNALS
 };
 
-static glong NS = 1000000000;
 static guint playback_engine_signals[N_SIGNALS] = { 0 };
 
 extern KotoCartographer *koto_maps;
@@ -51,12 +50,16 @@ struct _KotoPlaybackEngine {
 	GstElement *suppress_video;
 	GstBus *monitor;
 
+	GstQuery *duration_query;
+	GstQuery *position_query;
+
 	KotoIndexedTrack *current_track;
 
 	gboolean is_muted;
 	gboolean is_repeat_enabled;
 
 	gboolean is_playing;
+	gboolean is_playing_specific_track;
 
 	gboolean tick_duration_timer_running;
 	gboolean tick_track_timer_running;
@@ -197,12 +200,17 @@ static void koto_playback_engine_init(KotoPlaybackEngine *self) {
 	gst_bin_add(GST_BIN(self->player), self->playbin);
 	self->monitor = gst_bus_new(); // Get the bus for the playbin
 
+	self->duration_query = gst_query_new_duration(GST_FORMAT_TIME); // Create our re-usable query for querying the duration
+	self->position_query = gst_query_new_position(GST_FORMAT_TIME); // Create our re-usable query for querying the position
+
 	if (GST_IS_BUS(self->monitor)) {
 		gst_bus_add_watch(self->monitor, koto_playback_engine_monitor_changed, self);
 		gst_element_set_bus(self->player, self->monitor); // Set our bus to monitor changes
 	}
 
 	self->is_muted = FALSE;
+	self->is_playing = FALSE;
+	self->is_playing_specific_track = FALSE;
 	self->is_repeat_enabled = FALSE;
 	self->tick_duration_timer_running = FALSE;
 	self->tick_track_timer_running = FALSE;
@@ -216,6 +224,10 @@ void koto_playback_engine_backwards(KotoPlaybackEngine *self) {
 	KotoPlaylist *playlist = koto_current_playlist_get_playlist(current_playlist); // Get the current playlist
 
 	if (!KOTO_IS_PLAYLIST(playlist)) { // If we do not have a playlist currently
+		return;
+	}
+
+	if (self->is_repeat_enabled || self->is_playing_specific_track) { // Repeat enabled or playing a specific track
 		return;
 	}
 
@@ -245,7 +257,7 @@ void koto_playback_engine_forwards(KotoPlaybackEngine *self) {
 
 	if (self->is_repeat_enabled) { // Is repeat enabled
 		koto_playback_engine_set_position(self, 0); // Set position back to 0 to repeat the track
-	} else { // Repeat not enabled
+	} else if (!self->is_repeat_enabled && !self->is_playing_specific_track) { // Repeat not enabled and we are not playing a specific track
 		koto_playback_engine_set_track_by_uuid(self, koto_playlist_go_to_next(playlist));
 	}
 }
@@ -256,27 +268,32 @@ KotoIndexedTrack* koto_playback_engine_get_current_track(KotoPlaybackEngine *sel
 
 gint64 koto_playback_engine_get_duration(KotoPlaybackEngine *self) {
 	gint64 duration = 0;
-	if (gst_element_query_duration(self->player, GST_FORMAT_TIME, &duration)) {
-		duration = duration / NS; // Divide by NS to get seconds
+	if (gst_element_query(self->player, self->duration_query)) { // Able to query our duration
+		gst_query_parse_duration(self->duration_query, NULL, &duration); // Get the duration
+		duration = duration / GST_SECOND; // Divide by NS to get seconds
 	}
 
 	return duration;
 }
 
-gint64 koto_playback_engine_get_progress(KotoPlaybackEngine *self) {
-	gint64 progress = 0;
-	if (gst_element_query_position(self->player, GST_FORMAT_TIME, &progress)) {
-		progress = progress / NS; // Divide by NS to get seconds
+gdouble koto_playback_engine_get_progress(KotoPlaybackEngine *self) {
+	gdouble progress = 0.0;
+	gint64 gstprog = 0;
+	if (gst_element_query(self->playbin, self->position_query)) { // Able to get our position
+		gst_query_parse_position(self->position_query, NULL, &gstprog); // Get the progress
+
+		if (gstprog < 1) { // Less than a second
+			return 0.0;
+		}
+
+		progress = gstprog / GST_SECOND; // Divide by GST_SECOND then again by 100.
 	}
 
 	return progress;
 }
 
 GstState koto_playback_engine_get_state(KotoPlaybackEngine *self) {
-	GstState current_state;
-	gst_element_get_state(self->player, &current_state, NULL, GST_SECOND); // Get the current state, allowing up to a second to get it
-
-	return current_state;
+	return GST_STATE(self->player);
 }
 
 gboolean koto_playback_engine_get_track_repeat(KotoPlaybackEngine *self) {
@@ -361,7 +378,7 @@ void koto_playback_engine_pause(KotoPlaybackEngine *self) {
 }
 
 void koto_playback_engine_set_position(KotoPlaybackEngine *self, int position) {
-	gst_element_seek_simple(self->playbin, GST_FORMAT_TIME, GST_SEEK_FLAG_FLUSH, position * NS);
+	gst_element_seek_simple(self->playbin, GST_FORMAT_TIME, GST_SEEK_FLAG_FLUSH, position * GST_SECOND);
 }
 
 void koto_playback_engine_set_track_repeat(KotoPlaybackEngine *self, gboolean enable_repeat) {

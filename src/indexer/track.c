@@ -278,6 +278,14 @@ void koto_indexed_track_commit(KotoIndexedTrack *self) {
 	g_free(commit_op_errmsg);
 }
 
+gchar* koto_indexed_track_get_uuid(KotoIndexedTrack *self) {
+	if (!KOTO_IS_INDEXED_TRACK(self)) {
+		return NULL;
+	}
+
+	return self->uuid; // Do not return a duplicate since otherwise comparison refs fail due to pointer positions being different
+}
+
 void koto_indexed_track_parse_name(KotoIndexedTrack *self) {
 	gchar *copied_file_name = g_strdelimit(g_strdup(self->file_name), "_", ' '); // Replace _ with whitespace for starters
 
@@ -335,14 +343,37 @@ void koto_indexed_track_parse_name(KotoIndexedTrack *self) {
 	g_free(file_without_ext);
 }
 
-void koto_indexed_track_save_to_playlist(KotoIndexedTrack *self, gchar *playlist_uuid, guint position, gint current) {
+void koto_indexed_track_remove_from_playlist(KotoIndexedTrack *self, gchar *playlist_uuid) {
+	if (!KOTO_IS_INDEXED_TRACK(self)) {
+		return;
+	}
+
 	gchar *commit_op = g_strdup_printf(
-		"INSERT INTO playlist_tracks(playlist_id, track_id, position, current)"
-		"VALUES('%s', '%s', quote(\"%d\"), quote(\"%d\")"
-		"ON CONFLICT(playlist_id, track_id) DO UPDATE SET position=excluded.position, current=excluded.current;",
+		"DELETE FROM playlist_tracks WHERE track_id='%s' AND playlist_id='%s'",
+		self->uuid,
+		playlist_uuid
+	);
+
+	gchar *commit_op_errmsg = NULL;
+	int rc = sqlite3_exec(koto_db, commit_op, 0, 0, &commit_op_errmsg);
+	if (rc != SQLITE_OK) {
+		g_warning("Failed to remove track from playlist: %s", commit_op_errmsg);
+	}
+
+	g_free(commit_op);
+	g_free(commit_op_errmsg);
+}
+
+void koto_indexed_track_save_to_playlist(KotoIndexedTrack *self, gchar *playlist_uuid, gint current) {
+	if (!KOTO_IS_INDEXED_TRACK(self)) {
+		return;
+	}
+
+	gchar *commit_op = g_strdup_printf(
+		"INSERT INTO playlist_tracks(playlist_id, track_id, current)"
+		"VALUES('%s', '%s', quote(\"%d\"))",
 		playlist_uuid,
 		self->uuid,
-		position,
 		current
 	);
 

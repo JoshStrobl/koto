@@ -1,6 +1,8 @@
 add_project_arguments('-Db_sanitize=address', language: 'c')
 
 koto_sources = [
+	'components/koto-action-bar.c',
+	'components/koto-cover-art-button.c',
 	'db/cartographer.c',
 	'db/db.c',
 	'indexer/album.c',
@@ -11,15 +13,18 @@ koto_sources = [
 	'pages/music/artist-view.c',
 	'pages/music/disc-view.c',
 	'pages/music/music-local.c',
+	'pages/playlist/list.c',
 	'playback/engine.c',
 	'playback/media-keys.c',
 	'playback/mimes.c',
 	'playback/mpris.c',
-	'playlist/create-dialog.c',
+	'playlist/add-remove-track-popover.c',
+	'playlist/create-modify-dialog.c',
 	'playlist/current.c',
 	'playlist/playlist.c',
 	'main.c',
 	'koto-button.c',
+	'koto-dialog-container.c',
 	'koto-expander.c',
 	'koto-nav.c',
 	'koto-playerbar.c',

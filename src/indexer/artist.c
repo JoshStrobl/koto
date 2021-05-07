@@ -151,7 +151,11 @@ static void koto_indexed_artist_set_property(GObject *obj, guint prop_id, const 
 }
 
 void koto_indexed_artist_add_album(KotoIndexedArtist *self, gchar *album_uuid) {
-	if ((album_uuid == NULL) || (strcmp(album_uuid, "") == 0)) { // No album UUID really defined
+	if (!KOTO_IS_INDEXED_ARTIST(self)) { // Not an artist
+		return;
+	}
+
+	if ((album_uuid == NULL) || g_strcmp0(album_uuid, "") == 0) { // No album UUID really defined
 		return;
 	}
 
@@ -163,11 +167,27 @@ void koto_indexed_artist_add_album(KotoIndexedArtist *self, gchar *album_uuid) {
 }
 
 GList* koto_indexed_artist_get_albums(KotoIndexedArtist *self) {
+	if (!KOTO_IS_INDEXED_ARTIST(self)) { // Not an artist
+		return NULL;
+	}
+
 	return g_list_copy(self->albums);
 }
 
+gchar* koto_indexed_artist_get_name(KotoIndexedArtist *self) {
+	if (!KOTO_IS_INDEXED_ARTIST(self)) { // Not an artist
+		return g_strdup("");
+	}
+
+	return g_strdup(g_strcmp0(self->artist_name, "") == 0 ? "" : self->artist_name); // Return artist name if set
+}
+
 void koto_indexed_artist_remove_album(KotoIndexedArtist *self, KotoIndexedAlbum *album) {
-	if (album == NULL) { // No album defined
+	if (!KOTO_IS_INDEXED_ARTIST(self)) { // Not an artist
+		return;
+	}
+
+	if (!KOTO_INDEXED_ALBUM(album)) { // No album defined
 		return;
 	}
 
@@ -177,11 +197,15 @@ void koto_indexed_artist_remove_album(KotoIndexedArtist *self, KotoIndexedAlbum 
 }
 
 void koto_indexed_artist_update_path(KotoIndexedArtist *self, const gchar *new_path) {
-	if (new_path == NULL) { // No path really
+	if (!KOTO_IS_INDEXED_ARTIST(self)) { // Not an artist
 		return;
 	}
 
-	if (self->path != NULL) { // Already have a path set
+	if ((new_path == NULL) || g_strcmp0(new_path, "") == 0) { // No path really
+		return;
+	}
+
+	if ((self->path != NULL) && g_strcmp0(self->path, "") != 0) { // Already have a path set
 		g_free(self->path); // Free
 	}
 
@@ -190,11 +214,15 @@ void koto_indexed_artist_update_path(KotoIndexedArtist *self, const gchar *new_p
 }
 
 void koto_indexed_artist_set_artist_name(KotoIndexedArtist *self, const gchar *artist_name) {
-	if (artist_name == NULL) { // No artist name
+	if (!KOTO_IS_INDEXED_ARTIST(self)) { // Not an artist
 		return;
 	}
 
-	if (self->artist_name != NULL) { // Has artist name
+	if ((artist_name == NULL) || g_strcmp0(artist_name, "") == 0) { // No artist name
+		return;
+	}
+
+	if ((self->artist_name != NULL) && g_strcmp0(self->artist_name, "") != 0) { // Has artist name
 		g_free(self->artist_name);
 	}
 

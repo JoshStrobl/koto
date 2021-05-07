@@ -14,4 +14,32 @@
 			color: white;
 		}
 	}
+
+	.playerbar-info { // Central info section
+		& > box { // Info labels
+			margin-left: 2ex;
+
+			& > label {
+				margin-top: 6px;
+				margin-bottom: 6px;
+
+				&:nth-child(1) { // Title
+					font-size: x-large;
+					font-weight: bold;
+				}
+
+				&:not(:nth-child(1)) { // Album and Artist
+					font-size: large;
+				}
+
+				&:nth-child(2) { // Album
+
+				}
+
+				&:nth-child(3) { // Artist
+
+				}
+			}
+		}
+	}
 }

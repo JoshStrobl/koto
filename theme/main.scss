@@ -1,4 +1,7 @@
-@import 'pages/music-local.scss';
+@import 'components/cover-art-button';
+@import 'components/gtk-overrides';
+@import 'pages/music-local';
+@import 'pages/playlist-page';
 
 @import 'button';
 @import 'disc-view';
@@ -14,5 +17,16 @@ window {
 	& > headerbar, & > headerbar:active {
 		background-color: $midnight;
 		background-image: none;
+	}
+
+	.koto-dialog-container {
+		background-color: transparentize($midnight, 0.5);
+		padding: 20px;
+	}
+
+	// All the classes we want consistent padding applied to for its primary content
+	.artist-view-content, // Has the albums
+	.playlist-page { // Individual playlists
+		padding: $itempadding;
 	}
 }

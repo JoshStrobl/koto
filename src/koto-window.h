@@ -18,6 +18,8 @@
 #pragma once
 
 #include <gtk-4.0/gtk/gtk.h>
+#include "db/cartographer.h"
+#include "playlist/playlist.h"
 
 G_BEGIN_DECLS
 
@@ -25,10 +27,15 @@ G_BEGIN_DECLS
 
 G_DECLARE_FINAL_TYPE (KotoWindow, koto_window, KOTO, WINDOW, GtkApplicationWindow)
 
-void koto_window_show_create_playlist_dialog(KotoWindow *self);
-void koto_window_hide_create_playlist_dialog(KotoWindow *self);
+void koto_window_add_page(KotoWindow *self, gchar *page_name, GtkWidget *page);
+void koto_window_go_to_page(KotoWindow *self, gchar *page_name);
+void koto_window_handle_playlist_added(KotoCartographer *carto, KotoPlaylist *playlist, gpointer user_data);
+void koto_window_hide_dialogs(KotoWindow *self);
+void koto_window_remove_page(KotoWindow *self, gchar *page_name);
+void koto_window_show_dialog(KotoWindow *self, gchar *dialog_name);
 
 void create_new_headerbar(KotoWindow *self);
+void handle_album_added();
 void load_library(KotoWindow *self);
 void set_optimal_default_window_size(KotoWindow *self);
 

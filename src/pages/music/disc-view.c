@@ -16,11 +16,13 @@
  */
 
 #include <gtk-4.0/gtk/gtk.h>
+#include "../../components/koto-action-bar.h"
 #include "../../db/cartographer.h"
 #include "../../indexer/structs.h"
 #include "../../koto-track-item.h"
 #include "disc-view.h"
 
+extern KotoActionBar *action_bar;
 extern KotoCartographer *koto_maps;
 
 struct _KotoDiscView {
@@ -121,31 +123,17 @@ static void koto_disc_view_init(KotoDiscView *self) {
 	gtk_box_append(GTK_BOX(self->header), self->label);
 
 	gtk_box_append(GTK_BOX(self), self->header);
-}
-
-void koto_disc_view_set_album(KotoDiscView *self, KotoIndexedAlbum *album) {
-	if (album == NULL) {
-		return;
-	}
-
-	if (self->album != NULL) {
-		g_free(self->album);
-	}
-
-	self->album = album;
-
-	if (GTK_IS_LIST_BOX(self->list)) { // Already have a listbox
-		gtk_box_remove(GTK_BOX(self), self->list); // Remove the box
-		g_object_unref(self->list); // Unref the list
-	}
 
 	self->list = gtk_list_box_new(); // Create our list of our tracks
+	gtk_list_box_set_activate_on_single_click(GTK_LIST_BOX(self->list), FALSE);
 	gtk_list_box_set_selection_mode(GTK_LIST_BOX(self->list), GTK_SELECTION_MULTIPLE);
 	gtk_widget_add_css_class(self->list, "track-list");
+	gtk_widget_set_can_focus(self->list, FALSE);
+	gtk_widget_set_focusable(self->list, FALSE);
 	gtk_widget_set_size_request(self->list, 600, -1);
 	gtk_box_append(GTK_BOX(self), self->list);
 
-	g_list_foreach(koto_indexed_album_get_tracks(self->album), koto_disc_view_list_tracks, self);
+	g_signal_connect(self->list, "selected-rows-changed", G_CALLBACK(koto_disc_view_handle_selected_rows_changed), self);
 }
 
 void koto_disc_view_list_tracks(gpointer data, gpointer selfptr) {
@@ -161,6 +149,49 @@ void koto_disc_view_list_tracks(gpointer data, gpointer selfptr) {
 
 	KotoTrackItem *track_item = koto_track_item_new(track); // Create our new track item
 	gtk_list_box_append(GTK_LIST_BOX(self->list), GTK_WIDGET(track_item)); // Add to our tracks list box
+}
+
+void koto_disc_view_handle_selected_rows_changed(GtkListBox *box, gpointer user_data) {
+	KotoDiscView *self = user_data;
+
+	gchar *album_uuid = koto_indexed_album_get_album_uuid(self->album); // Get the UUID
+
+	if ((album_uuid == NULL) || g_strcmp0(album_uuid, "") == 0) { // Not set
+		return;
+	}
+
+	GList *selected_rows = gtk_list_box_get_selected_rows(box); // Get the selected rows
+
+	if (g_list_length(selected_rows) == 0) { // No rows selected
+		koto_action_bar_toggle_reveal(action_bar, FALSE); // Close the action bar
+		return;
+	}
+
+	GList *selected_tracks = NULL; // Create our list of KotoIndexedTracks
+	GList *cur_selected_rows;
+	for (cur_selected_rows = selected_rows; cur_selected_rows != NULL; cur_selected_rows = cur_selected_rows->next) { // Iterate over the rows
+		KotoTrackItem *track_item = (KotoTrackItem*) gtk_list_box_row_get_child(cur_selected_rows->data);
+		selected_tracks = g_list_append(selected_tracks, koto_track_item_get_track(track_item)); // Add the KotoIndexedTrack to our list
+	}
+
+	g_list_free(cur_selected_rows);
+
+	koto_action_bar_set_tracks_in_album_selection(action_bar, album_uuid, selected_tracks); // Set our album selection
+	koto_action_bar_toggle_reveal(action_bar, TRUE); // Show the action bar
+}
+
+void koto_disc_view_set_album(KotoDiscView *self, KotoIndexedAlbum *album) {
+	if (album == NULL) {
+		return;
+	}
+
+	if (self->album != NULL) {
+		g_free(self->album);
+	}
+
+	self->album = album;
+
+	g_list_foreach(koto_indexed_album_get_tracks(self->album), koto_disc_view_list_tracks, self);
 }
 
 void koto_disc_view_set_disc_number(KotoDiscView *self, guint disc_number) {

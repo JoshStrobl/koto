@@ -49,6 +49,8 @@ struct _KotoPageMusicLocalClass {
 
 G_DEFINE_TYPE(KotoPageMusicLocal, koto_page_music_local, GTK_TYPE_BOX);
 
+KotoPageMusicLocal *music_local_page;
+
 static void koto_page_music_local_constructed(GObject *obj);
 static void koto_page_music_local_get_property(GObject *obj, guint prop_id, GValue *val, GParamSpec *spec);
 static void koto_page_music_local_set_property(GObject *obj, guint prop_id, const GValue *val, GParamSpec *spec);
@@ -145,6 +147,32 @@ void koto_page_music_local_add_artist(KotoPageMusicLocal *self, KotoIndexedArtis
 	gtk_stack_add_named(GTK_STACK(self->stack), koto_artist_view_get_main(artist_view), artist_name);
 }
 
+void koto_page_music_local_go_to_artist_by_name(KotoPageMusicLocal *self, gchar *artist_name) {
+	gtk_stack_set_visible_child_name(GTK_STACK(self->stack), artist_name);
+}
+
+void koto_page_music_local_go_to_artist_by_uuid(KotoPageMusicLocal *self, gchar *artist_uuid) {
+	KotoIndexedArtist *artist = koto_cartographer_get_artist_by_uuid(koto_maps, artist_uuid); // Get the artist
+
+	if (!KOTO_IS_INDEXED_ARTIST(artist)) { // No artist for this UUID
+		return;
+	}
+
+	gchar *artist_name = NULL;
+	g_object_get(
+		artist,
+		"name",
+		&artist_name,
+		NULL
+	);
+
+	if (artist_name == NULL || (g_strcmp0(artist_name, "") == 0)) { // Failed to get the artist name
+		return;
+	}
+
+	koto_page_music_local_go_to_artist_by_name(self, artist_name);
+}
+
 void koto_page_music_local_handle_artist_click(GtkListBox *box, GtkListBoxRow *row, gpointer data) {
 	(void) box;
 	KotoPageMusicLocal *self = (KotoPageMusicLocal*) data;
@@ -152,7 +180,7 @@ void koto_page_music_local_handle_artist_click(GtkListBox *box, GtkListBoxRow *r
 
 	gchar *artist_name;
 	g_object_get(btn, "button-text", &artist_name, NULL);
-	gtk_stack_set_visible_child_name(GTK_STACK(self->stack), artist_name);
+	koto_page_music_local_go_to_artist_by_name(self, artist_name);
 }
 
 void koto_page_music_local_set_library(KotoPageMusicLocal *self, KotoIndexedLibrary *lib) {

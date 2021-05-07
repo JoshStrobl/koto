@@ -16,17 +16,27 @@
  */
 
 #include <gtk-4.0/gdk/x11/gdkx.h>
+#include "components/koto-action-bar.h"
+#include "db/cartographer.h"
 #include "indexer/structs.h"
 #include "pages/music/music-local.h"
+#include "pages/playlist/list.h"
 #include "playback/engine.h"
+#include "playlist/add-remove-track-popover.h"
 #include "playlist/current.h"
-#include "playlist/create-dialog.h"
+#include "playlist/create-modify-dialog.h"
 #include "koto-config.h"
+#include "koto-dialog-container.h"
 #include "koto-nav.h"
 #include "koto-playerbar.h"
 #include "koto-window.h"
 
+extern KotoActionBar *action_bar;
+extern KotoAddRemoveTrackPopover *koto_add_remove_track_popup;
+extern KotoCartographer *koto_maps;
+extern KotoCreateModifyPlaylistDialog *playlist_create_modify_dialog;
 extern KotoCurrentPlaylist *current_playlist;
+extern KotoPageMusicLocal *music_local_page;
 extern KotoPlaybackEngine *playback_engine;
 
 struct _KotoWindow {
@@ -34,7 +44,7 @@ struct _KotoWindow {
 	KotoIndexedLibrary *library;
 	KotoCurrentPlaylist *current_playlist;
 
-	KotoCreatePlaylistDialog *playlist_create_dialog;
+	KotoDialogContainer *dialogs;
 
 	GtkWidget *overlay;
 	GtkWidget        *header_bar;
@@ -66,14 +76,18 @@ static void koto_window_init (KotoWindow *self) {
 	create_new_headerbar(self); // Create our headerbar
 
 	self->overlay = gtk_overlay_new(); // Create our overlay
-	self->playlist_create_dialog = koto_create_playlist_dialog_new(); // Create our Create Playlist dialog
+	self->dialogs = koto_dialog_container_new(); // Create our dialog container
 
 	self->primary_layout = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
 	gtk_widget_add_css_class(self->primary_layout, "primary-layout");
 	gtk_widget_set_hexpand(self->primary_layout, TRUE);
 	gtk_widget_set_vexpand(self->primary_layout, TRUE);
 
+	playlist_create_modify_dialog = koto_create_modify_playlist_dialog_new(); // Create our Create Playlist dialog
+	koto_dialog_container_add_dialog(self->dialogs, "create-modify-playlist", GTK_WIDGET(playlist_create_modify_dialog));
+
 	gtk_overlay_set_child(GTK_OVERLAY(self->overlay), self->primary_layout); // Add our primary layout to the overlay
+	gtk_overlay_add_overlay(GTK_OVERLAY(self->overlay), GTK_WIDGET(self->dialogs)); // Add the stack as our overlay
 
 	self->content_layout = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
 	gtk_widget_add_css_class(self->content_layout, "content-layout");
@@ -97,9 +111,20 @@ static void koto_window_init (KotoWindow *self) {
 
 	gtk_box_prepend(GTK_BOX(self->primary_layout), self->content_layout);
 
+	koto_add_remove_track_popup = koto_add_remove_track_popover_new(); // Create our popover for adding and removing tracks
+	action_bar = koto_action_bar_new(); // Create our Koto Action Bar
+
+	if (KOTO_IS_ACTION_BAR(action_bar)) { // Is an action bar
+		GtkActionBar *bar = koto_action_bar_get_main(action_bar);
+
+		if (GTK_IS_ACTION_BAR(bar)) {
+			gtk_box_append(GTK_BOX(self->primary_layout), GTK_WIDGET(bar)); // Add the action
+		}
+	}
+
 	self->player_bar = koto_playerbar_new();
 
-	if (self->player_bar != NULL) {
+	if (KOTO_IS_PLAYERBAR(self->player_bar)) { // Is a playerbar
 		GtkWidget *playerbar_main = koto_playerbar_get_main(self->player_bar);
 		gtk_box_append(GTK_BOX(self->primary_layout), playerbar_main);
 	}
@@ -114,6 +139,42 @@ static void koto_window_init (KotoWindow *self) {
 
 	gtk_widget_queue_draw(self->content_layout);
 	g_thread_new("load-library", (void*) load_library, self);
+}
+
+void koto_window_add_page(KotoWindow *self, gchar *page_name, GtkWidget *page) {
+	gtk_stack_add_named(GTK_STACK(self->pages), page, page_name);
+}
+
+void koto_window_go_to_page(KotoWindow *self, gchar *page_name) {
+	gtk_stack_set_visible_child_name(GTK_STACK(self->pages), page_name);
+}
+
+void koto_window_handle_playlist_added(KotoCartographer *carto, KotoPlaylist *playlist, gpointer user_data) {
+	(void) carto;
+
+	if (!KOTO_IS_PLAYLIST(playlist)) {
+		return;
+	}
+
+	KotoWindow *self = user_data;
+
+	gchar *playlist_uuid = koto_playlist_get_uuid(playlist);
+	KotoPlaylistPage *playlist_page = koto_playlist_page_new(playlist_uuid); // Create our new Playlist Page
+	koto_window_add_page(self, playlist_uuid, koto_playlist_page_get_main(playlist_page)); // Get the GtkScrolledWindow "main" content of the playlist page and add that as a page to our stack by the playlist UUID
+}
+
+void koto_window_hide_dialogs(KotoWindow *self) {
+	koto_dialog_container_hide(self->dialogs); // Hide the dialog container
+}
+
+void koto_window_remove_page(KotoWindow *self, gchar *page_name) {
+	GtkWidget *page = gtk_stack_get_child_by_name(GTK_STACK(self->pages), page_name);
+	g_return_if_fail(page != NULL);
+	gtk_stack_remove(GTK_STACK(self->pages), page);
+}
+
+void koto_window_show_dialog(KotoWindow *self, gchar *dialog_name) {
+	koto_dialog_container_show_dialog(self->dialogs, dialog_name);
 }
 
 void create_new_headerbar(KotoWindow *self) {
@@ -136,26 +197,18 @@ void create_new_headerbar(KotoWindow *self) {
 	gtk_window_set_titlebar(GTK_WINDOW(self), self->header_bar);
 }
 
-void koto_window_hide_create_playlist_dialog(KotoWindow *self) {
-	gtk_overlay_remove_overlay(GTK_OVERLAY(self->overlay), koto_create_playlist_dialog_get_content(self->playlist_create_dialog));
-}
-
-void koto_window_show_create_playlist_dialog(KotoWindow *self) {
-	gtk_overlay_add_overlay(GTK_OVERLAY(self->overlay), koto_create_playlist_dialog_get_content(self->playlist_create_dialog));
-}
-
 void load_library(KotoWindow *self) {
 	KotoIndexedLibrary *lib = koto_indexed_library_new(g_get_user_special_dir(G_USER_DIRECTORY_MUSIC));
 
 	if (lib != NULL) {
 		self->library = lib;
-		KotoPageMusicLocal* l = koto_page_music_local_new();
+		music_local_page = koto_page_music_local_new();
 
 		// TODO: Remove and do some fancy state loading
-		gtk_stack_add_named(GTK_STACK(self->pages), GTK_WIDGET(l), "music.local");
-		gtk_stack_set_visible_child_name(GTK_STACK(self->pages), "music.local");
+		koto_window_add_page(self, "music.local", GTK_WIDGET(music_local_page));
+		koto_window_go_to_page(self, "music.local");
 		gtk_widget_show(self->pages); // Do not remove this. Will cause sporadic hiding of the local page content otherwise.
-		koto_page_music_local_set_library(l, self->library);
+		koto_page_music_local_set_library(music_local_page, self->library);
 	}
 
 	g_thread_exit(0);

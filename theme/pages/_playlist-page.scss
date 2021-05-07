@@ -1,0 +1,84 @@
+@import '../vars';
+
+.playlist-page {
+	.playlist-page-header { // Our header
+		& > .playlist-page-header-info { // Our info centerbox
+			margin-left: 40px;
+
+			& > label { // All labels
+				color: $palewhite;
+			}
+
+			& > label:nth-child(1) { // First item (type of playlist)
+				font-size: 3ex;
+				font-weight: 700;
+				margin-top: 30px;
+				margin-bottom: 10px;
+			}
+
+			& > label:nth-child(2),
+			& > label:nth-child(3) {
+				font-weight: 800;
+			}
+
+			& > label:nth-child(2) { // Second item (playlist name)
+				font-size: 10ex;
+			}
+
+			& > label:nth-child(3) { // Third item (number of tracks)
+				font-size: 4ex;
+				margin-top: 40px;
+			}
+		}
+
+		& > .koto-button {
+
+		}
+	}
+
+	.track-list-content { // Our Track List
+		& > .track-list-header,
+		.track-list-columned-item {
+			font-size: x-large;
+			padding: 3ex 2ex;
+		}
+
+		& > .track-list-header { // Headers
+			font-weight: bold;
+
+			.koto-button { // All Koto buttons in our header
+				&.active { // Is active
+					color: $green;
+				}
+			}
+		}
+
+		& > .track-list-columned { // Column content
+			& > row {
+				& > .track-list-columned-item { // Track rows
+					font-size: x-large;
+				}
+
+				&:nth-child(odd):not(:selected) {
+					background-color: $midnight;
+				}
+			}
+		}
+
+		.track-column-number { // Column section within header and track items
+			
+		}
+
+		.track-column-name { // Name section within header and track items
+
+		}
+
+		.track-column-album { // Album section within headers and track items
+
+		}
+
+		.track-column-artist { // Artist section within headers and track items
+
+		}
+	}
+}

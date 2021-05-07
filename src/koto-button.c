@@ -51,10 +51,11 @@ guint koto_get_pixbuf_size(KotoButtonPixbufSize s) {
 
 enum {
 	PROP_BTN_0,
-	PROP_USE_FROM_FILE,
 	PROP_PIX_SIZE,
 	PROP_TEXT,
 	PROP_BADGE_TEXT,
+	PROP_USE_FROM_FILE,
+	PROP_IMAGE_FILE_PATH,
 	PROP_ICON_NAME,
 	PROP_ALT_ICON_NAME,
 	N_BTN_PROPERTIES
@@ -70,11 +71,16 @@ struct _KotoButton {
 	GtkWidget *badge_label;
 	GtkWidget *button_label;
 
+	GtkGesture *left_click_gesture;
+	GtkGesture *right_click_gesture;
+
+	gchar *image_file_path;
 	gchar *badge_text;
 	gchar *icon_name;
 	gchar *alt_icon_name;
 	gchar *text;
 
+	KotoButtonImagePosition image_position;
 	gboolean use_from_file;
 	gboolean currently_showing_alt;
 };
@@ -95,14 +101,6 @@ static void koto_button_class_init(KotoButtonClass *c) {
 	gobject_class->constructed = koto_button_constructed;
 	gobject_class->set_property = koto_button_set_property;
 	gobject_class->get_property = koto_button_get_property;
-
-	btn_props[PROP_USE_FROM_FILE] = g_param_spec_boolean(
-		"use-from-file",
-		"Use from a file / file name",
-		"Use from a file / file name",
-		FALSE,
-		G_PARAM_CONSTRUCT|G_PARAM_EXPLICIT_NOTIFY|G_PARAM_READWRITE
-	);
 
 	btn_props[PROP_PIX_SIZE] = g_param_spec_uint(
 		"pixbuf-size",
@@ -130,6 +128,22 @@ static void koto_button_class_init(KotoButtonClass *c) {
 		G_PARAM_CONSTRUCT|G_PARAM_EXPLICIT_NOTIFY|G_PARAM_READWRITE
 	);
 
+	btn_props[PROP_USE_FROM_FILE] = g_param_spec_boolean(
+		"use-from-file",
+		"Use from a file / file name",
+		"Use from a file / file name",
+		FALSE,
+		G_PARAM_CONSTRUCT|G_PARAM_EXPLICIT_NOTIFY|G_PARAM_READWRITE
+	);
+
+	btn_props[PROP_IMAGE_FILE_PATH] = g_param_spec_string(
+		"image-file-path",
+		"File path to image",
+		"File path to image",
+		NULL,
+		G_PARAM_CONSTRUCT|G_PARAM_EXPLICIT_NOTIFY|G_PARAM_READWRITE
+	);
+
 	btn_props[PROP_ICON_NAME] = g_param_spec_string(
 		"icon-name",
 		"Icon Name",
@@ -151,6 +165,16 @@ static void koto_button_class_init(KotoButtonClass *c) {
 
 static void koto_button_init(KotoButton *self) {
 	self->currently_showing_alt = FALSE;
+	self->image_position = KOTO_BUTTON_IMAGE_POS_LEFT;
+
+	self->left_click_gesture = gtk_gesture_click_new(); // Set up our left click gesture
+	self->right_click_gesture = gtk_gesture_click_new(); // Set up our right click gesture
+
+	gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(self->left_click_gesture), (int) KOTO_BUTTON_CLICK_TYPE_PRIMARY); // Only allow left clicks on left click gesture
+	gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(self->right_click_gesture), (int) KOTO_BUTTON_CLICK_TYPE_SECONDARY); // Only allow right clicks on right click gesture
+
+	gtk_widget_add_controller(GTK_WIDGET(self), GTK_EVENT_CONTROLLER(self->left_click_gesture)); // Add our left click gesture
+	gtk_widget_add_controller(GTK_WIDGET(self), GTK_EVENT_CONTROLLER(self->right_click_gesture)); // Add our right click gesture
 }
 
 static void koto_button_constructed(GObject *obj) {
@@ -165,6 +189,9 @@ static void koto_button_get_property(GObject *obj, guint prop_id, GValue *val, G
 	KotoButton *self = KOTO_BUTTON(obj);
 
 	switch (prop_id) {
+		case PROP_IMAGE_FILE_PATH:
+			g_value_set_string(val, self->image_file_path);
+			break;
 		case PROP_USE_FROM_FILE:
 			g_value_set_boolean(val, self->use_from_file);
 			break;
@@ -193,22 +220,23 @@ static void koto_button_set_property(GObject *obj, guint prop_id, const GValue *
 	KotoButton *self = KOTO_BUTTON(obj);
 
 	switch (prop_id) {
-		case PROP_USE_FROM_FILE:
-			self->use_from_file = g_value_get_boolean(val);
-			break;
 		case PROP_PIX_SIZE:
 			koto_button_set_pixbuf_size(self, g_value_get_uint(val));
 			break;
 		case PROP_TEXT:
-			if (val == NULL) {
-				koto_button_set_text(self, NULL);
-			} else {
-				koto_button_set_text(self, g_strdup(g_value_get_string(val)));
+			if (val != NULL) {
+				koto_button_set_text(self, (gchar*) g_value_get_string(val));
 			}
 
 			break;
 		case PROP_BADGE_TEXT:
 			koto_button_set_badge_text(self, g_strdup(g_value_get_string(val)));
+			break;
+		case PROP_USE_FROM_FILE:
+			self->use_from_file = g_value_get_boolean(val);
+			break;
+		case PROP_IMAGE_FILE_PATH:
+			koto_button_set_file_path(self, (gchar*) g_value_get_string(val));
 			break;
 		case PROP_ICON_NAME:
 			koto_button_set_icon_name(self, g_strdup(g_value_get_string(val)), FALSE);
@@ -228,8 +256,30 @@ static void koto_button_set_property(GObject *obj, guint prop_id, const GValue *
 	}
 }
 
+void koto_button_add_click_handler(KotoButton *self, KotoButtonClickType button, GCallback handler, gpointer user_data) {
+	if (!KOTO_IS_BUTTON(self)) {
+		return;
+	}
+
+	if ((button != KOTO_BUTTON_CLICK_TYPE_PRIMARY) && (button != KOTO_BUTTON_CLICK_TYPE_SECONDARY)) { // Not valid type
+		return;
+	}
+
+	g_signal_connect((button == KOTO_BUTTON_CLICK_TYPE_PRIMARY) ? self->left_click_gesture : self->right_click_gesture, "pressed", handler, user_data);
+}
+
 void koto_button_flip(KotoButton *self) {
+	if (!KOTO_IS_BUTTON(self)) {
+		return;
+	}
+
 	koto_button_show_image(self, !self->currently_showing_alt);
+}
+
+void koto_button_hide_image(KotoButton *self) {
+	if (GTK_IS_WIDGET(self->button_pic)) { // Is a widget
+		gtk_widget_hide(self->button_pic);
+	}
 }
 
 void koto_button_set_badge_text(KotoButton *self, gchar *text) {
@@ -254,6 +304,23 @@ void koto_button_set_badge_text(KotoButton *self, gchar *text) {
 	}
 
 	g_object_notify_by_pspec(G_OBJECT(self), btn_props[PROP_BADGE_TEXT]);
+}
+
+void koto_button_set_file_path(KotoButton *self, gchar *file_path) {
+	if (!KOTO_IS_BUTTON(self)) { // Not a button
+		return;
+	}
+
+	if (file_path == NULL || (g_strcmp0(file_path, "") == 0)) { // Empty string or null
+		return;
+	}
+
+	if (self->image_file_path != NULL && (g_strcmp0(self->image_file_path, "") != 0)) { // Not null and not empty
+		g_free(self->image_file_path);
+	}
+
+	self->image_file_path = g_strdup(file_path);
+	koto_button_show_image(self, FALSE);
 }
 
 void koto_button_set_icon_name(KotoButton *self, gchar *icon_name, gboolean for_alt) {
@@ -291,6 +358,22 @@ void koto_button_set_icon_name(KotoButton *self, gchar *icon_name, gboolean for_
 	g_object_notify_by_pspec(G_OBJECT(self), for_alt ? btn_props[PROP_ALT_ICON_NAME] : btn_props[PROP_ICON_NAME]);
 }
 
+void koto_button_set_image_position(KotoButton *self, KotoButtonImagePosition pos) {
+	if (self->image_position == pos) { // Is a different position that currently
+		return;
+	}
+
+	if (GTK_IS_WIDGET(self->button_pic)) { // Button is already defined
+		if (pos == KOTO_BUTTON_IMAGE_POS_RIGHT) { // If we want to move the image to the right
+			gtk_box_reorder_child_after(GTK_BOX(self), self->button_pic, self->button_label); // Move image to after label
+		} else { // Moving image to left
+			gtk_box_reorder_child_after(GTK_BOX(self), self->button_label, self->button_pic); // Move label to after image
+		}
+	}
+
+	self->image_position = pos;
+}
+
 void koto_button_set_pixbuf_size(KotoButton *self, guint size) {
 	g_return_if_fail(size != self->pix_size); // If the sizes aren't different, return
 
@@ -305,16 +388,14 @@ void koto_button_set_text(KotoButton *self, gchar *text) {
 		return;
 	}
 
-	gchar *copied_text = g_strdup(text); // Copy our text
-
-	if (strcmp(copied_text, "") == 0) { // Clearing our text
+	if (self->text != NULL) { // Text defined
 		g_free(self->text); // Free existing text
 	}
 
-	self->text = copied_text;
+	self->text = g_strdup(text);
 
 	if (GTK_IS_LABEL(self->button_label)) { // If we have a button label
-		if (strcmp(self->text, "") != 0) { // Have text set
+		if (g_strcmp0(self->text, "") != 0) { // Have text set
 			gtk_label_set_text(GTK_LABEL(self->button_label), self->text);
 			gtk_widget_show(self->button_label); // Show the label
 		} else { // Have a label but no longer text
@@ -322,7 +403,7 @@ void koto_button_set_text(KotoButton *self, gchar *text) {
 			g_free(self->button_label);
 		}
 	} else { // If we do not have a button label
-		if (strcmp(self->text, "") != 0) { // If we have text
+		if ((self->text != NULL) && (g_strcmp0(self->text, "") != 0)) { // If we have text
 			self->button_label = gtk_label_new(self->text); // Create our label
 			gtk_label_set_xalign(GTK_LABEL(self->button_label), 0);
 
@@ -342,15 +423,25 @@ void koto_button_show_image(KotoButton *self, gboolean use_alt) {
 		return;
 	}
 
-	if (use_alt && ((self->alt_icon_name == NULL) || (strcmp(self->alt_icon_name, "") == 0))) { // Don't have an alt icon set
-		return;
-	} else if (!use_alt && ((self->icon_name == NULL) || (strcmp(self->icon_name, "") == 0))) { // Don't have icon set
-		return;
-	}
-
 	if (self->use_from_file) { // Use from a file instead of icon name
-		// TODO: Add
+		if ((self->image_file_path == NULL) || g_strcmp0(self->image_file_path, "") == 0) { // Not set
+			return;
+		}
+
+		if (GTK_IS_IMAGE(self->button_pic)) { // Already have an icon
+			gtk_image_set_from_file(GTK_IMAGE(self->button_pic), self->image_file_path);
+		} else { // Don't have an image yet
+			self->button_pic = gtk_image_new_from_file(self->image_file_path); // Create a new image from the file
+			gtk_box_prepend(GTK_BOX(self), self->button_pic); // Prepend to the box
+		}
 	} else { // From icon name
+
+		if (use_alt && ((self->alt_icon_name == NULL) || (strcmp(self->alt_icon_name, "") == 0))) { // Don't have an alt icon set
+			return;
+		} else if (!use_alt && ((self->icon_name == NULL) || (strcmp(self->icon_name, "") == 0))) { // Don't have icon set
+			return;
+		}
+
 		self->currently_showing_alt = use_alt;
 		gchar *name = use_alt ? self->alt_icon_name : self->icon_name;
 
@@ -358,12 +449,21 @@ void koto_button_show_image(KotoButton *self, gboolean use_alt) {
 			gtk_image_set_from_icon_name(GTK_IMAGE(self->button_pic), name); // Just update the existing iamge
 		} else { // Not an image
 			self->button_pic = gtk_image_new_from_icon_name(name); // Get our new image
-			gtk_image_set_pixel_size(GTK_IMAGE(self->button_pic), self->pix_size);
 			gtk_box_prepend(GTK_BOX(self), self->button_pic); // Prepend to the box
 		}
-
-		gtk_image_set_icon_size(GTK_IMAGE(self->button_pic), GTK_ICON_SIZE_INHERIT); // Inherit height of parent widget
 	}
+
+	gtk_image_set_pixel_size(GTK_IMAGE(self->button_pic), self->pix_size);
+	gtk_image_set_icon_size(GTK_IMAGE(self->button_pic), GTK_ICON_SIZE_INHERIT); // Inherit height of parent widget
+	gtk_widget_show(self->button_pic); // Ensure we actually are showing the image
+}
+
+void koto_button_unflatten(KotoButton *self) {
+	if (!KOTO_IS_BUTTON(self)) {
+		return;
+	}
+
+	gtk_widget_remove_css_class(GTK_WIDGET(self), "flat");
 }
 
 KotoButton* koto_button_new_plain(gchar *label) {
@@ -379,6 +479,19 @@ KotoButton* koto_button_new_with_icon(gchar *label, gchar *icon_name, gchar *alt
 		"icon-name", icon_name,
 		"alt-icon-name", alt_icon_name,
 		"pixbuf-size", koto_get_pixbuf_size(size),
+		NULL
+	);
+}
+
+KotoButton *koto_button_new_with_file(gchar *label, gchar *file_path, KotoButtonPixbufSize size) {
+	return g_object_new(KOTO_TYPE_BUTTON,
+		"button-text", label,
+		"use-from-file",
+		TRUE,
+		"image-file-path",
+		file_path,
+		"pixbuf-size",
+		koto_get_pixbuf_size(size),
 		NULL
 	);
 }

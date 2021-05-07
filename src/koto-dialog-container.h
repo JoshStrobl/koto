@@ -1,4 +1,4 @@
-/* create-dialog.h
+/* koto-dialog-container.h
  *
  * Copyright 2021 Joshua Strobl
  *
@@ -25,17 +25,18 @@ G_BEGIN_DECLS
  * Type Definition
 **/
 
-#define KOTO_TYPE_CREATE_PLAYLIST_DIALOG koto_create_playlist_dialog_get_type()
-G_DECLARE_FINAL_TYPE(KotoCreatePlaylistDialog, koto_create_playlist_dialog, KOTO, CREATE_PLAYLIST_DIALOG, GObject);
+#define KOTO_TYPE_DIALOG_CONTAINER koto_dialog_container_get_type()
+G_DECLARE_FINAL_TYPE(KotoDialogContainer, koto_dialog_container, KOTO, DIALOG_CONTAINER, GtkBox);
+#define KOTO_IS_DIALOG_CONTAINER(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), KOTO_TYPE_DIALOG_CONTAINER))
 
 /**
- * Create Dialog Functions
+ * Functions
 **/
 
-KotoCreatePlaylistDialog* koto_create_playlist_dialog_new();
-GtkWidget* koto_create_playlist_dialog_get_content(KotoCreatePlaylistDialog *self);
-void koto_create_playlist_dialog_handle_close(KotoCreatePlaylistDialog *self);
-void koto_create_playlist_dialog_handle_create(KotoCreatePlaylistDialog *self);
-void koto_create_playlist_dialog_handle_image_click(GtkGestureClick *gesture, int n_press, double x, double y, gpointer user_data);
+KotoDialogContainer* koto_dialog_container_new();
+void koto_dialog_container_add_dialog(KotoDialogContainer *self, gchar *dialog_name, GtkWidget *dialog);
+void koto_dialog_container_handle_close_click(GtkGestureClick *gesture, int n_press, double x, double y, gpointer user_data);
+void koto_dialog_container_hide(KotoDialogContainer *self);
+void koto_dialog_container_show_dialog(KotoDialogContainer *self, gchar *dialog_name);
 
 G_END_DECLS

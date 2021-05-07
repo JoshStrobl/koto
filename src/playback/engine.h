@@ -48,7 +48,7 @@ void koto_playback_engine_forwards(KotoPlaybackEngine *self);
 KotoIndexedTrack* koto_playback_engine_get_current_track(KotoPlaybackEngine *self);
 gint64 koto_playback_engine_get_duration(KotoPlaybackEngine *self);
 GstState koto_playback_engine_get_state(KotoPlaybackEngine *self);
-gint64 koto_playback_engine_get_progress(KotoPlaybackEngine *self);
+gdouble koto_playback_engine_get_progress(KotoPlaybackEngine *self);
 gboolean koto_playback_engine_get_track_repeat(KotoPlaybackEngine *self);
 gboolean koto_playback_engine_get_track_shuffle(KotoPlaybackEngine *self);
 void koto_playback_engine_mute(KotoPlaybackEngine *self);

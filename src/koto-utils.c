@@ -18,6 +18,25 @@
 #include <glib-2.0/glib.h>
 #include <gtk-4.0/gtk/gtk.h>
 
+extern GtkWindow *main_window;
+
+GtkFileChooserNative* koto_utils_create_image_file_chooser(gchar *file_chooser_label) {
+	GtkFileChooserNative* chooser =  gtk_file_chooser_native_new(
+		file_chooser_label,
+		main_window,
+		GTK_FILE_CHOOSER_ACTION_OPEN,
+		"Choose",
+		"Cancel"
+	);
+
+	GtkFileFilter *image_filter = gtk_file_filter_new(); // Create our file filter
+	gtk_file_filter_add_mime_type(image_filter, "image/*"); // Only allow for images
+	gtk_file_chooser_set_filter(GTK_FILE_CHOOSER(chooser), image_filter); // Only allow picking images
+	gtk_file_chooser_set_select_multiple(GTK_FILE_CHOOSER(chooser), FALSE);
+
+	return chooser;
+}
+
 GtkWidget* koto_utils_create_image_from_filepath(gchar *filepath, gchar *fallback_icon, guint width, guint height) {
 	GtkWidget* image = NULL;
 
@@ -68,7 +87,11 @@ gchar* koto_utils_get_filename_without_extension(gchar *filename) {
 	return stripped_file_name;
 }
 
-gchar *koto_utils_replace_string_all(gchar *str, gchar *find, gchar *repl) {
+void koto_utils_push_queue_element_to_store(gpointer data, gpointer user_data) {
+	g_list_store_append(G_LIST_STORE(user_data), data);
+}
+
+gchar* koto_utils_replace_string_all(gchar *str, gchar *find, gchar *repl) {
 	gchar *cleaned_string = "";
 	gchar **split = g_strsplit(str, find, -1); // Split on find
 

@@ -28,6 +28,7 @@ G_BEGIN_DECLS
 G_DECLARE_FINAL_TYPE(KotoDiscView, koto_disc_view, KOTO, DISC_VIEW, GtkBox)
 
 KotoDiscView* koto_disc_view_new(KotoIndexedAlbum *album, guint *disc);
+void koto_disc_view_handle_selected_rows_changed(GtkListBox *box, gpointer user_data);
 void koto_disc_view_list_tracks(gpointer data, gpointer selfptr);
 void koto_disc_view_set_album(KotoDiscView *self, KotoIndexedAlbum *album);
 void koto_disc_view_set_disc_label_visible(KotoDiscView *self, gboolean visible);

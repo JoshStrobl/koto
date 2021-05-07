@@ -18,6 +18,20 @@
 #include <glib-2.0/glib.h>
 #include "cartographer.h"
 
+enum {
+	SIGNAL_ALBUM_ADDED,
+	SIGNAL_ALBUM_REMOVED,
+	SIGNAL_ARTIST_ADDED,
+	SIGNAL_ARTIST_REMOVED,
+	SIGNAL_PLAYLIST_ADDED,
+	SIGNAL_PLAYLIST_REMOVED,
+	SIGNAL_TRACK_ADDED,
+	SIGNAL_TRACK_REMOVED,
+	N_SIGNALS
+};
+
+static guint cartographer_signals[N_SIGNALS] = { 0 };
+
 struct _KotoCartographer {
 	GObject parent_instance;
 
@@ -27,12 +41,130 @@ struct _KotoCartographer {
 	GHashTable *tracks;
 };
 
+struct _KotoCartographerClass {
+	GObjectClass parent_class;
+
+	void (* album_added) (KotoCartographer *cartographer, KotoIndexedAlbum *album);
+	void (* album_removed) (KotoCartographer *cartographer, KotoIndexedAlbum *album);
+	void (* artist_added) (KotoCartographer *cartographer, KotoIndexedArtist *artist);
+	void (* artist_removed) (KotoCartographer *cartographer, KotoIndexedArtist *artist);
+	void (* playlist_added) (KotoCartographer *cartographer, KotoPlaylist *playlist);
+	void (* playlist_removed) (KotoCartographer *cartographer, KotoPlaylist *playlist);
+	void (* track_added) (KotoCartographer *cartographer, KotoIndexedTrack *track);
+	void (* track_removed) (KotoCartographer *cartographer, KotoIndexedTrack *track);
+};
+
 G_DEFINE_TYPE(KotoCartographer, koto_cartographer, G_TYPE_OBJECT);
 
 KotoCartographer *koto_maps = NULL;
 
 static void koto_cartographer_class_init(KotoCartographerClass *c) {
-	(void) c;
+	GObjectClass *gobject_class;
+	gobject_class = G_OBJECT_CLASS(c);
+
+	cartographer_signals[SIGNAL_ALBUM_ADDED] = g_signal_new(
+		"album-added",
+		G_TYPE_FROM_CLASS(gobject_class),
+		G_SIGNAL_RUN_FIRST | G_SIGNAL_ACTION,
+		G_STRUCT_OFFSET(KotoCartographerClass, album_added),
+		NULL,
+		NULL,
+		NULL,
+		G_TYPE_NONE,
+		1,
+		KOTO_TYPE_INDEXED_ALBUM
+	);
+
+	cartographer_signals[SIGNAL_ALBUM_REMOVED] = g_signal_new(
+		"album-removed",
+		G_TYPE_FROM_CLASS(gobject_class),
+		G_SIGNAL_RUN_FIRST | G_SIGNAL_ACTION,
+		G_STRUCT_OFFSET(KotoCartographerClass, album_removed),
+		NULL,
+		NULL,
+		NULL,
+		G_TYPE_NONE,
+		1,
+		G_TYPE_CHAR
+	);
+
+	cartographer_signals[SIGNAL_ARTIST_ADDED] = g_signal_new(
+		"artist-added",
+		G_TYPE_FROM_CLASS(gobject_class),
+		G_SIGNAL_RUN_FIRST | G_SIGNAL_ACTION,
+		G_STRUCT_OFFSET(KotoCartographerClass, artist_added),
+		NULL,
+		NULL,
+		NULL,
+		G_TYPE_NONE,
+		1,
+		KOTO_TYPE_INDEXED_ARTIST
+	);
+
+	cartographer_signals[SIGNAL_ARTIST_REMOVED] = g_signal_new(
+		"artist-removed",
+		G_TYPE_FROM_CLASS(gobject_class),
+		G_SIGNAL_RUN_FIRST | G_SIGNAL_ACTION,
+		G_STRUCT_OFFSET(KotoCartographerClass, artist_removed),
+		NULL,
+		NULL,
+		NULL,
+		G_TYPE_NONE,
+		1,
+		G_TYPE_CHAR
+	);
+
+	cartographer_signals[SIGNAL_PLAYLIST_ADDED] = g_signal_new(
+		"playlist-added",
+		G_TYPE_FROM_CLASS(gobject_class),
+		G_SIGNAL_RUN_FIRST | G_SIGNAL_ACTION,
+		G_STRUCT_OFFSET(KotoCartographerClass, playlist_added),
+		NULL,
+		NULL,
+		NULL,
+		G_TYPE_NONE,
+		1,
+		KOTO_TYPE_PLAYLIST
+	);
+
+	cartographer_signals[SIGNAL_PLAYLIST_REMOVED] = g_signal_new(
+		"playlist-removed",
+		G_TYPE_FROM_CLASS(gobject_class),
+		G_SIGNAL_RUN_FIRST | G_SIGNAL_ACTION,
+		G_STRUCT_OFFSET(KotoCartographerClass, playlist_removed),
+		NULL,
+		NULL,
+		NULL,
+		G_TYPE_NONE,
+		1,
+		G_TYPE_CHAR
+	);
+
+	cartographer_signals[SIGNAL_TRACK_ADDED] = g_signal_new(
+		"track-added",
+		G_TYPE_FROM_CLASS(gobject_class),
+		G_SIGNAL_RUN_FIRST | G_SIGNAL_ACTION,
+		G_STRUCT_OFFSET(KotoCartographerClass, track_added),
+		NULL,
+		NULL,
+		NULL,
+		G_TYPE_NONE,
+		1,
+		KOTO_TYPE_INDEXED_TRACK
+	);
+
+	cartographer_signals[SIGNAL_TRACK_REMOVED] = g_signal_new(
+		"track-removed",
+		G_TYPE_FROM_CLASS(gobject_class),
+		G_SIGNAL_RUN_FIRST | G_SIGNAL_ACTION,
+		G_STRUCT_OFFSET(KotoCartographerClass, track_removed),
+		NULL,
+		NULL,
+		NULL,
+		G_TYPE_NONE,
+		1,
+		G_TYPE_CHAR
+	);
 }
 
 static void koto_cartographer_init(KotoCartographer *self) {
@@ -46,36 +178,80 @@ void koto_cartographer_add_album(KotoCartographer *self, KotoIndexedAlbum *album
 	gchar *album_uuid = NULL;
 	g_object_get(album, "uuid", &album_uuid, NULL);
 
-	if ((album_uuid != NULL) && (!koto_cartographer_has_album_by_uuid(self, album_uuid))) { // Don't have this album
-		g_hash_table_replace(self->albums, album_uuid, album);
+	if ((album_uuid == NULL) || koto_cartographer_has_album_by_uuid(self, album_uuid)) { // Have the album or invalid UUID
+		return;
 	}
+
+	g_hash_table_replace(self->albums, album_uuid, album);
+
+	g_signal_emit(
+		self,
+		cartographer_signals[SIGNAL_ALBUM_ADDED],
+		0,
+		album
+	);
 }
 
 void koto_cartographer_add_artist(KotoCartographer *self, KotoIndexedArtist *artist) {
 	gchar *artist_uuid = NULL;
 	g_object_get(artist, "uuid", &artist_uuid, NULL);
 
-	if ((artist_uuid != NULL) && (!koto_cartographer_has_artist_by_uuid(self, artist_uuid))) { // Don't have this album
-		g_hash_table_replace(self->artists, artist_uuid, artist);
+	if ((artist_uuid == NULL) || koto_cartographer_has_artist_by_uuid(self, artist_uuid)) { // Have the artist or invalid UUID
+		return;
 	}
+
+	g_hash_table_replace(self->artists, artist_uuid, artist);
+
+	g_signal_emit(
+		self,
+		cartographer_signals[SIGNAL_ARTIST_ADDED],
+		0,
+		artist
+	);
 }
 
 void koto_cartographer_add_playlist(KotoCartographer *self, KotoPlaylist *playlist) {
 	gchar *playlist_uuid = NULL;
 	g_object_get(playlist, "uuid", &playlist_uuid, NULL);
 
-	if ((playlist_uuid != NULL) && (!koto_cartographer_has_playlist_by_uuid(self, playlist_uuid))) { // Don't have this album
-		g_hash_table_replace(self->playlists, playlist_uuid, playlist);
+	if ((playlist_uuid == NULL) || koto_cartographer_has_playlist_by_uuid(self, playlist_uuid)) { // Have the playlist or invalid UUID
+		return;
 	}
+
+	g_hash_table_replace(self->playlists, playlist_uuid, playlist);
+
+	if (koto_playlist_get_is_finalized(playlist)) { // Already finalized
+		koto_cartographer_emit_playlist_added(playlist, self); // Emit playlist-added immediately
+	} else { // Not finalized
+		g_signal_connect(playlist, "track-load-finalized", G_CALLBACK(koto_cartographer_emit_playlist_added), self);
+	}
+}
+
+void koto_cartographer_emit_playlist_added(KotoPlaylist *playlist, KotoCartographer *self) {
+		g_signal_emit(
+		self,
+		cartographer_signals[SIGNAL_PLAYLIST_ADDED],
+		0,
+		playlist
+	);
 }
 
 void koto_cartographer_add_track(KotoCartographer *self, KotoIndexedTrack *track) {
 	gchar *track_uuid = NULL;
 	g_object_get(track, "uuid", &track_uuid, NULL);
 
-	if ((track_uuid != NULL) && (!koto_cartographer_has_playlist_by_uuid(self, track_uuid))) { // Don't have this album
-		g_hash_table_replace(self->tracks, track_uuid, track);
+	if ((track_uuid == NULL) || koto_cartographer_has_track_by_uuid(self, track_uuid)) { // Have the track or invalid UUID
+		return;
 	}
+
+	g_hash_table_replace(self->tracks, track_uuid, track);
+
+	g_signal_emit(
+		self,
+		cartographer_signals[SIGNAL_TRACK_ADDED],
+		0,
+		track
+	);
 }
 
 KotoIndexedAlbum* koto_cartographer_get_album_by_uuid(KotoCartographer *self, gchar* album_uuid) {
@@ -84,6 +260,10 @@ KotoIndexedAlbum* koto_cartographer_get_album_by_uuid(KotoCartographer *self, gc
 
 KotoIndexedArtist* koto_cartographer_get_artist_by_uuid(KotoCartographer *self, gchar* artist_uuid) {
 	return g_hash_table_lookup(self->artists, artist_uuid);
+}
+
+GHashTable* koto_cartographer_get_playlists(KotoCartographer *self)  {
+	return self->playlists;
 }
 
 KotoPlaylist* koto_cartographer_get_playlist_by_uuid(KotoCartographer *self, gchar* playlist_uuid) {
@@ -153,57 +333,77 @@ gboolean koto_cartographer_has_track_by_uuid(KotoCartographer *self, gchar* trac
 void koto_cartographer_remove_album(KotoCartographer *self, KotoIndexedAlbum *album) {
 	gchar *album_uuid = NULL;
 	g_object_get(album, "uuid", &album_uuid, NULL);
-	return koto_cartographer_remove_album_by_uuid(self, album_uuid);
+	koto_cartographer_remove_album_by_uuid(self, album_uuid);
 }
 
 void koto_cartographer_remove_album_by_uuid(KotoCartographer *self, gchar* album_uuid) {
 	if (album_uuid != NULL) {
 		g_hash_table_remove(self->albums, album_uuid);
-	}
 
-	return;
+		g_signal_emit(
+			self,
+			cartographer_signals[SIGNAL_ALBUM_REMOVED],
+			0,
+			album_uuid
+		);
+	}
 }
 
 void koto_cartographer_remove_artist(KotoCartographer *self, KotoIndexedArtist *artist) {
 	gchar *artist_uuid = NULL;
 	g_object_get(artist, "uuid", &artist_uuid, NULL);
-	return koto_cartographer_remove_artist_by_uuid(self, artist_uuid);
+	koto_cartographer_remove_artist_by_uuid(self, artist_uuid);
 }
 
 void koto_cartographer_remove_artist_by_uuid(KotoCartographer *self, gchar* artist_uuid) {
 	if (artist_uuid == NULL) {
 		g_hash_table_remove(self->artists, artist_uuid);
-	}
 
-	return;
+		g_signal_emit(
+			self,
+			cartographer_signals[SIGNAL_ARTIST_REMOVED],
+			0,
+			artist_uuid
+		);
+	}
 }
 
 void koto_cartographer_remove_playlist(KotoCartographer *self, KotoPlaylist *playlist) {
 	gchar *playlist_uuid = NULL;
 	g_object_get(playlist, "uuid", &playlist_uuid, NULL);
-	return koto_cartographer_remove_playlist_by_uuid(self, playlist_uuid);
+	koto_cartographer_remove_playlist_by_uuid(self, playlist_uuid);
 }
 
 void koto_cartographer_remove_playlist_by_uuid(KotoCartographer *self, gchar* playlist_uuid) {
 	if (playlist_uuid != NULL) {
 		g_hash_table_remove(self->playlists, playlist_uuid);
-	}
 
-	return;
+		g_signal_emit(
+			self,
+			cartographer_signals[SIGNAL_PLAYLIST_REMOVED],
+			0,
+			playlist_uuid
+		);
+	}
 }
 
 void koto_cartographer_remove_track(KotoCartographer *self, KotoIndexedTrack *track) {
 	gchar *track_uuid = NULL;
 	g_object_get(track, "uuid", &track_uuid, NULL);
-	return koto_cartographer_remove_track_by_uuid(self, track_uuid);
+	koto_cartographer_remove_track_by_uuid(self, track_uuid);
 }
 
 void koto_cartographer_remove_track_by_uuid(KotoCartographer *self, gchar* track_uuid) {
 	if (track_uuid != NULL) {
 		g_hash_table_remove(self->tracks, track_uuid);
-	}
 
-	return;
+		g_signal_emit(
+			self,
+			cartographer_signals[SIGNAL_TRACK_REMOVED],
+			0,
+			track_uuid
+		);
+	}
 }
 
 KotoCartographer* koto_cartographer_new() {

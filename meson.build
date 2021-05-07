@@ -3,6 +3,7 @@ project('koto', 'c',
 	meson_version: '>= 0.57.0',
 	default_options: [ 'warning_level=2',
 		'c_std=gnu11',
+		'werror=true',
 	],
 )
 

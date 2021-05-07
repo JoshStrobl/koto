@@ -112,6 +112,8 @@ void koto_current_playlist_set_playlist(KotoCurrentPlaylist *self, KotoPlaylist 
 	}
 
 	self->current_playlist = playlist;
+	// TODO: Saved state
+	koto_playlist_set_position(self->current_playlist, -1); // Reset our position, use -1 since "next" song is then 0
 	g_object_ref(playlist); // Increment the reference
 	g_object_notify_by_pspec(G_OBJECT(self), props[PROP_CURRENT_PLAYLIST]);
 }

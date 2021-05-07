@@ -27,7 +27,12 @@ G_BEGIN_DECLS
 **/
 
 #define KOTO_TYPE_CARTOGRAPHER koto_cartographer_get_type()
-G_DECLARE_FINAL_TYPE(KotoCartographer, koto_cartographer, KOTO, CARTOGRAPHER, GObject);
+
+typedef struct _KotoCartographer KotoCartographer;
+typedef struct _KotoCartographerClass KotoCartographerClass;
+
+GLIB_AVAILABLE_IN_ALL
+GType koto_cartographer_get_type(void) G_GNUC_CONST;
 
 /**
  * Cartographer Functions
@@ -40,9 +45,12 @@ void koto_cartographer_add_artist(KotoCartographer *self, KotoIndexedArtist *art
 void koto_cartographer_add_playlist(KotoCartographer *self, KotoPlaylist *playlist);
 void koto_cartographer_add_track(KotoCartographer *self, KotoIndexedTrack *track);
 
+void koto_cartographer_emit_playlist_added(KotoPlaylist *playlist, KotoCartographer *self);
+
 KotoIndexedAlbum* koto_cartographer_get_album_by_uuid(KotoCartographer *self, gchar* album_uuid);
 KotoIndexedArtist* koto_cartographer_get_artist_by_uuid(KotoCartographer *self, gchar* artist_uuid);
 KotoPlaylist* koto_cartographer_get_playlist_by_uuid(KotoCartographer *self, gchar* playlist_uuid);
+GHashTable* koto_cartographer_get_playlists(KotoCartographer *self);
 KotoIndexedTrack* koto_cartographer_get_track_by_uuid(KotoCartographer *self, gchar* track_uuid);
 
 gboolean koto_cartographer_has_album(KotoCartographer *self, KotoIndexedAlbum *album);

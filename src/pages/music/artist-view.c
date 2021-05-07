@@ -122,7 +122,7 @@ static void koto_artist_view_constructed(GObject *obj) {
 	gtk_widget_set_halign(self->favorites_list, GTK_ALIGN_START);
 
 	self->album_list = gtk_flow_box_new(); // Create our list of our albums
-	gtk_flow_box_set_activate_on_single_click(GTK_FLOW_BOX(self->album_list), FALSE);
+	//gtk_flow_box_set_activate_on_single_click(GTK_FLOW_BOX(self->album_list), FALSE);
 	gtk_flow_box_set_selection_mode(GTK_FLOW_BOX(self->album_list), GTK_SELECTION_NONE);
 	gtk_widget_add_css_class(self->album_list, "album-list");
 

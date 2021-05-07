@@ -16,8 +16,6 @@
 	& > stack {
 		& > .artist-view {
 			& > viewport > .artist-view-content {
-				padding: $itempadding;
-
 				& > .album-strip {
 					margin-bottom: $itempadding;
 					& > flowboxchild {

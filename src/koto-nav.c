@@ -16,12 +16,16 @@
  */
 
 #include <gtk-4.0/gtk/gtk.h>
+#include "db/cartographer.h"
+#include "indexer/structs.h"
+#include "playlist/playlist.h"
 #include "koto-config.h"
 #include "koto-button.h"
 #include "koto-expander.h"
 #include "koto-nav.h"
 #include "koto-window.h"
 
+extern KotoCartographer *koto_maps;
 extern KotoWindow *main_window;
 
 struct _KotoNav {
@@ -46,6 +50,10 @@ struct _KotoNav {
 	KotoButton *music_local;
 	KotoButton *music_radio;
 
+	// Playlists
+
+	GHashTable *playlist_buttons;
+
 	// Podcasts
 
 	KotoButton *podcasts_local;
@@ -63,6 +71,7 @@ static void koto_nav_class_init(KotoNavClass *c) {
 }
 
 static void koto_nav_init(KotoNav *self) {
+	self->playlist_buttons = g_hash_table_new(g_str_hash, g_str_equal);
 	self->win = gtk_scrolled_window_new();
 	gtk_widget_set_hexpand_set(self->win, TRUE); // using hexpand-set works, hexpand seems to break it by causing it to take up way too much space
 	gtk_widget_set_size_request(self->win, 300, -1);
@@ -88,19 +97,7 @@ static void koto_nav_init(KotoNav *self) {
 	koto_nav_create_audiobooks_section(self);
 	koto_nav_create_music_section(self);
 	koto_nav_create_podcasts_section(self);
-
-	KotoButton *playlist_add_button = koto_button_new_with_icon("", "list-add-symbolic", NULL, KOTO_BUTTON_PIXBUF_SIZE_SMALL);
-	KotoExpander *pl_expander = koto_expander_new_with_button("playlist-symbolic", "Playlists", playlist_add_button);
-
-	if (pl_expander != NULL) {
-		self->playlists_expander = pl_expander;
-		gtk_box_append(GTK_BOX(self->content), GTK_WIDGET(self->playlists_expander));
-	}
-
-	GtkGesture *playlist_add_gesture = gtk_gesture_click_new(); // Create a gesture for clicking on the playlist add
-	gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(playlist_add_gesture), 1); // Only allow left click
-	g_signal_connect(playlist_add_gesture, "pressed", G_CALLBACK(koto_nav_handle_playlist_add_click), NULL);
-	gtk_widget_add_controller(GTK_WIDGET(playlist_add_button), GTK_EVENT_CONTROLLER(playlist_add_gesture));
+	koto_nav_create_playlist_section(self);
 }
 
 void koto_nav_create_audiobooks_section(KotoNav *self) {
@@ -135,6 +132,24 @@ void koto_nav_create_music_section(KotoNav *self) {
 	gtk_box_append(GTK_BOX(new_content), GTK_WIDGET(self->music_radio));
 
 	koto_expander_set_content(m_expander, new_content);
+	koto_button_add_click_handler(self->music_local, KOTO_BUTTON_CLICK_TYPE_PRIMARY, G_CALLBACK(koto_nav_handle_local_music_click), NULL);
+}
+
+void koto_nav_create_playlist_section(KotoNav *self) {
+	KotoButton *playlist_add_button = koto_button_new_with_icon("", "list-add-symbolic", NULL, KOTO_BUTTON_PIXBUF_SIZE_SMALL);
+	KotoExpander *pl_expander = koto_expander_new_with_button("playlist-symbolic", "Playlists", playlist_add_button);
+
+	self->playlists_expander = pl_expander;
+	gtk_box_append(GTK_BOX(self->content), GTK_WIDGET(self->playlists_expander));
+
+	// TODO: Turn into ListBox to sort playlists
+	GtkWidget *playlist_list = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+
+	koto_expander_set_content(self->playlists_expander, playlist_list);
+	koto_button_add_click_handler(playlist_add_button, KOTO_BUTTON_CLICK_TYPE_PRIMARY, G_CALLBACK(koto_nav_handle_playlist_add_click), NULL);
+
+	g_signal_connect(koto_maps, "playlist-added", G_CALLBACK(koto_nav_handle_playlist_added), self);
+	g_signal_connect(koto_maps, "playlist-removed", G_CALLBACK(koto_nav_handle_playlist_removed), self);
 }
 
 void koto_nav_create_podcasts_section(KotoNav *self) {
@@ -155,8 +170,76 @@ void koto_nav_create_podcasts_section(KotoNav *self) {
 
 void koto_nav_handle_playlist_add_click(GtkGestureClick *gesture, int n_press, double x, double y, gpointer user_data) {
 	(void) gesture; (void) n_press; (void) x; (void) y; (void) user_data;
-	g_message("plz");
-	koto_window_show_create_playlist_dialog(main_window);
+	koto_window_show_dialog(main_window, "create-modify-playlist");
+}
+
+void koto_nav_handle_local_music_click(GtkGestureClick *gesture, int n_press, double x, double y, gpointer user_data) {
+	(void) gesture; (void) n_press; (void) x; (void) y; (void) user_data;
+	koto_window_go_to_page(main_window, "music.local"); // Go to the playlist page
+}
+
+void koto_nav_handle_playlist_button_click(GtkGestureClick *gesture, int n_press, double x, double y, gpointer user_data) {
+	(void) gesture; (void) n_press; (void) x; (void) y;
+	gchar *playlist_uuid = user_data;
+	koto_window_go_to_page(main_window, playlist_uuid); // Go to the playlist page
+}
+
+void koto_nav_handle_playlist_added(KotoCartographer *carto, KotoPlaylist *playlist, gpointer user_data) {
+	(void) carto;
+	g_return_if_fail(KOTO_IS_PLAYLIST(playlist));
+
+	KotoNav *self = user_data;
+	g_return_if_fail(KOTO_IS_NAV(self));
+
+	gchar *playlist_uuid = koto_playlist_get_uuid(playlist); // Get the UUID for a playlist
+
+	if (g_hash_table_contains(self->playlist_buttons, playlist_uuid)) { // Already added button
+		g_free(playlist_uuid);
+		return;
+	}
+
+	gchar *playlist_name = koto_playlist_get_name(playlist);
+	gchar *playlist_art_path = koto_playlist_get_artwork(playlist); // Get any file path for it
+	KotoButton *playlist_button = NULL;
+
+	if ((playlist_art_path != NULL) && g_strcmp0(playlist_art_path, "") != 0) { // Have a file associated
+		playlist_button = koto_button_new_with_file(playlist_name, playlist_art_path, KOTO_BUTTON_PIXBUF_SIZE_NORMAL);
+	} else { // No file associated
+		playlist_button = koto_button_new_with_icon(playlist_name, "audio-x-generic-symbolic", NULL, KOTO_BUTTON_PIXBUF_SIZE_NORMAL);
+	}
+
+	if (KOTO_IS_BUTTON(playlist_button)) {
+		g_hash_table_insert(self->playlist_buttons, playlist_uuid, playlist_button); // Add the button
+
+		// TODO: Make this a ListBox and sort the playlists alphabetically
+		GtkBox *playlist_expander_content = GTK_BOX(koto_expander_get_content(self->playlists_expander));
+
+		if (GTK_IS_BOX(playlist_expander_content)) {
+			gtk_box_append(playlist_expander_content, GTK_WIDGET(playlist_button));
+
+			koto_button_add_click_handler(playlist_button, KOTO_BUTTON_CLICK_TYPE_PRIMARY, G_CALLBACK(koto_nav_handle_playlist_button_click), playlist_uuid);
+			koto_window_handle_playlist_added(koto_maps, playlist, main_window); // TODO: MOVE THIS
+		}
+	}
+}
+
+void koto_nav_handle_playlist_removed(KotoCartographer *carto, gchar *playlist_uuid, gpointer user_data) {
+	(void) carto;
+	KotoNav *self = user_data;
+
+	if (!g_hash_table_contains(self->playlist_buttons, playlist_uuid)) { // Does not contain this
+		return;
+	}
+
+	KotoButton *playlist_btn = g_hash_table_lookup(self->playlist_buttons, playlist_uuid); // Get the playlist button
+
+	if (!KOTO_IS_BUTTON(playlist_btn)) { // Not a playlist button
+		return;
+	}
+
+	GtkBox *playlist_expander_content = GTK_BOX(koto_expander_get_content(self->playlists_expander));
+	gtk_box_remove(playlist_expander_content, GTK_WIDGET(playlist_btn)); // Remove the button
+	g_hash_table_remove(self->playlist_buttons, playlist_uuid); // Remove from the playlist buttons hash table
 }
 
 GtkWidget* koto_nav_get_nav(KotoNav *self) {
