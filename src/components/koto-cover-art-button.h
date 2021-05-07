@@ -29,11 +29,11 @@ G_DECLARE_FINAL_TYPE(KotoCoverArtButton, koto_cover_art_button, KOTO, COVER_ART_
  * Cover Art Functions
 **/
 
-KotoCoverArtButton* koto_cover_art_button_new(guint height, guint width, const gchar *art_path);
+KotoCoverArtButton* koto_cover_art_button_new(guint height, guint width, gchar *art_path);
 KotoButton* koto_cover_art_button_get_button(KotoCoverArtButton *self);
 GtkWidget* koto_cover_art_button_get_main(KotoCoverArtButton *self);
 void koto_cover_art_button_hide_overlay_controls(GtkEventControllerFocus *controller, gpointer data);
-void koto_cover_art_button_set_art_path(KotoCoverArtButton *self, const gchar *art_path);
+void koto_cover_art_button_set_art_path(KotoCoverArtButton *self, gchar *art_path);
 void koto_cover_art_button_set_dimensions(KotoCoverArtButton *self, guint height, guint width);
 void koto_cover_art_button_show_overlay_controls(GtkEventControllerFocus *controller, gpointer data);
 

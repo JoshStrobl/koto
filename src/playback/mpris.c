@@ -23,6 +23,7 @@
 #include "../db/cartographer.h"
 #include "../playlist/current.h"
 #include "../playlist/playlist.h"
+#include "../koto-utils.h"
 #include "engine.h"
 #include "mimes.h"
 #include "mpris.h"
@@ -316,14 +317,14 @@ void koto_push_track_info_to_builder(GVariantBuilder *builder, KotoIndexedTrack 
 
 	g_variant_builder_add(builder, "{sv}", "mpris:trackid", g_variant_new_string(track_uuid));
 
-	if (g_strcmp0(album_art_path, "") != 0) { // Not empty
+	if (koto_utils_is_string_valid(album_art_path)) { // Valid album art path
 		album_art_path = g_strconcat("file://", album_art_path, NULL); // Prepend with file://
 		g_variant_builder_add(builder, "{sv}", "mpris:artUrl", g_variant_new_string(album_art_path));
 	}
 
 	g_variant_builder_add(builder, "{sv}", "xesam:album", g_variant_new_string(album_name));
 
-	if (g_strcmp0(artist_name, "") != 0) { // Got artist name
+	if (koto_utils_is_string_valid(artist_name)) { // Valid artist name
 		GVariant *artist_name_variant;
 		GVariantBuilder *artist_list_builder = g_variant_builder_new(G_VARIANT_TYPE("as"));
 		g_variant_builder_add(artist_list_builder, "s", artist_name);

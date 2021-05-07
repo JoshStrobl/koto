@@ -120,7 +120,7 @@ static void koto_cover_art_button_set_property(GObject *obj, guint prop_id, cons
 
 	switch (prop_id) {
 		case PROP_ART_PATH:
-			koto_cover_art_button_set_art_path(self, g_value_get_string(val)); // Get the value and call our set_art_path with it
+			koto_cover_art_button_set_art_path(self, (gchar*) g_value_get_string(val)); // Get the value and call our set_art_path with it
 			break;
 		case PROP_DESIRED_HEIGHT:
 			koto_cover_art_button_set_dimensions(self, g_value_get_uint(val), 0);
@@ -156,12 +156,12 @@ GtkWidget* koto_cover_art_button_get_main(KotoCoverArtButton *self) {
 	return self->main;
 }
 
-void koto_cover_art_button_set_art_path(KotoCoverArtButton *self, const gchar *art_path) {
+void koto_cover_art_button_set_art_path(KotoCoverArtButton *self, gchar *art_path) {
 	if (!KOTO_IS_COVER_ART_BUTTON(self)) {
 		return;
 	}
 
-	gboolean defined_artwork = (art_path != NULL || (g_strcmp0(art_path, "") != 0));
+	gboolean defined_artwork = koto_utils_is_string_valid(art_path);
 
 	if (GTK_IS_IMAGE(self->art)) { // Already have an image
 		if (!defined_artwork) { // No art path or empty string
@@ -204,7 +204,7 @@ void koto_cover_art_button_show_overlay_controls(GtkEventControllerFocus *contro
 	gtk_revealer_set_reveal_child(GTK_REVEALER(self->revealer), TRUE);
 }
 
-KotoCoverArtButton* koto_cover_art_button_new(guint height, guint width, const gchar *art_path) {
+KotoCoverArtButton* koto_cover_art_button_new(guint height, guint width, gchar *art_path) {
 	return g_object_new(KOTO_TYPE_COVER_ART_BUTTON,
 		"desired-height",
 		height,

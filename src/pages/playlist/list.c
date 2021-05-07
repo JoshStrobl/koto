@@ -211,7 +211,9 @@ void koto_playlist_page_bind_track_item(GtkListItemFactory *factory, GtkListItem
 
 	KotoIndexedTrack *track = gtk_list_item_get_item(item); // Get the track UUID from our model
 
-	g_return_if_fail(KOTO_IS_INDEXED_TRACK(track));
+	if (!KOTO_IS_INDEXED_TRACK(track)) {
+		return;
+	}
 
 	gchar *track_name = NULL;
 	gchar *album_uuid = NULL;
@@ -388,9 +390,21 @@ void koto_playlist_page_handle_tracks_selected(GtkSelectionModel *model, guint p
 }
 
 void koto_playlist_page_set_playlist_uuid(KotoPlaylistPage *self, gchar *playlist_uuid) {
-	g_return_if_fail(KOTO_IS_PLAYLIST_PAGE(self));
-	g_return_if_fail(g_strcmp0(playlist_uuid, "") != 0); // Return if empty string
-	g_return_if_fail(koto_cartographer_has_playlist_by_uuid(koto_maps, playlist_uuid)); // Don't have a playlist with this UUID
+	if (!KOTO_IS_PLAYLIST_PAGE(self)) {
+		return;
+	}
+
+	if (!KOTO_IS_PLAYLIST_PAGE(self)) {
+		return;
+	}
+
+	if (!koto_utils_is_string_valid(playlist_uuid)) { // Provided UUID string is not valid
+		return;
+	}
+
+	if (!koto_cartographer_has_playlist_by_uuid(koto_maps, playlist_uuid)) { // If we don't have this playlist
+		return;
+	}
 
 	self->uuid = g_strdup(playlist_uuid); // Duplicate the playlist UUID
 	KotoPlaylist *playlist = koto_cartographer_get_playlist_by_uuid(koto_maps, self->uuid);
@@ -400,7 +414,9 @@ void koto_playlist_page_set_playlist_uuid(KotoPlaylistPage *self, gchar *playlis
 }
 
 void koto_playlist_page_set_playlist_model(KotoPlaylistPage *self, KotoPreferredModelType model) {
-	g_return_if_fail(KOTO_IS_PLAYLIST_PAGE(self));
+	if (!KOTO_IS_PLAYLIST_PAGE(self)) {
+		return;
+	}
 
 	koto_playlist_apply_model(self->playlist, model); // Apply our new model
 	self->model = G_LIST_MODEL(koto_playlist_get_store(self->playlist)); // Get the latest generated model / store and cast it as a GListModel
@@ -426,6 +442,10 @@ void koto_playlist_page_set_playlist_model(KotoPlaylistPage *self, KotoPreferred
 void koto_playlist_page_setup_track_item(GtkListItemFactory *factory, GtkListItem *item, gpointer user_data) {
 	(void) factory;
 	KotoPlaylistPage *self = user_data;
+
+	if (!KOTO_IS_PLAYLIST_PAGE(self)) {
+		return;
+	}
 
 	GtkWidget *item_content = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0); // Have a horizontal box for our content
 	gtk_widget_add_css_class(item_content, "track-list-columned-item");
@@ -472,8 +492,13 @@ void koto_playlist_page_setup_track_item(GtkListItemFactory *factory, GtkListIte
 }
 
 void koto_playlist_page_update_header(KotoPlaylistPage *self) {
-	g_return_if_fail(KOTO_IS_PLAYLIST_PAGE(self));
-	g_return_if_fail(KOTO_IS_PLAYLIST(self->playlist)); // Not a valid playlist
+	if (!KOTO_IS_PLAYLIST_PAGE(self)) {
+		return;
+	}
+
+	if (!KOTO_IS_PLAYLIST(self->playlist)) { // Not a playlist
+		return;
+	}
 
 	gboolean ephemeral = TRUE;
 	g_object_get(
@@ -491,7 +516,7 @@ void koto_playlist_page_update_header(KotoPlaylistPage *self) {
 
 	gchar *artwork = koto_playlist_get_artwork(self->playlist);
 
-	if ((artwork != NULL) && g_strcmp0(artwork, "") != 0) { // Have artwork
+	if (koto_utils_is_string_valid(artwork)) { // Have artwork
 		koto_cover_art_button_set_art_path(self->playlist_image, artwork); // Update our artwork
 	}
 

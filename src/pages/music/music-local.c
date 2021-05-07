@@ -21,6 +21,7 @@
 #include "../../indexer/structs.h"
 #include "koto-button.h"
 #include "koto-config.h"
+#include "../../koto-utils.h"
 #include "music-local.h"
 
 extern KotoCartographer *koto_maps;
@@ -166,7 +167,7 @@ void koto_page_music_local_go_to_artist_by_uuid(KotoPageMusicLocal *self, gchar 
 		NULL
 	);
 
-	if (artist_name == NULL || (g_strcmp0(artist_name, "") == 0)) { // Failed to get the artist name
+	if (!koto_utils_is_string_valid(artist_name)) { // Failed to get the artist name
 		return;
 	}
 

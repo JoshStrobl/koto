@@ -20,6 +20,7 @@
 #include "../../db/cartographer.h"
 #include "../../indexer/structs.h"
 #include "../../koto-track-item.h"
+#include "../../koto-utils.h"
 #include "disc-view.h"
 
 extern KotoActionBar *action_bar;
@@ -156,7 +157,7 @@ void koto_disc_view_handle_selected_rows_changed(GtkListBox *box, gpointer user_
 
 	gchar *album_uuid = koto_indexed_album_get_album_uuid(self->album); // Get the UUID
 
-	if ((album_uuid == NULL) || g_strcmp0(album_uuid, "") == 0) { // Not set
+	if (!koto_utils_is_string_valid(album_uuid)) { // Not set
 		return;
 	}
 

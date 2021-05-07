@@ -445,7 +445,7 @@ gchar* koto_playlist_go_to_next(KotoPlaylist *self) {
 		return random_track_uuid;
 	}
 
-	if (self->current_uuid == NULL || (g_strcmp0(self->current_uuid, "") == 0)) {
+	if (!koto_utils_is_string_valid(self->current_uuid)) { // No valid UUID yet
 		self->current_position++;
 	} else { // Have a UUID currently
 		KotoIndexedTrack *track = koto_cartographer_get_track_by_uuid(koto_maps, self->current_uuid);
@@ -474,7 +474,7 @@ gchar* koto_playlist_go_to_previous(KotoPlaylist *self) {
 		return koto_playlist_get_random_track(self); // Get a random track
 	}
 
-	if (self->current_uuid == NULL || (g_strcmp0(self->current_uuid, "") == 0)) {
+	if (!koto_utils_is_string_valid(self->current_uuid)) { // No valid UUID
 		return NULL;
 	}
 
@@ -736,8 +736,10 @@ void koto_playlist_set_position(KotoPlaylist *self, gint position) {
 
 void koto_playlist_set_track_as_current(KotoPlaylist *self, gchar *track_uuid) {
 	gint position_of_track = g_queue_index(self->sorted_tracks, track_uuid); // Get the position of the UUID in our tracks
-	g_return_if_fail(position_of_track != -1);
-	self->current_position = position_of_track;
+
+	if (position_of_track != -1) { // In tracks
+		self->current_position = position_of_track;
+	}
 }
 
 void koto_playlist_set_uuid(KotoPlaylist *self, const gchar *uuid) {

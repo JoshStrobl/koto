@@ -87,6 +87,10 @@ gchar* koto_utils_get_filename_without_extension(gchar *filename) {
 	return stripped_file_name;
 }
 
+gboolean koto_utils_is_string_valid(gchar *str) {
+	return ((str != NULL) && (g_strcmp0(str, "") != 0));
+}
+
 void koto_utils_push_queue_element_to_store(gpointer data, gpointer user_data) {
 	g_list_store_append(G_LIST_STORE(user_data), data);
 }

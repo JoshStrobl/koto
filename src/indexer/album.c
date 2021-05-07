@@ -355,7 +355,7 @@ static void koto_indexed_album_set_property(GObject *obj, guint prop_id, const G
 			self->do_initial_index = g_value_get_boolean(val);
 			break;
 		case PROP_PATH: // Path to the album
-			koto_indexed_album_update_path(self, g_value_get_string(val));
+			koto_indexed_album_update_path(self, (gchar*) g_value_get_string(val));
 			break;
 		case PROP_ALBUM_NAME: // Name of album
 			koto_indexed_album_set_album_name(self, g_value_get_string(val));
@@ -377,7 +377,7 @@ gchar* koto_indexed_album_get_album_art(KotoIndexedAlbum *self) {
 		return g_strdup("");
 	}
 
-	return g_strdup((self->has_album_art && (self->art_path != NULL) && (g_strcmp0(self->art_path, "") != 0)) ? self->art_path : "");
+	return g_strdup((self->has_album_art && koto_utils_is_string_valid(self->art_path)) ? self->art_path : "");
 }
 
 gchar *koto_indexed_album_get_album_name(KotoIndexedAlbum *self) {
@@ -385,7 +385,7 @@ gchar *koto_indexed_album_get_album_name(KotoIndexedAlbum *self) {
 		return NULL;
 	}
 
-	if ((self->name == NULL) || g_strcmp0(self->name, "") == 0) { // Not set
+	if (!koto_utils_is_string_valid(self->name)) { // Not set
 		return NULL;
 	}
 
@@ -393,7 +393,11 @@ gchar *koto_indexed_album_get_album_name(KotoIndexedAlbum *self) {
 }
 
 gchar* koto_indexed_album_get_album_uuid(KotoIndexedAlbum *self) {
-	if ((self->uuid == NULL) || g_strcmp0(self->uuid, "") == 0) { // Not set
+	if (!KOTO_IS_INDEXED_ALBUM(self)) { // Not an album
+		return NULL;
+	}
+
+	if (!koto_utils_is_string_valid(self->uuid)) { // Not set
 		return NULL;
 	}
 
@@ -550,16 +554,16 @@ gint koto_indexed_album_sort_tracks(gconstpointer track1_uuid, gconstpointer tra
 	}
 }
 
-void koto_indexed_album_update_path(KotoIndexedAlbum *self, const gchar* new_path) {
+void koto_indexed_album_update_path(KotoIndexedAlbum *self, gchar* new_path) {
 	if (!KOTO_IS_INDEXED_ALBUM(self)) { // Not an album
 		return;
 	}
 
-	if ((new_path == NULL) || g_strcmp0(new_path, "") == 0) {
+	if (!koto_utils_is_string_valid(new_path)) {
 		return;
 	}
 
-	if ((self->path != NULL) && g_strcmp0(self->path, "") != 0) {
+	if (koto_utils_is_string_valid(self->path)) { // Path is currently set
 		g_free(self->path);
 	}
 

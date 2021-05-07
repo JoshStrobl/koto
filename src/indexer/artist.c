@@ -19,6 +19,7 @@
 #include <sqlite3.h>
 #include "structs.h"
 #include "../db/db.h"
+#include "../koto-utils.h"
 
 extern sqlite3 *koto_db;
 
@@ -139,10 +140,10 @@ static void koto_indexed_artist_set_property(GObject *obj, guint prop_id, const 
 			g_object_notify_by_pspec(G_OBJECT(self), props[PROP_UUID]);
 			break;
 		case PROP_PATH:
-			koto_indexed_artist_update_path(self, g_value_get_string(val));
+			koto_indexed_artist_update_path(self, (gchar*) g_value_get_string(val));
 			break;
 		case PROP_ARTIST_NAME:
-			koto_indexed_artist_set_artist_name(self, g_value_get_string(val));
+			koto_indexed_artist_set_artist_name(self, (gchar*) g_value_get_string(val));
 			break;
 		default:
 			G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, prop_id, spec);
@@ -155,7 +156,7 @@ void koto_indexed_artist_add_album(KotoIndexedArtist *self, gchar *album_uuid) {
 		return;
 	}
 
-	if ((album_uuid == NULL) || g_strcmp0(album_uuid, "") == 0) { // No album UUID really defined
+	if (!koto_utils_is_string_valid(album_uuid)) { // No album UUID really defined
 		return;
 	}
 
@@ -179,7 +180,7 @@ gchar* koto_indexed_artist_get_name(KotoIndexedArtist *self) {
 		return g_strdup("");
 	}
 
-	return g_strdup(g_strcmp0(self->artist_name, "") == 0 ? "" : self->artist_name); // Return artist name if set
+	return g_strdup(koto_utils_is_string_valid(self->artist_name) ? self->artist_name : ""); // Return artist name if set
 }
 
 void koto_indexed_artist_remove_album(KotoIndexedArtist *self, KotoIndexedAlbum *album) {
@@ -196,16 +197,16 @@ void koto_indexed_artist_remove_album(KotoIndexedArtist *self, KotoIndexedAlbum 
 	self->albums = g_list_remove(self->albums, album_uuid);
 }
 
-void koto_indexed_artist_update_path(KotoIndexedArtist *self, const gchar *new_path) {
+void koto_indexed_artist_update_path(KotoIndexedArtist *self, gchar *new_path) {
 	if (!KOTO_IS_INDEXED_ARTIST(self)) { // Not an artist
 		return;
 	}
 
-	if ((new_path == NULL) || g_strcmp0(new_path, "") == 0) { // No path really
+	if (!koto_utils_is_string_valid(new_path)) { // No path really
 		return;
 	}
 
-	if ((self->path != NULL) && g_strcmp0(self->path, "") != 0) { // Already have a path set
+	if (koto_utils_is_string_valid(self->path)) { // Already have a path set
 		g_free(self->path); // Free
 	}
 
@@ -213,16 +214,16 @@ void koto_indexed_artist_update_path(KotoIndexedArtist *self, const gchar *new_p
 	g_object_notify_by_pspec(G_OBJECT(self), props[PROP_PATH]);
 }
 
-void koto_indexed_artist_set_artist_name(KotoIndexedArtist *self, const gchar *artist_name) {
+void koto_indexed_artist_set_artist_name(KotoIndexedArtist *self, gchar *artist_name) {
 	if (!KOTO_IS_INDEXED_ARTIST(self)) { // Not an artist
 		return;
 	}
 
-	if ((artist_name == NULL) || g_strcmp0(artist_name, "") == 0) { // No artist name
+	if (!koto_utils_is_string_valid(artist_name)) { // No artist name
 		return;
 	}
 
-	if ((self->artist_name != NULL) && g_strcmp0(self->artist_name, "") != 0) { // Has artist name
+	if (koto_utils_is_string_valid(self->artist_name)) { // Has artist name
 		g_free(self->artist_name);
 	}
 
@@ -230,7 +231,7 @@ void koto_indexed_artist_set_artist_name(KotoIndexedArtist *self, const gchar *a
 	g_object_notify_by_pspec(G_OBJECT(self), props[PROP_ARTIST_NAME]);
 }
 
-KotoIndexedArtist* koto_indexed_artist_new(const gchar *path) {
+KotoIndexedArtist* koto_indexed_artist_new(gchar *path) {
 	KotoIndexedArtist* artist = g_object_new(KOTO_TYPE_INDEXED_ARTIST,
 		"uuid", g_uuid_string_random(),
 		"path", path,

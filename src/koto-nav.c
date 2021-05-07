@@ -23,6 +23,7 @@
 #include "koto-button.h"
 #include "koto-expander.h"
 #include "koto-nav.h"
+#include "koto-utils.h"
 #include "koto-window.h"
 
 extern KotoCartographer *koto_maps;
@@ -186,10 +187,14 @@ void koto_nav_handle_playlist_button_click(GtkGestureClick *gesture, int n_press
 
 void koto_nav_handle_playlist_added(KotoCartographer *carto, KotoPlaylist *playlist, gpointer user_data) {
 	(void) carto;
-	g_return_if_fail(KOTO_IS_PLAYLIST(playlist));
+	if (!KOTO_IS_PLAYLIST(playlist)) {
+		return;
+	}
 
 	KotoNav *self = user_data;
-	g_return_if_fail(KOTO_IS_NAV(self));
+	if (!KOTO_IS_NAV(self)) {
+		return;
+	}
 
 	gchar *playlist_uuid = koto_playlist_get_uuid(playlist); // Get the UUID for a playlist
 
@@ -202,7 +207,7 @@ void koto_nav_handle_playlist_added(KotoCartographer *carto, KotoPlaylist *playl
 	gchar *playlist_art_path = koto_playlist_get_artwork(playlist); // Get any file path for it
 	KotoButton *playlist_button = NULL;
 
-	if ((playlist_art_path != NULL) && g_strcmp0(playlist_art_path, "") != 0) { // Have a file associated
+	if (koto_utils_is_string_valid(playlist_art_path)) { // Have a file associated
 		playlist_button = koto_button_new_with_file(playlist_name, playlist_art_path, KOTO_BUTTON_PIXBUF_SIZE_NORMAL);
 	} else { // No file associated
 		playlist_button = koto_button_new_with_icon(playlist_name, "audio-x-generic-symbolic", NULL, KOTO_BUTTON_PIXBUF_SIZE_NORMAL);

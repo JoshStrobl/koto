@@ -66,7 +66,7 @@ void output_track(gpointer data, gpointer user_data);
  * Artist Functions
 **/
 
-KotoIndexedArtist* koto_indexed_artist_new(const gchar *path);
+KotoIndexedArtist* koto_indexed_artist_new(gchar *path);
 KotoIndexedArtist* koto_indexed_artist_new_with_uuid(const gchar *uuid);
 
 void koto_indexed_artist_add_album(KotoIndexedArtist *self, gchar *album_uuid);
@@ -76,8 +76,8 @@ GList* koto_indexed_artist_get_albums(KotoIndexedArtist *self);
 gchar* koto_indexed_artist_get_name(KotoIndexedArtist *self);
 void koto_indexed_artist_remove_album(KotoIndexedArtist *self, KotoIndexedAlbum *album);
 void koto_indexed_artist_remove_album_by_name(KotoIndexedArtist *self, gchar *album_name);
-void koto_indexed_artist_set_artist_name(KotoIndexedArtist *self, const gchar *artist_name);
-void koto_indexed_artist_update_path(KotoIndexedArtist *self, const gchar *new_path);
+void koto_indexed_artist_set_artist_name(KotoIndexedArtist *self, gchar *artist_name);
+void koto_indexed_artist_update_path(KotoIndexedArtist *self, gchar *new_path);
 void output_artists(gpointer artist_key, gpointer artist_ptr, gpointer data);
 
 /**
@@ -100,7 +100,7 @@ void koto_indexed_album_set_album_art(KotoIndexedAlbum *self, const gchar *album
 void koto_indexed_album_set_album_name(KotoIndexedAlbum *self, const gchar *album_name);
 void koto_indexed_album_set_artist_uuid(KotoIndexedAlbum *self, const gchar *artist_uuid);
 void koto_indexed_album_set_as_current_playlist(KotoIndexedAlbum *self);
-void koto_indexed_album_update_path(KotoIndexedAlbum *self, const gchar *path);
+void koto_indexed_album_update_path(KotoIndexedAlbum *self, gchar *path);
 gint koto_indexed_album_sort_tracks(gconstpointer track1_uuid, gconstpointer track2_uuid, gpointer user_data);
 
 /**

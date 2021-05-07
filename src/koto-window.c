@@ -169,8 +169,10 @@ void koto_window_hide_dialogs(KotoWindow *self) {
 
 void koto_window_remove_page(KotoWindow *self, gchar *page_name) {
 	GtkWidget *page = gtk_stack_get_child_by_name(GTK_STACK(self->pages), page_name);
-	g_return_if_fail(page != NULL);
-	gtk_stack_remove(GTK_STACK(self->pages), page);
+
+	if (GTK_IS_WIDGET(page)) {
+		gtk_stack_remove(GTK_STACK(self->pages), page);
+	}
 }
 
 void koto_window_show_dialog(KotoWindow *self, gchar *dialog_name) {
@@ -216,11 +218,16 @@ void load_library(KotoWindow *self) {
 
 void set_optimal_default_window_size(KotoWindow *self) {
 	GdkDisplay *default_display = gdk_display_get_default();
-	g_return_if_fail(GDK_IS_X11_DISPLAY(default_display));
+
+	if (!GDK_IS_X11_DISPLAY(default_display)) { // Not an X11 display
+		return;
+	}
 
 	GdkMonitor *default_monitor = gdk_x11_display_get_primary_monitor(GDK_X11_DISPLAY(default_display)); // Get primary monitor for the X11
-	g_return_if_fail(default_monitor);
 
+	if (!GDK_IS_X11_MONITOR(default_monitor)) { // Not an X11 Monitor
+		return;
+	}
 
 	GdkRectangle workarea = {0};
 	gdk_monitor_get_geometry(default_monitor, &workarea);

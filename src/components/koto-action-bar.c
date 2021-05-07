@@ -23,6 +23,7 @@
 #include "../playlist/add-remove-track-popover.h"
 #include "../playback/engine.h"
 #include "../koto-button.h"
+#include "../koto-utils.h"
 #include "../koto-window.h"
 
 extern KotoAddRemoveTrackPopover *koto_add_remove_track_popup;
@@ -246,7 +247,7 @@ void koto_action_bar_handle_remove_from_playlist_button_clicked(GtkButton *butto
 		goto doclose;
 	}
 
-	if (self->current_playlist_uuid == NULL || (g_strcmp0(self->current_playlist_uuid, "") == 0)) { // Not valid UUID
+	if (!koto_utils_is_string_valid(self->current_playlist_uuid)) { // Not valid UUID
 		goto doclose;
 	}
 
@@ -271,11 +272,11 @@ void koto_action_bar_set_tracks_in_album_selection(KotoActionBar *self, gchar *a
 		return;
 	}
 
-	if (self->current_album_uuid != NULL && (g_strcmp0(self->current_album_uuid, "") != 0)) { // Album UUID currently set
+	if (koto_utils_is_string_valid(self->current_album_uuid)) { // Album UUID currently set
 		g_free(self->current_album_uuid);
 	}
 
-	if (self->current_playlist_uuid != NULL && (g_strcmp0(self->current_playlist_uuid, "") != 0)) { // Playlist UUID currently set
+	if (koto_utils_is_string_valid(self->current_playlist_uuid)) { // Playlist UUID currently set
 		g_free(self->current_playlist_uuid);
 	}
 
@@ -301,11 +302,11 @@ void koto_action_bar_set_tracks_in_playlist_selection(KotoActionBar *self, gchar
 		return;
 	}
 
-	if (self->current_album_uuid != NULL && (g_strcmp0(self->current_album_uuid, "") != 0)) { // Album UUID currently set
+	if (koto_utils_is_string_valid(self->current_album_uuid)) { // Album UUID currently set
 		g_free(self->current_album_uuid);
 	}
 
-	if (self->current_playlist_uuid != NULL && (g_strcmp0(self->current_playlist_uuid, "") != 0)) { // Playlist UUID currently set
+	if (koto_utils_is_string_valid(self->current_playlist_uuid)) { // Playlist UUID currently set
 		g_free(self->current_playlist_uuid);
 	}
 

@@ -18,6 +18,7 @@
 #include <gtk-4.0/gtk/gtk.h>
 #include "koto-button.h"
 #include "koto-config.h"
+#include "koto-utils.h"
 
 struct _PixbufSize {
 	guint size;
@@ -311,11 +312,11 @@ void koto_button_set_file_path(KotoButton *self, gchar *file_path) {
 		return;
 	}
 
-	if (file_path == NULL || (g_strcmp0(file_path, "") == 0)) { // Empty string or null
+	if (!koto_utils_is_string_valid(file_path)) { // file path is invalid
 		return;
 	}
 
-	if (self->image_file_path != NULL && (g_strcmp0(self->image_file_path, "") != 0)) { // Not null and not empty
+	if (koto_utils_is_string_valid(self->image_file_path)) { // image file path is valid
 		g_free(self->image_file_path);
 	}
 
@@ -375,7 +376,9 @@ void koto_button_set_image_position(KotoButton *self, KotoButtonImagePosition po
 }
 
 void koto_button_set_pixbuf_size(KotoButton *self, guint size) {
-	g_return_if_fail(size != self->pix_size); // If the sizes aren't different, return
+	if (size == self->pix_size) {
+		return;
+	}
 
 	self->pix_size = size;
 	gtk_widget_set_size_request(GTK_WIDGET(self), self->pix_size, self->pix_size);
@@ -395,7 +398,7 @@ void koto_button_set_text(KotoButton *self, gchar *text) {
 	self->text = g_strdup(text);
 
 	if (GTK_IS_LABEL(self->button_label)) { // If we have a button label
-		if (g_strcmp0(self->text, "") != 0) { // Have text set
+		if (koto_utils_is_string_valid(self->text)) { // Have text set
 			gtk_label_set_text(GTK_LABEL(self->button_label), self->text);
 			gtk_widget_show(self->button_label); // Show the label
 		} else { // Have a label but no longer text
@@ -403,7 +406,7 @@ void koto_button_set_text(KotoButton *self, gchar *text) {
 			g_free(self->button_label);
 		}
 	} else { // If we do not have a button label
-		if ((self->text != NULL) && (g_strcmp0(self->text, "") != 0)) { // If we have text
+		if (koto_utils_is_string_valid(self->text)) { // If we have text
 			self->button_label = gtk_label_new(self->text); // Create our label
 			gtk_label_set_xalign(GTK_LABEL(self->button_label), 0);
 
@@ -424,7 +427,7 @@ void koto_button_show_image(KotoButton *self, gboolean use_alt) {
 	}
 
 	if (self->use_from_file) { // Use from a file instead of icon name
-		if ((self->image_file_path == NULL) || g_strcmp0(self->image_file_path, "") == 0) { // Not set
+		if (!koto_utils_is_string_valid(self->image_file_path)) { // Not set
 			return;
 		}
 
