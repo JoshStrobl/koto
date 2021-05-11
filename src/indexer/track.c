@@ -278,6 +278,59 @@ void koto_indexed_track_commit(KotoIndexedTrack *self) {
 	g_free(commit_op_errmsg);
 }
 
+GVariant* koto_indexed_track_get_metadata_vardict(KotoIndexedTrack *self) {
+	if (!KOTO_IS_INDEXED_TRACK(self)) {
+		return NULL;
+	}
+
+	GVariantBuilder *builder = g_variant_builder_new(G_VARIANT_TYPE_VARDICT);
+
+	gchar *album_art_path = NULL;
+	gchar *album_name = NULL;
+	gchar *artist_name = NULL;
+
+	KotoIndexedArtist *artist = koto_cartographer_get_artist_by_uuid(koto_maps, self->artist_uuid);
+	KotoIndexedAlbum *album = koto_cartographer_get_album_by_uuid(koto_maps, self->album_uuid);
+
+	g_object_get(album,
+		"art-path", &album_art_path,
+		"name", &album_name,
+	NULL);
+
+	g_object_get(artist,
+		"name", &artist_name,
+	NULL);
+
+	g_variant_builder_add(builder, "{sv}", "mpris:trackid", g_variant_new_string(self->uuid));
+
+	if (koto_utils_is_string_valid(album_art_path)) { // Valid album art path
+		album_art_path = g_strconcat("file://", album_art_path, NULL); // Prepend with file://
+		g_variant_builder_add(builder, "{sv}", "mpris:artUrl", g_variant_new_string(album_art_path));
+	}
+
+	g_variant_builder_add(builder, "{sv}", "xesam:album", g_variant_new_string(album_name));
+
+	if (koto_utils_is_string_valid(artist_name)) { // Valid artist name
+		GVariant *artist_name_variant;
+		GVariantBuilder *artist_list_builder = g_variant_builder_new(G_VARIANT_TYPE("as"));
+		g_variant_builder_add(artist_list_builder, "s", artist_name);
+		artist_name_variant = g_variant_new("as", artist_list_builder);
+		g_variant_builder_unref(artist_list_builder);
+
+		g_variant_builder_add(builder, "{sv}", "xesam:artist", artist_name_variant);
+		g_variant_builder_add(builder, "{sv}", "playbackengine:artist", g_variant_new_string(artist_name)); // Add a sort of "meta" string val for our playback engine so we don't need to mess about with the array
+	}
+
+	g_variant_builder_add(builder, "{sv}", "xesam:discNumber", g_variant_new_uint64(GPOINTER_TO_UINT(self->cd)));
+	g_variant_builder_add(builder, "{sv}", "xesam:title", g_variant_new_string(self->parsed_name));
+	g_variant_builder_add(builder, "{sv}", "xesam:url", g_variant_new_string(self->path));
+	g_variant_builder_add(builder, "{sv}", "xesam:trackNumber", g_variant_new_uint64(GPOINTER_TO_UINT(self->position)));
+
+	GVariant *metadata_ret = g_variant_builder_end(builder);
+
+	return metadata_ret;
+}
+
 gchar* koto_indexed_track_get_uuid(KotoIndexedTrack *self) {
 	if (!KOTO_IS_INDEXED_TRACK(self)) {
 		return NULL;

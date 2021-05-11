@@ -17,6 +17,7 @@
 
 #include <glib/gi18n.h>
 #include <gstreamer-1.0/gst/gst.h>
+#include <libnotify/notify.h>
 #include "db/cartographer.h"
 #include "db/db.h"
 #include "playback/media-keys.h"

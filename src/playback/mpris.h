@@ -21,9 +21,9 @@
 #include <gstreamer-1.0/gst/player/player.h>
 #include "../indexer/structs.h"
 
-void koto_push_track_info_to_builder(GVariantBuilder *builder, KotoIndexedTrack *track);
 void koto_update_mpris_playback_state(GstState state);
 void koto_update_mpris_info_for_track(KotoIndexedTrack *track);
+void koto_update_mpris_info_for_track_with_metadata(KotoIndexedTrack *track, GVariant *metadata);
 void handle_method_call(GDBusConnection *connection, const gchar *sender, const gchar *object_path, const gchar *interface_name,	const gchar *method_name, GVariant *parameters, GDBusMethodInvocation *invocation, gpointer user_data);
 GVariant* handle_get_property(GDBusConnection *connection, const gchar *sender, const gchar *object_path, const gchar *interface_name,	const gchar *property_name,	GError **error,	gpointer user_data);
 gboolean handle_set_property(GDBusConnection *connection, const gchar *sender, 	const gchar *object_path, const gchar *interface_name, const gchar *property_name, GVariant *value, GError **error, gpointer user_data);

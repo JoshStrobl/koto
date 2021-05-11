@@ -200,15 +200,14 @@ GVariant* handle_get_property(
 	}
 
 	if (g_strcmp0(property_name, "Metadata") == 0) { // Metadata
-		GVariantBuilder *builder = g_variant_builder_new(G_VARIANT_TYPE_VARDICT);
-
 		KotoIndexedTrack *current_track = koto_playback_engine_get_current_track(playback_engine);
 
 		if (KOTO_IS_INDEXED_TRACK(current_track)) { // Currently playing a track
-			koto_push_track_info_to_builder(builder, current_track);
+			ret = koto_indexed_track_get_metadata_vardict(current_track);
+		} else { // No track
+			GVariantBuilder *builder = g_variant_builder_new(G_VARIANT_TYPE_VARDICT); // Create an empty builder
+			ret = g_variant_builder_end(builder); // return the vardict
 		}
-
-		ret = g_variant_builder_end(builder);
 	}
 
 	if (
@@ -277,69 +276,6 @@ gboolean handle_set_property(
 	return FALSE;
 }
 
-void koto_push_track_info_to_builder(GVariantBuilder *builder, KotoIndexedTrack *track) {
-	if (!KOTO_IS_INDEXED_TRACK(track)) {
-		return;
-	}
-
-	gchar *album_art_path = NULL;
-	gchar *album_name = NULL;
-	gchar *album_uuid = NULL;
-	gchar *artist_uuid = NULL;
-	gchar *artist_name = NULL;
-	gchar *track_name = NULL;
-	gchar *track_path = NULL;
-	gchar *track_uuid = NULL;
-	guint track_position = 0;
-	guint track_disc = 0;
-
-	g_object_get(track,
-		"album-uuid", &album_uuid,
-		"artist-uuid", &artist_uuid,
-		"cd", &track_disc,
-		"path", &track_path,
-		"parsed-name", &track_name,
-		"position", &track_position,
-		"uuid", &track_uuid,
-	NULL);
-
-	KotoIndexedArtist *artist = koto_cartographer_get_artist_by_uuid(koto_maps, artist_uuid);
-	KotoIndexedAlbum *album = koto_cartographer_get_album_by_uuid(koto_maps, album_uuid);
-
-	g_object_get(album,
-		"art-path", &album_art_path,
-		"name", &album_name,
-	NULL);
-
-	g_object_get(artist,
-		"name", &artist_name,
-	NULL);
-
-	g_variant_builder_add(builder, "{sv}", "mpris:trackid", g_variant_new_string(track_uuid));
-
-	if (koto_utils_is_string_valid(album_art_path)) { // Valid album art path
-		album_art_path = g_strconcat("file://", album_art_path, NULL); // Prepend with file://
-		g_variant_builder_add(builder, "{sv}", "mpris:artUrl", g_variant_new_string(album_art_path));
-	}
-
-	g_variant_builder_add(builder, "{sv}", "xesam:album", g_variant_new_string(album_name));
-
-	if (koto_utils_is_string_valid(artist_name)) { // Valid artist name
-		GVariant *artist_name_variant;
-		GVariantBuilder *artist_list_builder = g_variant_builder_new(G_VARIANT_TYPE("as"));
-		g_variant_builder_add(artist_list_builder, "s", artist_name);
-		artist_name_variant = g_variant_new("as", artist_list_builder);
-		g_variant_builder_unref(artist_list_builder);
-
-		g_variant_builder_add(builder, "{sv}", "xesam:artist", artist_name_variant);
-	}
-
-	g_variant_builder_add(builder, "{sv}", "xesam:discNumber", g_variant_new_uint64(track_disc));
-	g_variant_builder_add(builder, "{sv}", "xesam:title", g_variant_new_string(track_name));
-	g_variant_builder_add(builder, "{sv}", "xesam:url", g_variant_new_string(track_path));
-	g_variant_builder_add(builder, "{sv}", "xesam:trackNumber", g_variant_new_uint64(track_position));
-}
-
 void koto_update_mpris_playback_state(GstState state) {
 	GVariantBuilder *builder = g_variant_builder_new(G_VARIANT_TYPE_ARRAY);
 
@@ -366,12 +302,17 @@ void koto_update_mpris_info_for_track(KotoIndexedTrack *track) {
 		return;
 	}
 
-	GVariantBuilder *builder = g_variant_builder_new(G_VARIANT_TYPE_ARRAY);
-	GVariantBuilder *metadata_builder = g_variant_builder_new(G_VARIANT_TYPE_VARDICT);
+	GVariant *metadata = koto_indexed_track_get_metadata_vardict(track); // Get the GVariantBuilder variable dict for the metadata
+	koto_update_mpris_info_for_track_with_metadata(track, metadata);
+}
 
-	koto_push_track_info_to_builder(metadata_builder, track);
-	GVariant *metadata_ret = g_variant_builder_end(metadata_builder);
-	g_variant_builder_add(builder, "{sv}", "Metadata", metadata_ret);
+void koto_update_mpris_info_for_track_with_metadata(KotoIndexedTrack *track, GVariant *metadata) {
+	if (!KOTO_IS_INDEXED_TRACK(track)) {
+		return;
+	}
+
+	GVariantBuilder *builder = g_variant_builder_new(G_VARIANT_TYPE_ARRAY);
+	g_variant_builder_add(builder, "{sv}", "Metadata", metadata);
 
 	g_dbus_connection_emit_signal(dbus_conn,
 		NULL,

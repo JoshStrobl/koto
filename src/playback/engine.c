@@ -18,9 +18,12 @@
 #include <glib-2.0/glib.h>
 #include <gstreamer-1.0/gst/gst.h>
 #include <gstreamer-1.0/gst/player/player.h>
+#include <gtk-4.0/gtk/gtk.h>
+#include <libnotify/notify.h>
 #include "../db/cartographer.h"
 #include "../playlist/current.h"
 #include "../indexer/structs.h"
+#include "../koto-utils.h"
 #include "engine.h"
 #include "mpris.h"
 
@@ -54,6 +57,7 @@ struct _KotoPlaybackEngine {
 	GstQuery *position_query;
 
 	KotoIndexedTrack *current_track;
+	NotifyNotification *track_notification;
 
 	gboolean is_muted;
 	gboolean is_repeat_enabled;
@@ -426,8 +430,49 @@ void koto_playback_engine_set_track_by_uuid(KotoPlaybackEngine *self, gchar *tra
 	koto_playback_engine_set_position(self, 0);
 	koto_playback_engine_set_volume(self, self->volume); // Re-enforce our volume on the updated playbin
 
+	GVariant *metadata = koto_indexed_track_get_metadata_vardict(track); // Get the GVariantBuilder variable dict for the metadata
+	GVariantDict *metadata_dict = g_variant_dict_new(metadata);
+
 	g_signal_emit(self, playback_engine_signals[SIGNAL_TRACK_CHANGE], 0); // Emit our track change signal
 	koto_update_mpris_info_for_track(self->current_track);
+
+	GVariant *track_name_var = g_variant_dict_lookup_value(metadata_dict, "xesam:title", NULL); // Get the GVariant for the name of the track
+	const gchar *track_name = g_variant_get_string(track_name_var, NULL); // Get the string of the track name
+
+	GVariant *album_name_var = g_variant_dict_lookup_value(metadata_dict, "xesam:album", NULL); // Get the GVariant for the album name
+	const gchar *album_name = g_variant_get_string(album_name_var, NULL); // Get the string for the album name
+
+	GVariant *artist_name_var = g_variant_dict_lookup_value(metadata_dict, "playbackengine:artist", NULL); // Get the GVariant for the name of the artist
+	const gchar *artist_name = g_variant_get_string(artist_name_var, NULL); // Get the string for the artist name
+
+	gchar *artist_album_combo = g_strjoin(" - ", artist_name, album_name, NULL); // Join artist and album name separated by " - "
+
+	gchar *icon_name = "audio-x-generic-symbolic";
+
+	if (g_variant_dict_contains(metadata_dict, "mpris:artUrl")) { // If we have artwork specified
+		GVariant *art_url_var = g_variant_dict_lookup_value(metadata_dict, "mpris:artUrl", NULL); // Get the GVariant for the art URL
+		const gchar *art_uri = g_variant_get_string(art_url_var, NULL); // Get the string for the artwork
+		icon_name = koto_utils_replace_string_all(g_strdup(art_uri), "file://", "");
+	}
+
+	// Super important note: We are not using libnotify directly because the synchronous nature of notify_notification_send seems to result in dbus timeouts
+	if (g_find_program_in_path("notify-send") != NULL) { // Have notify-send
+		char *argv[12];
+		argv[0] = "notify-send";
+		argv[1] = "-a";
+		argv[2] = "Koto";
+		argv[3] = "-i";
+		argv[4] = icon_name;
+		argv[5] = "-c";
+		argv[6] = "x-gnome.music";
+		argv[7] = "-h";
+		argv[8] = "string:desktop-entry:com.github.joshstrobl.koto";
+		argv[9] = g_strdup(track_name);
+		argv[10] = artist_album_combo;
+		argv[11] = NULL;
+
+		g_spawn_async(NULL, argv, NULL, G_SPAWN_SEARCH_PATH, NULL, NULL, NULL, NULL);
+	}
 }
 
 void koto_playback_engine_set_volume(KotoPlaybackEngine *self, gdouble volume) {

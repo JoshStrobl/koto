@@ -111,6 +111,7 @@ KotoIndexedTrack* koto_indexed_track_new(KotoIndexedAlbum *album, const gchar *p
 KotoIndexedTrack* koto_indexed_track_new_with_uuid(const gchar *uuid);
 
 void koto_indexed_track_commit(KotoIndexedTrack *self);
+GVariant* koto_indexed_track_get_metadata_vardict(KotoIndexedTrack *self);
 gchar* koto_indexed_track_get_uuid(KotoIndexedTrack *self);
 void koto_indexed_track_parse_name(KotoIndexedTrack *self);
 void koto_indexed_track_remove_from_playlist(KotoIndexedTrack *self, gchar *playlist_uuid);
