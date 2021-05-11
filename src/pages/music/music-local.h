@@ -31,7 +31,7 @@ G_DECLARE_FINAL_TYPE(KotoPageMusicLocal, koto_page_music_local, KOTO, PAGE_MUSIC
 KotoPageMusicLocal* koto_page_music_local_new();
 void koto_page_music_local_add_artist(
 	KotoPageMusicLocal * self,
-	KotoIndexedArtist * artist
+	KotoArtist * artist
 );
 
 void koto_page_music_local_handle_artist_click(
@@ -52,7 +52,7 @@ void koto_page_music_local_go_to_artist_by_uuid(
 
 void koto_page_music_local_set_library(
 	KotoPageMusicLocal * self,
-	KotoIndexedLibrary * lib
+	KotoLibrary * lib
 );
 
 int koto_page_music_local_sort_artists(

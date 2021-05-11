@@ -29,7 +29,7 @@ extern KotoCartographer * koto_maps;
 
 struct _KotoAlbumView {
 	GObject parent_instance;
-	KotoIndexedAlbum * album;
+	KotoAlbum * album;
 	GtkWidget * main;
 	GtkWidget * album_tracks_box;
 	GtkWidget * discs;
@@ -81,7 +81,7 @@ static void koto_album_view_class_init(KotoAlbumViewClass * c) {
 		"album",
 		"Album",
 		"Album",
-		KOTO_TYPE_INDEXED_ALBUM,
+		KOTO_TYPE_ALBUM,
 		G_PARAM_CONSTRUCT_ONLY | G_PARAM_EXPLICIT_NOTIFY | G_PARAM_READWRITE
 	);
 
@@ -172,7 +172,7 @@ static void koto_album_view_set_property(
 
 	switch (prop_id) {
 		case PROP_ALBUM:
-			koto_album_view_set_album(self, (KotoIndexedAlbum*) g_value_get_object(val));
+			koto_album_view_set_album(self, (KotoAlbum*) g_value_get_object(val));
 			break;
 		default:
 			G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, prop_id, spec);
@@ -181,8 +181,8 @@ static void koto_album_view_set_property(
 }
 
 void koto_album_view_add_track_to_listbox(
-	KotoIndexedAlbum * self,
-	KotoIndexedTrack * track
+	KotoAlbum * self,
+	KotoTrack * track
 ) {
 	(void) self;
 	(void) track;
@@ -201,7 +201,7 @@ void koto_album_view_hide_overlay_controls(
 
 void koto_album_view_set_album(
 	KotoAlbumView * self,
-	KotoIndexedAlbum * album
+	KotoAlbum * album
 ) {
 	if (album == NULL) {
 		return;
@@ -209,7 +209,7 @@ void koto_album_view_set_album(
 
 	self->album = album;
 
-	gchar * album_art = koto_indexed_album_get_album_art(self->album); // Get the art for the album
+	gchar * album_art = koto_album_get_album_art(self->album); // Get the art for the album
 
 
 	gtk_image_set_from_file(GTK_IMAGE(self->album_overlay_art), album_art);
@@ -224,11 +224,11 @@ void koto_album_view_set_album(
 	gtk_box_prepend(GTK_BOX(self->album_tracks_box), self->album_label); // Prepend our new label to the album + tracks box
 
 	GHashTable * discs = g_hash_table_new(g_str_hash, g_str_equal);
-	GList * tracks = koto_indexed_album_get_tracks(album); // Get the tracks for this album
+	GList * tracks = koto_album_get_tracks(album); // Get the tracks for this album
 
 
 	for (guint i = 0; i < g_list_length(tracks); i++) {
-		KotoIndexedTrack * track = koto_cartographer_get_track_by_uuid(koto_maps, (gchar*) g_list_nth_data(tracks, i)); // Get the track by its UUID
+		KotoTrack * track = koto_cartographer_get_track_by_uuid(koto_maps, (gchar*) g_list_nth_data(tracks, i)); // Get the track by its UUID
 
 		if (track == NULL) { // Track doesn't exist
 			continue;
@@ -309,9 +309,9 @@ void koto_album_view_toggle_album_playback(
 
 
 	koto_button_show_image(KOTO_BUTTON(self->play_pause_button), TRUE);
-	koto_indexed_album_set_as_current_playlist(self->album); // Set as the current playlist
+	koto_album_set_as_current_playlist(self->album); // Set as the current playlist
 }
 
-KotoAlbumView * koto_album_view_new(KotoIndexedAlbum * album) {
+KotoAlbumView * koto_album_view_new(KotoAlbum * album) {
 	return g_object_new(KOTO_TYPE_ALBUM_VIEW, "album", album, NULL);
 }

@@ -278,7 +278,7 @@ static void koto_playlist_init(KotoPlaylist * self) {
 	self->tracks = g_queue_new(); // Set as an empty GQueue
 	self->played_tracks = g_queue_new(); // Set as an empty GQueue
 	self->sorted_tracks = g_queue_new(); // Set as an empty GQueue
-	self->store = g_list_store_new(KOTO_TYPE_INDEXED_TRACK);
+	self->store = g_list_store_new(KOTO_TYPE_TRACK);
 }
 
 void koto_playlist_add_to_played_tracks(
@@ -294,11 +294,11 @@ void koto_playlist_add_to_played_tracks(
 
 void koto_playlist_add_track(
 	KotoPlaylist * self,
-	KotoIndexedTrack * track,
+	KotoTrack * track,
 	gboolean current,
 	gboolean commit_to_table
 ) {
-	koto_playlist_add_track_by_uuid(self, koto_indexed_track_get_uuid(track), current, commit_to_table);
+	koto_playlist_add_track_by_uuid(self, koto_track_get_uuid(track), current, commit_to_table);
 }
 
 void koto_playlist_add_track_by_uuid(
@@ -307,10 +307,10 @@ void koto_playlist_add_track_by_uuid(
 	gboolean current,
 	gboolean commit_to_table
 ) {
-	KotoIndexedTrack * track = koto_cartographer_get_track_by_uuid(koto_maps, uuid); // Get the track
+	KotoTrack * track = koto_cartographer_get_track_by_uuid(koto_maps, uuid); // Get the track
 
 
-	if (!KOTO_IS_INDEXED_TRACK(track)) {
+	if (!KOTO_IS_TRACK(track)) {
 		return;
 	}
 
@@ -333,7 +333,7 @@ void koto_playlist_add_track_by_uuid(
 	}
 
 	if (commit_to_table) {
-		koto_indexed_track_save_to_playlist(track, self->uuid, (g_strcmp0(self->current_uuid, uuid) == 0) ? 1 : 0); // Call to save the playlist to the track
+		koto_track_save_to_playlist(track, self->uuid, (g_strcmp0(self->current_uuid, uuid) == 0) ? 1 : 0); // Call to save the playlist to the track
 	}
 
 	if (current && (g_queue_get_length(self->tracks) > 1)) { // Is current and NOT the first item
@@ -400,7 +400,7 @@ void koto_playlist_commit_tracks(
 	gpointer data,
 	gpointer user_data
 ) {
-	KotoIndexedTrack * track = koto_cartographer_get_track_by_uuid(koto_maps, data); // Get the track
+	KotoTrack * track = koto_cartographer_get_track_by_uuid(koto_maps, data); // Get the track
 
 
 	if (track == NULL) { // Not a track
@@ -408,7 +408,7 @@ void koto_playlist_commit_tracks(
 		gchar * playlist_uuid = self->uuid; // Get the playlist UUID
 
 		gchar * current_track = g_queue_peek_nth(self->tracks, self->current_position); // Get the UUID of the current track
-		//koto_indexed_track_save_to_playlist(track, playlist_uuid, (data == current_track) ? 1 : 0); // Call to save the playlist to the track
+		//koto_track_save_to_playlist(track, playlist_uuid, (data == current_track) ? 1 : 0); // Call to save the playlist to the track
 		g_free(playlist_uuid);
 		g_free(current_track);
 	}
@@ -447,7 +447,7 @@ gchar * koto_playlist_get_name(KotoPlaylist * self) {
 
 gint koto_playlist_get_position_of_track(
 	KotoPlaylist * self,
-	KotoIndexedTrack * track
+	KotoTrack * track
 ) {
 	if (!KOTO_IS_PLAYLIST(self)) {
 		return -1;
@@ -457,7 +457,7 @@ gint koto_playlist_get_position_of_track(
 		return -1;
 	}
 
-	if (!KOTO_IS_INDEXED_TRACK(track)) {
+	if (!KOTO_IS_TRACK(track)) {
 		return -1;
 	}
 
@@ -532,9 +532,9 @@ gchar * koto_playlist_go_to_next(KotoPlaylist * self) {
 	if (!koto_utils_is_string_valid(self->current_uuid)) { // No valid UUID yet
 		self->current_position++;
 	} else { // Have a UUID currently
-		KotoIndexedTrack * track = koto_cartographer_get_track_by_uuid(koto_maps, self->current_uuid);
+		KotoTrack * track = koto_cartographer_get_track_by_uuid(koto_maps, self->current_uuid);
 
-		if (!KOTO_IS_INDEXED_TRACK(track)) {
+		if (!KOTO_IS_TRACK(track)) {
 			return NULL;
 		}
 
@@ -562,10 +562,10 @@ gchar * koto_playlist_go_to_previous(KotoPlaylist * self) {
 		return NULL;
 	}
 
-	KotoIndexedTrack * track = koto_cartographer_get_track_by_uuid(koto_maps, self->current_uuid);
+	KotoTrack * track = koto_cartographer_get_track_by_uuid(koto_maps, self->current_uuid);
 
 
-	if (!KOTO_IS_INDEXED_TRACK(track)) {
+	if (!KOTO_IS_TRACK(track)) {
 		return NULL;
 	}
 
@@ -602,8 +602,8 @@ gint koto_playlist_model_sort_by_uuid(
 	gconstpointer second_item,
 	gpointer data_list
 ) {
-	KotoIndexedTrack * first_track = koto_cartographer_get_track_by_uuid(koto_maps, (gchar*) first_item);
-	KotoIndexedTrack * second_track = koto_cartographer_get_track_by_uuid(koto_maps, (gchar*) second_item);
+	KotoTrack * first_track = koto_cartographer_get_track_by_uuid(koto_maps, (gchar*) first_item);
+	KotoTrack * second_track = koto_cartographer_get_track_by_uuid(koto_maps, (gchar*) second_item);
 
 
 	return koto_playlist_model_sort_by_track(first_track, second_track, data_list);
@@ -614,8 +614,8 @@ gint koto_playlist_model_sort_by_track(
 	gconstpointer second_item,
 	gpointer data_list
 ) {
-	KotoIndexedTrack * first_track = (KotoIndexedTrack*) first_item;
-	KotoIndexedTrack * second_track = (KotoIndexedTrack*) second_item;
+	KotoTrack * first_track = (KotoTrack*) first_item;
+	KotoTrack * second_track = (KotoTrack*) second_item;
 
 	GList* ptr_list = data_list;
 	KotoPlaylist * self = g_list_nth_data(ptr_list, 0); // First item in the GPtrArray is a pointer to our playlist
@@ -626,8 +626,8 @@ gint koto_playlist_model_sort_by_track(
 		(model == KOTO_PREFERRED_MODEL_TYPE_DEFAULT) || // Newest first model
 		(model == KOTO_PREFERRED_MODEL_TYPE_OLDEST_FIRST) // Oldest first
 	) {
-		gint first_track_pos = g_queue_index(self->tracks, koto_indexed_track_get_uuid(first_track));
-		gint second_track_pos = g_queue_index(self->tracks, koto_indexed_track_get_uuid(second_track));
+		gint first_track_pos = g_queue_index(self->tracks, koto_track_get_uuid(first_track));
+		gint second_track_pos = g_queue_index(self->tracks, koto_track_get_uuid(second_track));
 
 		if (first_track_pos == -1) { // First track isn't in tracks
 			return 1;
@@ -668,17 +668,17 @@ gint koto_playlist_model_sort_by_track(
 			return 0; // Don't get too granular, just consider them equal
 		}
 
-		KotoIndexedAlbum * first_album = koto_cartographer_get_album_by_uuid(koto_maps, first_album_uuid);
-		KotoIndexedAlbum * second_album = koto_cartographer_get_album_by_uuid(koto_maps, second_album_uuid);
+		KotoAlbum * first_album = koto_cartographer_get_album_by_uuid(koto_maps, first_album_uuid);
+		KotoAlbum * second_album = koto_cartographer_get_album_by_uuid(koto_maps, second_album_uuid);
 
 		g_free(first_album_uuid);
 		g_free(second_album_uuid);
 
-		if (!KOTO_IS_INDEXED_ALBUM(first_album) && !KOTO_IS_INDEXED_ALBUM(second_album)) { // Neither are valid albums
+		if (!KOTO_IS_ALBUM(first_album) && !KOTO_IS_ALBUM(second_album)) { // Neither are valid albums
 			return 0; // Just consider them as equal
 		}
 
-		return g_utf8_collate(koto_indexed_album_get_album_name(first_album), koto_indexed_album_get_album_name(second_album));
+		return g_utf8_collate(koto_album_get_album_name(first_album), koto_album_get_album_name(second_album));
 	}
 
 	if (model == KOTO_PREFERRED_MODEL_TYPE_SORT_BY_ARTIST) { // Sort by artist name
@@ -699,17 +699,17 @@ gint koto_playlist_model_sort_by_track(
 			NULL
 		);
 
-		KotoIndexedArtist * first_artist = koto_cartographer_get_artist_by_uuid(koto_maps, first_artist_uuid);
-		KotoIndexedArtist * second_artist = koto_cartographer_get_artist_by_uuid(koto_maps, second_artist_uuid);
+		KotoArtist * first_artist = koto_cartographer_get_artist_by_uuid(koto_maps, first_artist_uuid);
+		KotoArtist * second_artist = koto_cartographer_get_artist_by_uuid(koto_maps, second_artist_uuid);
 
 		g_free(first_artist_uuid);
 		g_free(second_artist_uuid);
 
-		if (!KOTO_IS_INDEXED_ARTIST(first_artist) && !KOTO_IS_INDEXED_ARTIST(second_artist)) { // Neither are valid artists
+		if (!KOTO_IS_ARTIST(first_artist) && !KOTO_IS_ARTIST(second_artist)) { // Neither are valid artists
 			return 0; // Just consider them as equal
 		}
 
-		return g_utf8_collate(koto_indexed_artist_get_name(first_artist), koto_indexed_artist_get_name(second_artist));
+		return g_utf8_collate(koto_artist_get_name(first_artist), koto_artist_get_name(second_artist));
 	}
 
 	if (model == KOTO_PREFERRED_MODEL_TYPE_SORT_BY_TRACK_NAME) { // Track name
@@ -769,10 +769,10 @@ void koto_playlist_remove_track_by_uuid(
 		g_queue_pop_nth(self->sorted_tracks, file_index_in_sorted); // Remove nth where it is the index in sorted tracks
 	}
 
-	KotoIndexedTrack * track = koto_cartographer_get_track_by_uuid(koto_maps, uuid); // Get the track
+	KotoTrack * track = koto_cartographer_get_track_by_uuid(koto_maps, uuid); // Get the track
 
 
-	if (!KOTO_IS_INDEXED_TRACK(track)) { // Is not a track
+	if (!KOTO_IS_TRACK(track)) { // Is not a track
 		return;
 	}
 
@@ -783,7 +783,7 @@ void koto_playlist_remove_track_by_uuid(
 		g_list_store_remove(self->store, position); // Remove from the store
 	}
 
-	koto_indexed_track_remove_from_playlist(track, self->uuid);
+	koto_track_remove_from_playlist(track, self->uuid);
 
 	g_signal_emit(
 		self,
@@ -899,10 +899,10 @@ void koto_playlist_tracks_queue_push_to_store(
 	gpointer user_data
 ) {
 	gchar * track_uuid = (gchar*) data;
-	KotoIndexedTrack * track = koto_cartographer_get_track_by_uuid(koto_maps, track_uuid);
+	KotoTrack * track = koto_cartographer_get_track_by_uuid(koto_maps, track_uuid);
 
 
-	if (!KOTO_IS_INDEXED_TRACK(track)) { // Not a track
+	if (!KOTO_IS_TRACK(track)) { // Not a track
 		return;
 	}
 

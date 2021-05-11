@@ -30,12 +30,12 @@ G_DECLARE_FINAL_TYPE(KotoArtistView, koto_artist_view, KOTO, ARTIST_VIEW, GObjec
 KotoArtistView* koto_artist_view_new();
 void koto_artist_view_add_album(
 	KotoArtistView * self,
-	KotoIndexedAlbum * album
+	KotoAlbum * album
 );
 
 void koto_artist_view_add_artist(
 	KotoArtistView * self,
-	KotoIndexedArtist * artist
+	KotoArtist * artist
 );
 
 GtkWidget * koto_artist_view_get_main(KotoArtistView * self);

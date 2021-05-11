@@ -49,7 +49,7 @@ void koto_playback_engine_current_playlist_changed();
 
 void koto_playback_engine_forwards(KotoPlaybackEngine * self);
 
-KotoIndexedTrack * koto_playback_engine_get_current_track(KotoPlaybackEngine * self);
+KotoTrack * koto_playback_engine_get_current_track(KotoPlaybackEngine * self);
 
 gint64 koto_playback_engine_get_duration(KotoPlaybackEngine * self);
 

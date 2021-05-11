@@ -245,10 +245,10 @@ void koto_playlist_page_bind_track_item(
 	GtkWidget * track_album_label = gtk_widget_get_next_sibling(track_name_label);
 	GtkWidget * track_artist_label = gtk_widget_get_next_sibling(track_album_label);
 
-	KotoIndexedTrack * track = gtk_list_item_get_item(item); // Get the track UUID from our model
+	KotoTrack * track = gtk_list_item_get_item(item); // Get the track UUID from our model
 
 
-	if (!KOTO_IS_INDEXED_TRACK(track)) {
+	if (!KOTO_IS_TRACK(track)) {
 		return;
 	}
 
@@ -274,18 +274,18 @@ void koto_playlist_page_bind_track_item(
 	gtk_label_set_label(GTK_LABEL(track_position_label), g_strdup_printf("%u", track_position)); // Set the track position
 	gtk_label_set_label(GTK_LABEL(track_name_label), track_name); // Set our track name
 
-	KotoIndexedAlbum * album = koto_cartographer_get_album_by_uuid(koto_maps, album_uuid);
+	KotoAlbum * album = koto_cartographer_get_album_by_uuid(koto_maps, album_uuid);
 
 
-	if (KOTO_IS_INDEXED_ALBUM(album)) {
-		gtk_label_set_label(GTK_LABEL(track_album_label), koto_indexed_album_get_album_name(album)); // Get the name of the album and set it to the label
+	if (KOTO_IS_ALBUM(album)) {
+		gtk_label_set_label(GTK_LABEL(track_album_label), koto_album_get_album_name(album)); // Get the name of the album and set it to the label
 	}
 
-	KotoIndexedArtist * artist = koto_cartographer_get_artist_by_uuid(koto_maps, artist_uuid);
+	KotoArtist * artist = koto_cartographer_get_artist_by_uuid(koto_maps, artist_uuid);
 
 
-	if (KOTO_IS_INDEXED_ARTIST(artist)) {
-		gtk_label_set_label(GTK_LABEL(track_artist_label), koto_indexed_artist_get_name(artist)); // Get the name of the artist and set it to the label
+	if (KOTO_IS_ARTIST(artist)) {
+		gtk_label_set_label(GTK_LABEL(track_artist_label), koto_artist_get_name(artist)); // Get the name of the artist and set it to the label
 	}
 }
 
@@ -532,7 +532,7 @@ void koto_playlist_page_handle_tracks_selected(
 
 
 	for (cur_pos_list = selected_tracks_pos; cur_pos_list != NULL; cur_pos_list = cur_pos_list->next) { // Iterate over every position that we accumulated
-		KotoIndexedTrack * selected_track = g_list_model_get_item(self->model, GPOINTER_TO_UINT(cur_pos_list->data)); // Get the KotoIndexedTrack in the GListModel for this current position
+		KotoTrack * selected_track = g_list_model_get_item(self->model, GPOINTER_TO_UINT(cur_pos_list->data)); // Get the KotoTrack in the GListModel for this current position
 		selected_tracks = g_list_append(selected_tracks, selected_track); // Add to selected tracks
 	}
 

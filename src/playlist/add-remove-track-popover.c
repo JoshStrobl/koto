@@ -150,14 +150,14 @@ void koto_add_remove_track_popover_handle_checkbutton_toggle(
 	GList * pos;
 
 
-	for (pos = self->tracks; pos != NULL; pos = pos->next) { // Iterate over our KotoIndexedTracks
-		KotoIndexedTrack * track = pos->data;
+	for (pos = self->tracks; pos != NULL; pos = pos->next) { // Iterate over our KotoTracks
+		KotoTrack * track = pos->data;
 
-		if (!KOTO_INDEXED_TRACK(track)) { // Not a track
+		if (!KOTO_TRACK(track)) { // Not a track
 			continue; // Skip this
 		}
 
-		gchar * track_uuid = koto_indexed_track_get_uuid(track); // Get the track
+		gchar * track_uuid = koto_track_get_uuid(track); // Get the track
 
 		if (should_add) { // Should be adding
 			koto_playlist_add_track_by_uuid(playlist, track_uuid, FALSE, TRUE); // Add the track to the playlist
@@ -263,9 +263,9 @@ void koto_add_remove_track_popover_set_tracks(
 				}
 			}
 		} else {
-			KotoIndexedTrack * track = g_list_nth_data(self->tracks, 0); // Get the first track
+			KotoTrack * track = g_list_nth_data(self->tracks, 0); // Get the first track
 
-			if (KOTO_IS_INDEXED_TRACK(track)) {
+			if (KOTO_IS_TRACK(track)) {
 				gint pos = koto_playlist_get_position_of_track(playlist, track);
 				should_be_checked = (pos != -1);
 			}

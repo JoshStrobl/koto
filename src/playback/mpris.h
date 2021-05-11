@@ -23,10 +23,10 @@
 
 void koto_update_mpris_playback_state(GstState state);
 
-void koto_update_mpris_info_for_track(KotoIndexedTrack * track);
+void koto_update_mpris_info_for_track(KotoTrack * track);
 
 void koto_update_mpris_info_for_track_with_metadata(
-	KotoIndexedTrack * track,
+	KotoTrack * track,
 	GVariant * metadata
 );
 

@@ -29,7 +29,7 @@ extern KotoCartographer * koto_maps;
 extern KotoCurrentPlaylist * current_playlist;
 extern sqlite3 * koto_db;
 
-struct _KotoIndexedAlbum {
+struct _KotoAlbum {
 	GObject parent_instance;
 	gchar * uuid;
 	gchar * path;
@@ -43,7 +43,7 @@ struct _KotoIndexedAlbum {
 	gboolean do_initial_index;
 };
 
-G_DEFINE_TYPE(KotoIndexedAlbum, koto_indexed_album, G_TYPE_OBJECT);
+G_DEFINE_TYPE(KotoAlbum, koto_album, G_TYPE_OBJECT);
 
 enum {
 	PROP_0,
@@ -60,27 +60,27 @@ static GParamSpec * props[N_PROPERTIES] = {
 	NULL,
 };
 
-static void koto_indexed_album_get_property(
+static void koto_album_get_property(
 	GObject * obj,
 	guint prop_id,
 	GValue * val,
 	GParamSpec * spec
 );
 
-static void koto_indexed_album_set_property(
+static void koto_album_set_property(
 	GObject * obj,
 	guint prop_id,
 	const GValue * val,
 	GParamSpec * spec
 );
 
-static void koto_indexed_album_class_init(KotoIndexedAlbumClass * c) {
+static void koto_album_class_init(KotoAlbumClass * c) {
 	GObjectClass * gobject_class;
 
 
 	gobject_class = G_OBJECT_CLASS(c);
-	gobject_class->set_property = koto_indexed_album_set_property;
-	gobject_class->get_property = koto_indexed_album_get_property;
+	gobject_class->set_property = koto_album_set_property;
+	gobject_class->get_property = koto_album_get_property;
 
 	props[PROP_UUID] = g_param_spec_string(
 		"uuid",
@@ -133,14 +133,14 @@ static void koto_indexed_album_class_init(KotoIndexedAlbumClass * c) {
 	g_object_class_install_properties(gobject_class, N_PROPERTIES, props);
 }
 
-static void koto_indexed_album_init(KotoIndexedAlbum * self) {
+static void koto_album_init(KotoAlbum * self) {
 	self->has_album_art = FALSE;
 	self->tracks = NULL;
 }
 
-void koto_indexed_album_add_track(
-	KotoIndexedAlbum * self,
-	KotoIndexedTrack * track
+void koto_album_add_track(
+	KotoAlbum * self,
+	KotoTrack * track
 ) {
 	if (track == NULL) { // Not a file
 		return;
@@ -152,13 +152,13 @@ void koto_indexed_album_add_track(
 	g_object_get(track, "uuid", &track_uuid, NULL);
 
 	if (g_list_index(self->tracks, track_uuid) == -1) {
-		self->tracks = g_list_insert_sorted_with_data(self->tracks, track_uuid, koto_indexed_album_sort_tracks, NULL);
+		self->tracks = g_list_insert_sorted_with_data(self->tracks, track_uuid, koto_album_sort_tracks, NULL);
 	}
 }
 
-void koto_indexed_album_commit(KotoIndexedAlbum * self) {
+void koto_album_commit(KotoAlbum * self) {
 	if (self->art_path == NULL) { // If art_path isn't defined when committing
-		koto_indexed_album_set_album_art(self, ""); // Set to an empty string
+		koto_album_set_album_art(self, ""); // Set to an empty string
 	}
 
 	gchar * commit_op = g_strdup_printf(
@@ -184,7 +184,7 @@ void koto_indexed_album_commit(KotoIndexedAlbum * self) {
 	g_free(commit_op_errmsg);
 }
 
-void koto_indexed_album_find_album_art(KotoIndexedAlbum * self) {
+void koto_album_find_album_art(KotoAlbum * self) {
 	magic_t magic_cookie = magic_open(MAGIC_MIME);
 
 
@@ -233,7 +233,7 @@ void koto_indexed_album_find_album_art(KotoIndexedAlbum * self) {
 				(g_strrstr(lower_art, "Small") == NULL) && // Not Small
 				(g_strrstr(lower_art, "back") == NULL) // Not back
 			) {
-				koto_indexed_album_set_album_art(self, full_path);
+				koto_album_set_album_art(self, full_path);
 				g_free(album_art_no_ext);
 				g_free(lower_art);
 				break;
@@ -250,8 +250,8 @@ void koto_indexed_album_find_album_art(KotoIndexedAlbum * self) {
 	magic_close(magic_cookie);
 }
 
-void koto_indexed_album_find_tracks(
-	KotoIndexedAlbum * self,
+void koto_album_find_tracks(
+	KotoAlbum * self,
 	magic_t magic_cookie,
 	const gchar * path
 ) {
@@ -290,7 +290,7 @@ void koto_indexed_album_find_tracks(
 		gchar * full_path = g_strdup_printf("%s%s%s", path, G_DIR_SEPARATOR_S, entry->d_name);
 
 		if (entry->d_type == DT_DIR) { // If this is a directory
-			koto_indexed_album_find_tracks(self, magic_cookie, full_path); // Recursively find tracks
+			koto_album_find_tracks(self, magic_cookie, full_path); // Recursively find tracks
 			g_free(full_path);
 			continue;
 		}
@@ -334,10 +334,10 @@ void koto_indexed_album_find_tracks(
 			g_strfreev(possible_cd_split);
 			g_free(appended_slash_to_path);
 
-			KotoIndexedTrack * track = koto_indexed_track_new(self, full_path, cd);
+			KotoTrack * track = koto_track_new(self, full_path, cd);
 
 			if (track != NULL) { // Is a file
-				koto_indexed_album_add_track(self, track); // Add our file
+				koto_album_add_track(self, track); // Add our file
 			}
 		}
 
@@ -345,13 +345,13 @@ void koto_indexed_album_find_tracks(
 	}
 }
 
-static void koto_indexed_album_get_property(
+static void koto_album_get_property(
 	GObject * obj,
 	guint prop_id,
 	GValue * val,
 	GParamSpec * spec
 ) {
-	KotoIndexedAlbum * self = KOTO_INDEXED_ALBUM(obj);
+	KotoAlbum * self = KOTO_ALBUM(obj);
 
 
 	switch (prop_id) {
@@ -368,7 +368,7 @@ static void koto_indexed_album_get_property(
 			g_value_set_string(val, self->name);
 			break;
 		case PROP_ART_PATH:
-			g_value_set_string(val, koto_indexed_album_get_album_art(self));
+			g_value_set_string(val, koto_album_get_album_art(self));
 			break;
 		case PROP_ARTIST_UUID:
 			g_value_set_string(val, self->artist_uuid);
@@ -379,13 +379,13 @@ static void koto_indexed_album_get_property(
 	}
 }
 
-static void koto_indexed_album_set_property(
+static void koto_album_set_property(
 	GObject * obj,
 	guint prop_id,
 	const GValue * val,
 	GParamSpec * spec
 ) {
-	KotoIndexedAlbum * self = KOTO_INDEXED_ALBUM(obj);
+	KotoAlbum * self = KOTO_ALBUM(obj);
 
 
 	switch (prop_id) {
@@ -397,16 +397,16 @@ static void koto_indexed_album_set_property(
 			self->do_initial_index = g_value_get_boolean(val);
 			break;
 		case PROP_PATH: // Path to the album
-			koto_indexed_album_update_path(self, (gchar*) g_value_get_string(val));
+			koto_album_update_path(self, (gchar*) g_value_get_string(val));
 			break;
 		case PROP_ALBUM_NAME: // Name of album
-			koto_indexed_album_set_album_name(self, g_value_get_string(val));
+			koto_album_set_album_name(self, g_value_get_string(val));
 			break;
 		case PROP_ART_PATH: // Path to art
-			koto_indexed_album_set_album_art(self, g_value_get_string(val));
+			koto_album_set_album_art(self, g_value_get_string(val));
 			break;
 		case PROP_ARTIST_UUID:
-			koto_indexed_album_set_artist_uuid(self, g_value_get_string(val));
+			koto_album_set_artist_uuid(self, g_value_get_string(val));
 			break;
 		default:
 			G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, prop_id, spec);
@@ -414,16 +414,16 @@ static void koto_indexed_album_set_property(
 	}
 }
 
-gchar * koto_indexed_album_get_album_art(KotoIndexedAlbum * self) {
-	if (!KOTO_IS_INDEXED_ALBUM(self)) { // Not an album
+gchar * koto_album_get_album_art(KotoAlbum * self) {
+	if (!KOTO_IS_ALBUM(self)) { // Not an album
 		return g_strdup("");
 	}
 
 	return g_strdup((self->has_album_art && koto_utils_is_string_valid(self->art_path)) ? self->art_path : "");
 }
 
-gchar * koto_indexed_album_get_album_name(KotoIndexedAlbum * self) {
-	if (!KOTO_IS_INDEXED_ALBUM(self)) { // Not an album
+gchar * koto_album_get_album_name(KotoAlbum * self) {
+	if (!KOTO_IS_ALBUM(self)) { // Not an album
 		return NULL;
 	}
 
@@ -434,8 +434,8 @@ gchar * koto_indexed_album_get_album_name(KotoIndexedAlbum * self) {
 	return g_strdup(self->name); // Return duplicate of the name
 }
 
-gchar * koto_indexed_album_get_album_uuid(KotoIndexedAlbum * self) {
-	if (!KOTO_IS_INDEXED_ALBUM(self)) { // Not an album
+gchar * koto_album_get_album_uuid(KotoAlbum * self) {
+	if (!KOTO_IS_ALBUM(self)) { // Not an album
 		return NULL;
 	}
 
@@ -446,19 +446,19 @@ gchar * koto_indexed_album_get_album_uuid(KotoIndexedAlbum * self) {
 	return g_strdup(self->uuid); // Return a duplicate of the UUID
 }
 
-GList * koto_indexed_album_get_tracks(KotoIndexedAlbum * self) {
-	if (!KOTO_IS_INDEXED_ALBUM(self)) { // Not an album
+GList * koto_album_get_tracks(KotoAlbum * self) {
+	if (!KOTO_IS_ALBUM(self)) { // Not an album
 		return NULL;
 	}
 
 	return self->tracks; // Return
 }
 
-void koto_indexed_album_set_album_art(
-	KotoIndexedAlbum * self,
+void koto_album_set_album_art(
+	KotoAlbum * self,
 	const gchar * album_art
 ) {
-	if (!KOTO_IS_INDEXED_ALBUM(self)) { // Not an album
+	if (!KOTO_IS_ALBUM(self)) { // Not an album
 		return;
 	}
 
@@ -475,11 +475,11 @@ void koto_indexed_album_set_album_art(
 	self->has_album_art = TRUE;
 }
 
-void koto_indexed_album_remove_file(
-	KotoIndexedAlbum * self,
-	KotoIndexedTrack * track
+void koto_album_remove_file(
+	KotoAlbum * self,
+	KotoTrack * track
 ) {
-	if (!KOTO_IS_INDEXED_ALBUM(self)) { // Not an album
+	if (!KOTO_IS_ALBUM(self)) { // Not an album
 		return;
 	}
 
@@ -494,11 +494,11 @@ void koto_indexed_album_remove_file(
 	self->tracks = g_list_remove(self->tracks, track_uuid);
 }
 
-void koto_indexed_album_set_album_name(
-	KotoIndexedAlbum * self,
+void koto_album_set_album_name(
+	KotoAlbum * self,
 	const gchar * album_name
 ) {
-	if (!KOTO_IS_INDEXED_ALBUM(self)) { // Not an album
+	if (!KOTO_IS_ALBUM(self)) { // Not an album
 		return;
 	}
 
@@ -513,11 +513,11 @@ void koto_indexed_album_set_album_name(
 	self->name = g_strdup(album_name);
 }
 
-void koto_indexed_album_set_artist_uuid(
-	KotoIndexedAlbum * self,
+void koto_album_set_artist_uuid(
+	KotoAlbum * self,
 	const gchar * artist_uuid
 ) {
-	if (!KOTO_IS_INDEXED_ALBUM(self)) { // Not an album
+	if (!KOTO_IS_ALBUM(self)) { // Not an album
 		return;
 	}
 
@@ -532,8 +532,8 @@ void koto_indexed_album_set_artist_uuid(
 	self->artist_uuid = g_strdup(artist_uuid);
 }
 
-void koto_indexed_album_set_as_current_playlist(KotoIndexedAlbum * self) {
-	if (!KOTO_IS_INDEXED_ALBUM(self)) { // Not an album
+void koto_album_set_as_current_playlist(KotoAlbum * self) {
+	if (!KOTO_IS_ALBUM(self)) { // Not an album
 		return;
 	}
 
@@ -570,14 +570,14 @@ void koto_indexed_album_set_as_current_playlist(KotoIndexedAlbum * self) {
 	koto_current_playlist_set_playlist(current_playlist, new_album_playlist); // Set our new current playlist
 }
 
-gint koto_indexed_album_sort_tracks(
+gint koto_album_sort_tracks(
 	gconstpointer track1_uuid,
 	gconstpointer track2_uuid,
 	gpointer user_data
 ) {
 	(void) user_data;
-	KotoIndexedTrack * track1 = koto_cartographer_get_track_by_uuid(koto_maps, (gchar*) track1_uuid);
-	KotoIndexedTrack * track2 = koto_cartographer_get_track_by_uuid(koto_maps, (gchar*) track2_uuid);
+	KotoTrack * track1 = koto_cartographer_get_track_by_uuid(koto_maps, (gchar*) track1_uuid);
+	KotoTrack * track2 = koto_cartographer_get_track_by_uuid(koto_maps, (gchar*) track2_uuid);
 
 
 	if ((track1 == NULL) && (track2 == NULL)) { // Neither tracks actually exist
@@ -623,11 +623,11 @@ gint koto_indexed_album_sort_tracks(
 	}
 }
 
-void koto_indexed_album_update_path(
-	KotoIndexedAlbum * self,
+void koto_album_update_path(
+	KotoAlbum * self,
 	gchar* new_path
 ) {
-	if (!KOTO_IS_INDEXED_ALBUM(self)) { // Not an album
+	if (!KOTO_IS_ALBUM(self)) { // Not an album
 		return;
 	}
 
@@ -640,17 +640,17 @@ void koto_indexed_album_update_path(
 	}
 
 	self->path = g_strdup(new_path);
-	koto_indexed_album_set_album_name(self, g_path_get_basename(self->path)); // Update our album name based on the base name
+	koto_album_set_album_name(self, g_path_get_basename(self->path)); // Update our album name based on the base name
 
 	if (!self->do_initial_index) { // Not doing our initial index
 		return;
 	}
 
-	koto_indexed_album_find_album_art(self); // Update our path for the album art
+	koto_album_find_album_art(self); // Update our path for the album art
 }
 
-KotoIndexedAlbum * koto_indexed_album_new(
-	KotoIndexedArtist * artist,
+KotoAlbum * koto_album_new(
+	KotoArtist * artist,
 	const gchar * path
 ) {
 	gchar * artist_uuid = NULL;
@@ -658,8 +658,8 @@ KotoIndexedAlbum * koto_indexed_album_new(
 
 	g_object_get(artist, "uuid", &artist_uuid, NULL);
 
-	KotoIndexedAlbum* album = g_object_new(
-		KOTO_TYPE_INDEXED_ALBUM,
+	KotoAlbum* album = g_object_new(
+		KOTO_TYPE_ALBUM,
 		"artist-uuid",
 		artist_uuid,
 		"uuid",
@@ -672,14 +672,14 @@ KotoIndexedAlbum * koto_indexed_album_new(
 	);
 
 
-	koto_indexed_album_commit(album);
-	koto_indexed_album_find_tracks(album, NULL, NULL); // Scan for tracks now that we committed to the database (hopefully)
+	koto_album_commit(album);
+	koto_album_find_tracks(album, NULL, NULL); // Scan for tracks now that we committed to the database (hopefully)
 
 	return album;
 }
 
-KotoIndexedAlbum * koto_indexed_album_new_with_uuid(
-	KotoIndexedArtist * artist,
+KotoAlbum * koto_album_new_with_uuid(
+	KotoArtist * artist,
 	const gchar * uuid
 ) {
 	gchar * artist_uuid = NULL;
@@ -688,7 +688,7 @@ KotoIndexedAlbum * koto_indexed_album_new_with_uuid(
 	g_object_get(artist, "uuid", &artist_uuid, NULL);
 
 	return g_object_new(
-		KOTO_TYPE_INDEXED_ALBUM,
+		KOTO_TYPE_ALBUM,
 		"artist-uuid",
 		artist,
 		"uuid",

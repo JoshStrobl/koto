@@ -23,7 +23,7 @@
 
 extern sqlite3 * koto_db;
 
-struct _KotoIndexedArtist {
+struct _KotoArtist {
 	GObject parent_instance;
 	gchar * uuid;
 	gchar * path;
@@ -33,7 +33,7 @@ struct _KotoIndexedArtist {
 	GList * albums;
 };
 
-G_DEFINE_TYPE(KotoIndexedArtist, koto_indexed_artist, G_TYPE_OBJECT);
+G_DEFINE_TYPE(KotoArtist, koto_artist, G_TYPE_OBJECT);
 
 enum {
 	PROP_0,
@@ -47,27 +47,27 @@ static GParamSpec * props[N_PROPERTIES] = {
 	NULL,
 };
 
-static void koto_indexed_artist_get_property(
+static void koto_artist_get_property(
 	GObject * obj,
 	guint prop_id,
 	GValue * val,
 	GParamSpec * spec
 );
 
-static void koto_indexed_artist_set_property(
+static void koto_artist_set_property(
 	GObject * obj,
 	guint prop_id,
 	const GValue * val,
 	GParamSpec * spec
 );
 
-static void koto_indexed_artist_class_init(KotoIndexedArtistClass * c) {
+static void koto_artist_class_init(KotoArtistClass * c) {
 	GObjectClass * gobject_class;
 
 
 	gobject_class = G_OBJECT_CLASS(c);
-	gobject_class->set_property = koto_indexed_artist_set_property;
-	gobject_class->get_property = koto_indexed_artist_get_property;
+	gobject_class->set_property = koto_artist_set_property;
+	gobject_class->get_property = koto_artist_get_property;
 
 	props[PROP_UUID] = g_param_spec_string(
 		"uuid",
@@ -96,7 +96,7 @@ static void koto_indexed_artist_class_init(KotoIndexedArtistClass * c) {
 	g_object_class_install_properties(gobject_class, N_PROPERTIES, props);
 }
 
-void koto_indexed_artist_commit(KotoIndexedArtist * self) {
+void koto_artist_commit(KotoArtist * self) {
 	if ((self->uuid == NULL) || strcmp(self->uuid, "")) { // UUID not set
 		self->uuid = g_strdup(g_uuid_string_random());
 	}
@@ -123,18 +123,18 @@ void koto_indexed_artist_commit(KotoIndexedArtist * self) {
 	g_free(commit_opt_errmsg);
 }
 
-static void koto_indexed_artist_init(KotoIndexedArtist * self) {
+static void koto_artist_init(KotoArtist * self) {
 	self->has_artist_art = FALSE;
 	self->albums = NULL; // Create a new GList
 }
 
-static void koto_indexed_artist_get_property(
+static void koto_artist_get_property(
 	GObject * obj,
 	guint prop_id,
 	GValue * val,
 	GParamSpec * spec
 ) {
-	KotoIndexedArtist * self = KOTO_INDEXED_ARTIST(obj);
+	KotoArtist * self = KOTO_ARTIST(obj);
 
 
 	switch (prop_id) {
@@ -153,13 +153,13 @@ static void koto_indexed_artist_get_property(
 	}
 }
 
-static void koto_indexed_artist_set_property(
+static void koto_artist_set_property(
 	GObject * obj,
 	guint prop_id,
 	const GValue * val,
 	GParamSpec * spec
 ) {
-	KotoIndexedArtist * self = KOTO_INDEXED_ARTIST(obj);
+	KotoArtist * self = KOTO_ARTIST(obj);
 
 
 	switch (prop_id) {
@@ -168,10 +168,10 @@ static void koto_indexed_artist_set_property(
 			g_object_notify_by_pspec(G_OBJECT(self), props[PROP_UUID]);
 			break;
 		case PROP_PATH:
-			koto_indexed_artist_update_path(self, (gchar*) g_value_get_string(val));
+			koto_artist_update_path(self, (gchar*) g_value_get_string(val));
 			break;
 		case PROP_ARTIST_NAME:
-			koto_indexed_artist_set_artist_name(self, (gchar*) g_value_get_string(val));
+			koto_artist_set_artist_name(self, (gchar*) g_value_get_string(val));
 			break;
 		default:
 			G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, prop_id, spec);
@@ -179,11 +179,11 @@ static void koto_indexed_artist_set_property(
 	}
 }
 
-void koto_indexed_artist_add_album(
-	KotoIndexedArtist * self,
+void koto_artist_add_album(
+	KotoArtist * self,
 	gchar * album_uuid
 ) {
-	if (!KOTO_IS_INDEXED_ARTIST(self)) { // Not an artist
+	if (!KOTO_IS_ARTIST(self)) { // Not an artist
 		return;
 	}
 
@@ -199,31 +199,31 @@ void koto_indexed_artist_add_album(
 	}
 }
 
-GList * koto_indexed_artist_get_albums(KotoIndexedArtist * self) {
-	if (!KOTO_IS_INDEXED_ARTIST(self)) { // Not an artist
+GList * koto_artist_get_albums(KotoArtist * self) {
+	if (!KOTO_IS_ARTIST(self)) { // Not an artist
 		return NULL;
 	}
 
 	return g_list_copy(self->albums);
 }
 
-gchar * koto_indexed_artist_get_name(KotoIndexedArtist * self) {
-	if (!KOTO_IS_INDEXED_ARTIST(self)) { // Not an artist
+gchar * koto_artist_get_name(KotoArtist * self) {
+	if (!KOTO_IS_ARTIST(self)) { // Not an artist
 		return g_strdup("");
 	}
 
 	return g_strdup(koto_utils_is_string_valid(self->artist_name) ? self->artist_name : ""); // Return artist name if set
 }
 
-void koto_indexed_artist_remove_album(
-	KotoIndexedArtist * self,
-	KotoIndexedAlbum * album
+void koto_artist_remove_album(
+	KotoArtist * self,
+	KotoAlbum * album
 ) {
-	if (!KOTO_IS_INDEXED_ARTIST(self)) { // Not an artist
+	if (!KOTO_IS_ARTIST(self)) { // Not an artist
 		return;
 	}
 
-	if (!KOTO_INDEXED_ALBUM(album)) { // No album defined
+	if (!KOTO_ALBUM(album)) { // No album defined
 		return;
 	}
 
@@ -234,11 +234,11 @@ void koto_indexed_artist_remove_album(
 	self->albums = g_list_remove(self->albums, album_uuid);
 }
 
-void koto_indexed_artist_update_path(
-	KotoIndexedArtist * self,
+void koto_artist_update_path(
+	KotoArtist * self,
 	gchar * new_path
 ) {
-	if (!KOTO_IS_INDEXED_ARTIST(self)) { // Not an artist
+	if (!KOTO_IS_ARTIST(self)) { // Not an artist
 		return;
 	}
 
@@ -254,11 +254,11 @@ void koto_indexed_artist_update_path(
 	g_object_notify_by_pspec(G_OBJECT(self), props[PROP_PATH]);
 }
 
-void koto_indexed_artist_set_artist_name(
-	KotoIndexedArtist * self,
+void koto_artist_set_artist_name(
+	KotoArtist * self,
 	gchar * artist_name
 ) {
-	if (!KOTO_IS_INDEXED_ARTIST(self)) { // Not an artist
+	if (!KOTO_IS_ARTIST(self)) { // Not an artist
 		return;
 	}
 
@@ -274,9 +274,9 @@ void koto_indexed_artist_set_artist_name(
 	g_object_notify_by_pspec(G_OBJECT(self), props[PROP_ARTIST_NAME]);
 }
 
-KotoIndexedArtist * koto_indexed_artist_new(gchar * path) {
-	KotoIndexedArtist* artist = g_object_new(
-		KOTO_TYPE_INDEXED_ARTIST,
+KotoArtist * koto_artist_new(gchar * path) {
+	KotoArtist* artist = g_object_new(
+		KOTO_TYPE_ARTIST,
 		"uuid",
 		g_uuid_string_random(),
 		"path",
@@ -287,13 +287,13 @@ KotoIndexedArtist * koto_indexed_artist_new(gchar * path) {
 	);
 
 
-	koto_indexed_artist_commit(artist); // Commit the artist immediately to the database
+	koto_artist_commit(artist); // Commit the artist immediately to the database
 	return artist;
 }
 
-KotoIndexedArtist * koto_indexed_artist_new_with_uuid(const gchar * uuid) {
+KotoArtist * koto_artist_new_with_uuid(const gchar * uuid) {
 	return g_object_new(
-		KOTO_TYPE_INDEXED_ARTIST,
+		KOTO_TYPE_ARTIST,
 		"uuid",
 		g_strdup(uuid),
 		NULL

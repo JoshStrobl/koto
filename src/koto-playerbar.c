@@ -598,10 +598,10 @@ void koto_playerbar_update_track_info(
 		return;
 	}
 
-	KotoIndexedTrack * current_track = koto_playback_engine_get_current_track(playback_engine); // Get the current track from the playback engine
+	KotoTrack * current_track = koto_playback_engine_get_current_track(playback_engine); // Get the current track from the playback engine
 
 
-	if (!KOTO_IS_INDEXED_TRACK(current_track)) {
+	if (!KOTO_IS_TRACK(current_track)) {
 		return;
 	}
 
@@ -612,8 +612,8 @@ void koto_playerbar_update_track_info(
 
 	g_object_get(current_track, "parsed-name", &track_name, "artist-uuid", &artist_uuid, "album-uuid", &album_uuid, NULL);
 
-	KotoIndexedArtist * artist = koto_cartographer_get_artist_by_uuid(koto_maps, artist_uuid);
-	KotoIndexedAlbum * album = koto_cartographer_get_album_by_uuid(koto_maps, album_uuid);
+	KotoArtist * artist = koto_cartographer_get_artist_by_uuid(koto_maps, artist_uuid);
+	KotoAlbum * album = koto_cartographer_get_album_by_uuid(koto_maps, album_uuid);
 
 
 	g_free(artist_uuid);
@@ -623,7 +623,7 @@ void koto_playerbar_update_track_info(
 		gtk_label_set_text(GTK_LABEL(bar->playback_title), track_name); // Set the label
 	}
 
-	if (KOTO_IS_INDEXED_ARTIST(artist)) {
+	if (KOTO_IS_ARTIST(artist)) {
 		gchar * artist_name = NULL;
 		g_object_get(artist, "name", &artist_name, NULL);
 
@@ -635,7 +635,7 @@ void koto_playerbar_update_track_info(
 		}
 	}
 
-	if (KOTO_IS_INDEXED_ALBUM(album)) {
+	if (KOTO_IS_ALBUM(album)) {
 		gchar * album_name = NULL;
 		gchar * art_path = NULL;
 		g_object_get(album, "name", &album_name, "art-path", &art_path, NULL); // Get album name and art path

@@ -28,7 +28,7 @@ extern KotoCartographer * koto_maps;
 
 struct _KotoArtistView {
 	GObject parent_instance;
-	KotoIndexedArtist * artist;
+	KotoArtist * artist;
 	GtkWidget * scrolled_window;
 	GtkWidget * content;
 	GtkWidget * favorites_list;
@@ -79,7 +79,7 @@ static void koto_artist_view_class_init(KotoArtistViewClass * c) {
 		"artist",
 		"Artist",
 		"Artist",
-		KOTO_TYPE_INDEXED_ARTIST,
+		KOTO_TYPE_ARTIST,
 		G_PARAM_CONSTRUCT_ONLY | G_PARAM_EXPLICIT_NOTIFY | G_PARAM_READWRITE
 	);
 
@@ -116,7 +116,7 @@ static void koto_artist_view_set_property(
 
 	switch (prop_id) {
 		case PROP_ARTIST:
-			koto_artist_view_add_artist(self, (KotoIndexedArtist*) g_value_get_object(val));
+			koto_artist_view_add_artist(self, (KotoArtist*) g_value_get_object(val));
 			break;
 		default:
 			G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, prop_id, spec);
@@ -168,9 +168,9 @@ static void koto_artist_view_constructed(GObject * obj) {
 
 void koto_artist_view_add_album(
 	KotoArtistView * self,
-	KotoIndexedAlbum * album
+	KotoAlbum * album
 ) {
-	gchar * album_art = koto_indexed_album_get_album_art(album); // Get the art for the album
+	gchar * album_art = koto_album_get_album_art(album); // Get the art for the album
 
 	GtkWidget * art_image = koto_utils_create_image_from_filepath(album_art, "audio-x-generic-symbolic", 220, 220);
 
@@ -187,7 +187,7 @@ void koto_artist_view_add_album(
 
 void koto_artist_view_add_artist(
 	KotoArtistView * self,
-	KotoIndexedArtist * artist
+	KotoArtist * artist
 ) {
 	if (artist == NULL) {
 		return;
@@ -199,13 +199,13 @@ void koto_artist_view_add_artist(
 		return;
 	}
 
-	GList * albums = koto_indexed_artist_get_albums(self->artist); // Get the albums
+	GList * albums = koto_artist_get_albums(self->artist); // Get the albums
 
 	GList * a;
 
 
 	for (a = albums; a != NULL; a = a->next) {
-		KotoIndexedAlbum * album = koto_cartographer_get_album_by_uuid(koto_maps, (gchar*) a->data);
+		KotoAlbum * album = koto_cartographer_get_album_by_uuid(koto_maps, (gchar*) a->data);
 
 		if (album != NULL) {
 			koto_artist_view_add_album(self, album); // Add the album

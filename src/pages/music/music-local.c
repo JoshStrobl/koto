@@ -42,7 +42,7 @@ struct _KotoPageMusicLocal {
 	GtkWidget * artist_list;
 	GtkWidget * stack;
 
-	KotoIndexedLibrary * lib;
+	KotoLibrary * lib;
 	gboolean constructed;
 };
 
@@ -83,7 +83,7 @@ static void koto_page_music_local_class_init(KotoPageMusicLocalClass * c) {
 		"lib",
 		"Library",
 		"Library",
-		KOTO_TYPE_INDEXED_LIBRARY,
+		KOTO_TYPE_LIBRARY,
 		G_PARAM_CONSTRUCT | G_PARAM_EXPLICIT_NOTIFY | G_PARAM_READWRITE
 	);
 
@@ -120,7 +120,7 @@ static void koto_page_music_local_set_property(
 
 	switch (prop_id) {
 		case PROP_LIB:
-			koto_page_music_local_set_library(self, (KotoIndexedLibrary*) g_value_get_object(val));
+			koto_page_music_local_set_library(self, (KotoLibrary*) g_value_get_object(val));
 			break;
 		default:
 			G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, prop_id, spec);
@@ -168,7 +168,7 @@ static void koto_page_music_local_constructed(GObject * obj) {
 
 void koto_page_music_local_add_artist(
 	KotoPageMusicLocal * self,
-	KotoIndexedArtist * artist
+	KotoArtist * artist
 ) {
 	gchar * artist_name;
 
@@ -197,10 +197,10 @@ void koto_page_music_local_go_to_artist_by_uuid(
 	KotoPageMusicLocal * self,
 	gchar * artist_uuid
 ) {
-	KotoIndexedArtist * artist = koto_cartographer_get_artist_by_uuid(koto_maps, artist_uuid); // Get the artist
+	KotoArtist * artist = koto_cartographer_get_artist_by_uuid(koto_maps, artist_uuid); // Get the artist
 
 
-	if (!KOTO_IS_INDEXED_ARTIST(artist)) { // No artist for this UUID
+	if (!KOTO_IS_ARTIST(artist)) { // No artist for this UUID
 		return;
 	}
 
@@ -239,7 +239,7 @@ void koto_page_music_local_handle_artist_click(
 
 void koto_page_music_local_set_library(
 	KotoPageMusicLocal * self,
-	KotoIndexedLibrary * lib
+	KotoLibrary * lib
 ) {
 	if (lib == NULL) {
 		return;
@@ -259,12 +259,12 @@ void koto_page_music_local_set_library(
 	gpointer artist_key;
 	gpointer artist_data;
 
-	GHashTable * artists = koto_indexed_library_get_artists(self->lib); // Get the artists
+	GHashTable * artists = koto_library_get_artists(self->lib); // Get the artists
 
 
 	g_hash_table_iter_init(&artist_list_iter, artists);
 	while (g_hash_table_iter_next(&artist_list_iter, &artist_key, &artist_data)) { // For each of the music artists
-		KotoIndexedArtist * artist = koto_cartographer_get_artist_by_uuid(koto_maps, (gchar*) artist_data); // Cast our data as a KotoIndexedArtist
+		KotoArtist * artist = koto_cartographer_get_artist_by_uuid(koto_maps, (gchar*) artist_data); // Cast our data as a KotoArtist
 
 		if (artist != NULL) {
 			koto_page_music_local_add_artist(self, artist);

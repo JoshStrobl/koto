@@ -28,7 +28,7 @@ extern KotoCartographer * koto_maps;
 
 struct _KotoDiscView {
 	GtkBox parent_instance;
-	KotoIndexedAlbum * album;
+	KotoAlbum * album;
 	GtkWidget * header;
 	GtkWidget * label;
 	GtkWidget * list;
@@ -84,7 +84,7 @@ static void koto_disc_view_class_init(KotoDiscViewClass * c) {
 		"album",
 		"Album",
 		"Album",
-		KOTO_TYPE_INDEXED_ALBUM,
+		KOTO_TYPE_ALBUM,
 		G_PARAM_CONSTRUCT | G_PARAM_EXPLICIT_NOTIFY | G_PARAM_READWRITE
 	);
 
@@ -127,7 +127,7 @@ static void koto_disc_view_set_property(
 			koto_disc_view_set_disc_number(self, g_value_get_uint(val));
 			break;
 		case PROP_ALBUM:
-			koto_disc_view_set_album(self, (KotoIndexedAlbum*) g_value_get_object(val));
+			koto_disc_view_set_album(self, (KotoAlbum*) g_value_get_object(val));
 			break;
 		default:
 			G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, prop_id, spec);
@@ -171,7 +171,7 @@ void koto_disc_view_list_tracks(
 	gpointer selfptr
 ) {
 	KotoDiscView * self = (KotoDiscView*) selfptr;
-	KotoIndexedTrack * track = koto_cartographer_get_track_by_uuid(koto_maps, (gchar*) data); // Get the track by its UUID
+	KotoTrack * track = koto_cartographer_get_track_by_uuid(koto_maps, (gchar*) data); // Get the track by its UUID
 
 	guint * disc_number;
 
@@ -194,7 +194,7 @@ void koto_disc_view_handle_selected_rows_changed(
 ) {
 	KotoDiscView * self = user_data;
 
-	gchar * album_uuid = koto_indexed_album_get_album_uuid(self->album); // Get the UUID
+	gchar * album_uuid = koto_album_get_album_uuid(self->album); // Get the UUID
 
 
 	if (!koto_utils_is_string_valid(album_uuid)) { // Not set
@@ -209,13 +209,13 @@ void koto_disc_view_handle_selected_rows_changed(
 		return;
 	}
 
-	GList * selected_tracks = NULL; // Create our list of KotoIndexedTracks
+	GList * selected_tracks = NULL; // Create our list of KotoTracks
 	GList * cur_selected_rows;
 
 
 	for (cur_selected_rows = selected_rows; cur_selected_rows != NULL; cur_selected_rows = cur_selected_rows->next) { // Iterate over the rows
 		KotoTrackItem * track_item = (KotoTrackItem*) gtk_list_box_row_get_child(cur_selected_rows->data);
-		selected_tracks = g_list_append(selected_tracks, koto_track_item_get_track(track_item)); // Add the KotoIndexedTrack to our list
+		selected_tracks = g_list_append(selected_tracks, koto_track_item_get_track(track_item)); // Add the KotoTrack to our list
 	}
 
 	g_list_free(cur_selected_rows);
@@ -226,7 +226,7 @@ void koto_disc_view_handle_selected_rows_changed(
 
 void koto_disc_view_set_album(
 	KotoDiscView * self,
-	KotoIndexedAlbum * album
+	KotoAlbum * album
 ) {
 	if (album == NULL) {
 		return;
@@ -238,7 +238,7 @@ void koto_disc_view_set_album(
 
 	self->album = album;
 
-	g_list_foreach(koto_indexed_album_get_tracks(self->album), koto_disc_view_list_tracks, self);
+	g_list_foreach(koto_album_get_tracks(self->album), koto_disc_view_list_tracks, self);
 }
 
 void koto_disc_view_set_disc_number(
@@ -267,7 +267,7 @@ void koto_disc_view_set_disc_label_visible(
 }
 
 KotoDiscView * koto_disc_view_new(
-	KotoIndexedAlbum * album,
+	KotoAlbum * album,
 	guint * disc_number
 ) {
 	return g_object_new(

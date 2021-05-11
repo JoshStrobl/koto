@@ -57,7 +57,7 @@ struct _KotoPlaybackEngine {
 	GstQuery * duration_query;
 	GstQuery * position_query;
 
-	KotoIndexedTrack * current_track;
+	KotoTrack * current_track;
 
 	gboolean is_muted;
 	gboolean is_repeat_enabled;
@@ -271,7 +271,7 @@ void koto_playback_engine_forwards(KotoPlaybackEngine * self) {
 	}
 }
 
-KotoIndexedTrack * koto_playback_engine_get_current_track(KotoPlaybackEngine * self) {
+KotoTrack * koto_playback_engine_get_current_track(KotoPlaybackEngine * self) {
 	return self->current_track;
 }
 
@@ -436,10 +436,10 @@ void koto_playback_engine_set_track_by_uuid(
 		return;
 	}
 
-	KotoIndexedTrack * track = koto_cartographer_get_track_by_uuid(koto_maps, track_uuid); // Get the track from cartographer
+	KotoTrack * track = koto_cartographer_get_track_by_uuid(koto_maps, track_uuid); // Get the track from cartographer
 
 
-	if (!KOTO_IS_INDEXED_TRACK(track)) { // Not a track
+	if (!KOTO_IS_TRACK(track)) { // Not a track
 		return;
 	}
 
@@ -464,7 +464,7 @@ void koto_playback_engine_set_track_by_uuid(
 	koto_playback_engine_set_position(self, 0);
 	koto_playback_engine_set_volume(self, self->volume); // Re-enforce our volume on the updated playbin
 
-	GVariant * metadata = koto_indexed_track_get_metadata_vardict(track); // Get the GVariantBuilder variable dict for the metadata
+	GVariant * metadata = koto_track_get_metadata_vardict(track); // Get the GVariantBuilder variable dict for the metadata
 	GVariantDict * metadata_dict = g_variant_dict_new(metadata);
 
 

@@ -27,7 +27,7 @@ G_BEGIN_DECLS
 
 G_DECLARE_FINAL_TYPE(KotoTrackItem, koto_track_item, KOTO, TRACK_ITEM, GtkBox)
 
-KotoTrackItem* koto_track_item_new(KotoIndexedTrack * track);
+KotoTrackItem* koto_track_item_new(KotoTrack * track);
 void koto_track_item_handle_add_to_playlist_button_click(
 	GtkGestureClick * gesture,
 	int n_press,
@@ -36,11 +36,11 @@ void koto_track_item_handle_add_to_playlist_button_click(
 	gpointer user_data
 );
 
-KotoIndexedTrack * koto_track_item_get_track(KotoTrackItem * self);
+KotoTrack * koto_track_item_get_track(KotoTrackItem * self);
 
 void koto_track_item_set_track(
 	KotoTrackItem * self,
-	KotoIndexedTrack * track
+	KotoTrack * track
 );
 
 G_END_DECLS

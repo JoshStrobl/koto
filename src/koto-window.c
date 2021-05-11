@@ -41,7 +41,7 @@ extern KotoPlaybackEngine * playback_engine;
 
 struct _KotoWindow {
 	GtkApplicationWindow parent_instance;
-	KotoIndexedLibrary * library;
+	KotoLibrary * library;
 	KotoCurrentPlaylist * current_playlist;
 
 	KotoDialogContainer * dialogs;
@@ -222,7 +222,7 @@ void create_new_headerbar(KotoWindow * self) {
 }
 
 void load_library(KotoWindow * self) {
-	KotoIndexedLibrary * lib = koto_indexed_library_new(g_get_user_special_dir(G_USER_DIRECTORY_MUSIC));
+	KotoLibrary * lib = koto_library_new(g_get_user_special_dir(G_USER_DIRECTORY_MUSIC));
 
 
 	if (lib != NULL) {

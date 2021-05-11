@@ -212,10 +212,10 @@ GVariant * handle_get_property(
 	}
 
 	if (g_strcmp0(property_name, "Metadata") == 0) { // Metadata
-		KotoIndexedTrack * current_track = koto_playback_engine_get_current_track(playback_engine);
+		KotoTrack * current_track = koto_playback_engine_get_current_track(playback_engine);
 
-		if (KOTO_IS_INDEXED_TRACK(current_track)) { // Currently playing a track
-			ret = koto_indexed_track_get_metadata_vardict(current_track);
+		if (KOTO_IS_TRACK(current_track)) { // Currently playing a track
+			ret = koto_track_get_metadata_vardict(current_track);
 		} else { // No track
 			GVariantBuilder * builder = g_variant_builder_new(G_VARIANT_TYPE_VARDICT); // Create an empty builder
 			ret = g_variant_builder_end(builder); // return the vardict
@@ -226,8 +226,8 @@ GVariant * handle_get_property(
 		(g_strcmp0(property_name, "CanPlay") == 0) ||
 		(g_strcmp0(property_name, "CanPause") == 0)
 	) {
-		KotoIndexedTrack * current_track = koto_playback_engine_get_current_track(playback_engine);
-		ret = g_variant_new_boolean(KOTO_IS_INDEXED_TRACK(current_track));
+		KotoTrack * current_track = koto_playback_engine_get_current_track(playback_engine);
+		ret = g_variant_new_boolean(KOTO_IS_TRACK(current_track));
 	}
 
 	if (g_strcmp0(property_name, "CanSeek") == 0) { // Can control position over mpris
@@ -316,22 +316,22 @@ void koto_update_mpris_playback_state(GstState state) {
 	);
 }
 
-void koto_update_mpris_info_for_track(KotoIndexedTrack * track) {
-	if (!KOTO_IS_INDEXED_TRACK(track)) {
+void koto_update_mpris_info_for_track(KotoTrack * track) {
+	if (!KOTO_IS_TRACK(track)) {
 		return;
 	}
 
-	GVariant * metadata = koto_indexed_track_get_metadata_vardict(track); // Get the GVariantBuilder variable dict for the metadata
+	GVariant * metadata = koto_track_get_metadata_vardict(track); // Get the GVariantBuilder variable dict for the metadata
 
 
 	koto_update_mpris_info_for_track_with_metadata(track, metadata);
 }
 
 void koto_update_mpris_info_for_track_with_metadata(
-	KotoIndexedTrack * track,
+	KotoTrack * track,
 	GVariant * metadata
 ) {
-	if (!KOTO_IS_INDEXED_TRACK(track)) {
+	if (!KOTO_IS_TRACK(track)) {
 		return;
 	}
 

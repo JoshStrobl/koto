@@ -59,7 +59,7 @@ void koto_playlist_add_to_played_tracks(
 
 void koto_playlist_add_track(
 	KotoPlaylist * self,
-	KotoIndexedTrack * track,
+	KotoTrack * track,
 	gboolean current,
 	gboolean commit_to_table
 );
@@ -102,7 +102,7 @@ gchar * koto_playlist_get_name(KotoPlaylist * self);
 
 gint koto_playlist_get_position_of_track(
 	KotoPlaylist * self,
-	KotoIndexedTrack * track
+	KotoTrack * track
 );
 
 GListStore * koto_playlist_get_store(KotoPlaylist * self);

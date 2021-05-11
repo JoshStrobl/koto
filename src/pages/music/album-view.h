@@ -27,12 +27,12 @@ G_BEGIN_DECLS
 
 G_DECLARE_FINAL_TYPE(KotoAlbumView, koto_album_view, KOTO, ALBUM_VIEW, GObject)
 
-KotoAlbumView* koto_album_view_new(KotoIndexedAlbum * album);
+KotoAlbumView* koto_album_view_new(KotoAlbum * album);
 GtkWidget * koto_album_view_get_main(KotoAlbumView * self);
 
 void koto_album_view_add_track_to_listbox(
-	KotoIndexedAlbum * self,
-	KotoIndexedTrack * track
+	KotoAlbum * self,
+	KotoTrack * track
 );
 
 void koto_album_view_hide_overlay_controls(
@@ -42,7 +42,7 @@ void koto_album_view_hide_overlay_controls(
 
 void koto_album_view_set_album(
 	KotoAlbumView * self,
-	KotoIndexedAlbum * album
+	KotoAlbum * album
 );
 
 void koto_album_view_show_overlay_controls(

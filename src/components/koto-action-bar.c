@@ -192,10 +192,10 @@ void koto_action_bar_handle_go_to_artist_button_clicked(
 		return;
 	}
 
-	KotoIndexedTrack * selected_track = g_list_nth_data(self->current_list, 0); // Get the first item
+	KotoTrack * selected_track = g_list_nth_data(self->current_list, 0); // Get the first item
 
 
-	if (!KOTO_IS_INDEXED_TRACK(selected_track)) { // Not a track
+	if (!KOTO_IS_TRACK(selected_track)) { // Not a track
 		return;
 	}
 
@@ -250,14 +250,14 @@ void koto_action_bar_handle_play_track_button_clicked(
 		goto doclose;
 	}
 
-	KotoIndexedTrack * track = g_list_nth_data(self->current_list, 0); // Get the first track
+	KotoTrack * track = g_list_nth_data(self->current_list, 0); // Get the first track
 
 
-	if (!KOTO_IS_INDEXED_TRACK(track)) { // Not a track
+	if (!KOTO_IS_TRACK(track)) { // Not a track
 		goto doclose;
 	}
 
-	koto_playback_engine_set_track_by_uuid(playback_engine, koto_indexed_track_get_uuid(track)); // Set the track to play
+	koto_playback_engine_set_track_by_uuid(playback_engine, koto_track_get_uuid(track)); // Set the track to play
 
 doclose:
 	koto_action_bar_close(self);
@@ -293,9 +293,9 @@ void koto_action_bar_handle_remove_from_playlist_button_clicked(
 	GList * cur_list;
 
 
-	for (cur_list = self->current_list; cur_list != NULL; cur_list = cur_list->next) { // For each KotoIndexedTrack
-		KotoIndexedTrack * track = cur_list->data;
-		koto_playlist_remove_track_by_uuid(playlist, koto_indexed_track_get_uuid(track)); // Remove this track
+	for (cur_list = self->current_list; cur_list != NULL; cur_list = cur_list->next) { // For each KotoTrack
+		KotoTrack * track = cur_list->data;
+		koto_playlist_remove_track_by_uuid(playlist, koto_track_get_uuid(track)); // Remove this track
 	}
 
 doclose:
