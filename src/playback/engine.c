@@ -19,7 +19,6 @@
 #include <gstreamer-1.0/gst/gst.h>
 #include <gstreamer-1.0/gst/player/player.h>
 #include <gtk-4.0/gtk/gtk.h>
-#include <libnotify/notify.h>
 #include "../db/cartographer.h"
 #include "../playlist/current.h"
 #include "../indexer/structs.h"
