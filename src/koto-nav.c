@@ -224,7 +224,37 @@ void koto_nav_handle_playlist_added(KotoCartographer *carto, KotoPlaylist *playl
 
 			koto_button_add_click_handler(playlist_button, KOTO_BUTTON_CLICK_TYPE_PRIMARY, G_CALLBACK(koto_nav_handle_playlist_button_click), playlist_uuid);
 			koto_window_handle_playlist_added(koto_maps, playlist, main_window); // TODO: MOVE THIS
+			g_signal_connect(playlist, "modified", G_CALLBACK(koto_nav_handle_playlist_modified), self);
 		}
+	}
+}
+
+void koto_nav_handle_playlist_modified(KotoPlaylist *playlist, gpointer user_data) {
+	if (!KOTO_IS_PLAYLIST(playlist)) {
+		return;
+	}
+
+	KotoNav *self = user_data;
+	if (!KOTO_IS_NAV(self)) {
+		return;
+	}
+
+	gchar *playlist_uuid = koto_playlist_get_uuid(playlist); // Get the UUID for a playlist
+
+	KotoButton *playlist_button = g_hash_table_lookup(self->playlist_buttons, playlist_uuid);
+
+	if (!KOTO_IS_BUTTON(playlist_button)) {
+		return;
+	}
+
+	gchar *artwork = koto_playlist_get_artwork(playlist); // Get the artwork
+	if (koto_utils_is_string_valid(artwork)) { // Have valid artwork
+		koto_button_set_file_path(playlist_button, artwork); // Update the artwork path
+	}
+
+	gchar *name = koto_playlist_get_name(playlist); // Get the name
+	if (koto_utils_is_string_valid(name)) { // Have valid name
+		koto_button_set_text(playlist_button, name); // Update the button text
 	}
 }
 

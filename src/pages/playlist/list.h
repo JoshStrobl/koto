@@ -38,6 +38,7 @@ GtkWidget* koto_playlist_page_get_main(KotoPlaylistPage *self);
 void koto_playlist_page_handle_action_bar_closed(KotoActionBar *bar, gpointer data);
 void koto_playlist_page_handle_cover_art_clicked(GtkGestureClick *gesture, int n_press, double x, double y, gpointer user_data);
 void koto_playlist_page_handle_edit_button_clicked(GtkGestureClick *gesture, int n_press, double x, double y, gpointer user_data);
+void koto_playlist_page_handle_playlist_modified(KotoPlaylist *playlist, gpointer user_data);
 void koto_playlist_page_handle_track_album_clicked(GtkGestureClick *gesture, int n_press, double x, double y, gpointer user_data);
 void koto_playlist_page_handle_track_artist_clicked(GtkGestureClick *gesture, int n_press, double x, double y, gpointer user_data);
 void koto_playlist_page_handle_track_name_clicked(GtkGestureClick *gesture, int n_press, double x, double y, gpointer user_data);

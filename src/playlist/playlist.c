@@ -37,6 +37,7 @@ enum {
 };
 
 enum {
+	SIGNAL_MODIFIED,
 	SIGNAL_TRACK_ADDED,
 	SIGNAL_TRACK_LOAD_FINALIZED,
 	SIGNAL_TRACK_REMOVED,
@@ -67,6 +68,7 @@ struct _KotoPlaylist {
 struct _KotoPlaylistClass {
 	GObjectClass parent_class;
 
+	void (* modified) (KotoPlaylist *playlist);
 	void (* track_added) (KotoPlaylist *playlist, gchar *track_uuid);
 	void (* track_load_finalized) (KotoPlaylist *playlist);
 	void (* track_removed) (KotoPlaylist *playlist, gchar *track_uuid);
@@ -127,6 +129,18 @@ static void koto_playlist_class_init(KotoPlaylistClass *c) {
 	);
 
 	g_object_class_install_properties(gobject_class, N_PROPERTIES, props);
+
+	playlist_signals[SIGNAL_MODIFIED] = g_signal_new(
+		"modified",
+		G_TYPE_FROM_CLASS(gobject_class),
+		G_SIGNAL_RUN_FIRST | G_SIGNAL_ACTION,
+		G_STRUCT_OFFSET(KotoPlaylistClass, modified),
+		NULL,
+		NULL,
+		NULL,
+		G_TYPE_NONE,
+		0
+	);
 
 	playlist_signals[SIGNAL_TRACK_ADDED] = g_signal_new(
 		"track-added",
@@ -714,6 +728,14 @@ void koto_playlist_set_artwork(KotoPlaylist *self, const gchar *path) {
 
 	self->art_path = g_strdup(path); // Update our art path to a duplicate of provided path
 
+	if (self->finalized) { // Has already been loaded
+		g_signal_emit(
+			self,
+			playlist_signals[SIGNAL_MODIFIED],
+			0
+		);
+	}
+
 free_cookie:
 		magic_close(cookie); // Close and free the cookie to the cookie monster
 }
@@ -728,6 +750,14 @@ void koto_playlist_set_name(KotoPlaylist *self, const gchar *name) {
 	}
 
 	self->name = g_strdup(name);
+
+	if (self->finalized) { // Has already been loaded
+		g_signal_emit(
+			self,
+			playlist_signals[SIGNAL_MODIFIED],
+			0
+		);
+	}
 }
 
 void koto_playlist_set_position(KotoPlaylist *self, gint position) {

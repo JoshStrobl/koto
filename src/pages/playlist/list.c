@@ -310,6 +310,27 @@ void koto_playlist_page_handle_edit_button_clicked(GtkGestureClick *gesture, int
 	koto_window_show_dialog(main_window, "create-modify-playlist");
 }
 
+void koto_playlist_page_handle_playlist_modified(KotoPlaylist *playlist, gpointer user_data) {
+	if (!KOTO_IS_PLAYLIST(playlist)) {
+		return;
+	}
+
+	KotoPlaylistPage *self = user_data;
+	if (!KOTO_IS_PLAYLIST_PAGE(self)) {
+		return;
+	}
+
+	gchar *artwork = koto_playlist_get_artwork(playlist); // Get the artwork
+	if (koto_utils_is_string_valid(artwork)) { // Have valid artwork
+		koto_cover_art_button_set_art_path(self->playlist_image, artwork); // Update our Koto Cover Art Button
+	}
+
+	gchar *name = koto_playlist_get_name(playlist); // Get the name
+	if (koto_utils_is_string_valid(name)) { // Have valid name
+		gtk_label_set_label(GTK_LABEL(self->name_label), name); // Update the name label
+	}
+}
+
 void koto_playlist_page_handle_track_album_clicked(GtkGestureClick *gesture, int n_press, double x, double y, gpointer user_data) {
 	(void) gesture; (void) n_press; (void) x; (void) y;
 	KotoPlaylistPage *self  = user_data;
@@ -411,6 +432,8 @@ void koto_playlist_page_set_playlist_uuid(KotoPlaylistPage *self, gchar *playlis
 	self->playlist = playlist;
 	koto_playlist_page_set_playlist_model(self, KOTO_PREFERRED_MODEL_TYPE_DEFAULT); // TODO: Enable this to be changed
 	koto_playlist_page_update_header(self); // Update our header
+
+	g_signal_connect(playlist, "modified", G_CALLBACK(koto_playlist_page_handle_playlist_modified), self); // Handle playlist modification
 }
 
 void koto_playlist_page_set_playlist_model(KotoPlaylistPage *self, KotoPreferredModelType model) {
