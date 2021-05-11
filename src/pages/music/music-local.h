@@ -26,14 +26,39 @@ G_BEGIN_DECLS
 
 #define KOTO_TYPE_PAGE_MUSIC_LOCAL (koto_page_music_local_get_type())
 
-G_DECLARE_FINAL_TYPE (KotoPageMusicLocal, koto_page_music_local, KOTO, PAGE_MUSIC_LOCAL, GtkBox)
+G_DECLARE_FINAL_TYPE(KotoPageMusicLocal, koto_page_music_local, KOTO, PAGE_MUSIC_LOCAL, GtkBox)
 
 KotoPageMusicLocal* koto_page_music_local_new();
-void koto_page_music_local_add_artist(KotoPageMusicLocal *self, KotoIndexedArtist *artist);
-void koto_page_music_local_handle_artist_click(GtkListBox *box, GtkListBoxRow *row, gpointer data);
-void koto_page_music_local_go_to_artist_by_name(KotoPageMusicLocal *self, gchar *artist_name);
-void koto_page_music_local_go_to_artist_by_uuid(KotoPageMusicLocal *self, gchar *artist_uuid);
-void koto_page_music_local_set_library(KotoPageMusicLocal *self, KotoIndexedLibrary *lib);
-int koto_page_music_local_sort_artists(GtkListBoxRow *artist1, GtkListBoxRow *artist2, gpointer user_data);
+void koto_page_music_local_add_artist(
+	KotoPageMusicLocal * self,
+	KotoIndexedArtist * artist
+);
+
+void koto_page_music_local_handle_artist_click(
+	GtkListBox * box,
+	GtkListBoxRow * row,
+	gpointer data
+);
+
+void koto_page_music_local_go_to_artist_by_name(
+	KotoPageMusicLocal * self,
+	gchar * artist_name
+);
+
+void koto_page_music_local_go_to_artist_by_uuid(
+	KotoPageMusicLocal * self,
+	gchar * artist_uuid
+);
+
+void koto_page_music_local_set_library(
+	KotoPageMusicLocal * self,
+	KotoIndexedLibrary * lib
+);
+
+int koto_page_music_local_sort_artists(
+	GtkListBoxRow * artist1,
+	GtkListBoxRow * artist2,
+	gpointer user_data
+);
 
 G_END_DECLS

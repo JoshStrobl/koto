@@ -25,7 +25,7 @@ G_BEGIN_DECLS
 
 /**
  * Type Definition
-**/
+ **/
 
 #define KOTO_TYPE_ADD_REMOVE_TRACK_POPOVER koto_add_remove_track_popover_get_type()
 G_DECLARE_FINAL_TYPE(KotoAddRemoveTrackPopover, koto_add_remove_track_popover, KOTO, ADD_REMOVE_TRACK_POPOVER, GtkPopover);
@@ -33,16 +33,48 @@ G_DECLARE_FINAL_TYPE(KotoAddRemoveTrackPopover, koto_add_remove_track_popover, K
 
 /**
  * Functions
-**/
+ **/
 
-KotoAddRemoveTrackPopover* koto_add_remove_track_popover_new();
-void koto_add_remove_track_popover_add_playlist(KotoAddRemoveTrackPopover *self, KotoPlaylist *playlist);
-void koto_add_remove_track_popover_clear_tracks(KotoAddRemoveTrackPopover *self);
-void koto_add_remove_track_popover_remove_playlist(KotoAddRemoveTrackPopover *self, gchar *playlist_uuid);
-void koto_add_remove_track_popover_handle_checkbutton_toggle(GtkCheckButton *btn, gpointer user_data);
-void koto_add_remove_track_popover_handle_playlist_added(KotoCartographer *carto, KotoPlaylist *playlist, gpointer user_data);
-void koto_add_remove_track_popover_handle_playlist_removed(KotoCartographer *carto, gchar *playlist_uuid, gpointer user_data);
-void koto_add_remove_track_popover_set_pointing_to_widget(KotoAddRemoveTrackPopover *self, GtkWidget *widget, GtkPositionType pos);
-void koto_add_remove_track_popover_set_tracks(KotoAddRemoveTrackPopover *self, GList *tracks);
+KotoAddRemoveTrackPopover * koto_add_remove_track_popover_new();
+
+void koto_add_remove_track_popover_add_playlist(
+	KotoAddRemoveTrackPopover * self,
+	KotoPlaylist * playlist
+);
+
+void koto_add_remove_track_popover_clear_tracks(KotoAddRemoveTrackPopover * self);
+
+void koto_add_remove_track_popover_remove_playlist(
+	KotoAddRemoveTrackPopover * self,
+	gchar * playlist_uuid
+);
+
+void koto_add_remove_track_popover_handle_checkbutton_toggle(
+	GtkCheckButton * btn,
+	gpointer user_data
+);
+
+void koto_add_remove_track_popover_handle_playlist_added(
+	KotoCartographer * carto,
+	KotoPlaylist * playlist,
+	gpointer user_data
+);
+
+void koto_add_remove_track_popover_handle_playlist_removed(
+	KotoCartographer * carto,
+	gchar * playlist_uuid,
+	gpointer user_data
+);
+
+void koto_add_remove_track_popover_set_pointing_to_widget(
+	KotoAddRemoveTrackPopover * self,
+	GtkWidget * widget,
+	GtkPositionType pos
+);
+
+void koto_add_remove_track_popover_set_tracks(
+	KotoAddRemoveTrackPopover * self,
+	GList * tracks
+);
 
 G_END_DECLS

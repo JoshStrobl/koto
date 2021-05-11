@@ -24,8 +24,13 @@ extern int KOTO_DB_FAIL;
 extern gboolean created_new_db;
 
 void close_db();
+
 int create_db_tables();
-gchar* get_db_path();
+
+gchar * get_db_path();
+
 int enable_foreign_keys();
+
 int have_existing_db();
+
 int open_db();

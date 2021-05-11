@@ -20,12 +20,18 @@
 #include <gstreamer-1.0/gst/gst.h>
 #include "../koto-utils.h"
 
-GHashTable *supported_mimes_hash = NULL;
-GList *supported_mimes = NULL;
+GHashTable * supported_mimes_hash = NULL;
+GList * supported_mimes = NULL;
 
-gboolean koto_playback_engine_gst_caps_iter(GstCapsFeatures *features, GstStructure *structure, gpointer user_data) {
-	(void) features; (void) user_data;
-	gchar *caps_name = (gchar*) gst_structure_get_name(structure); // Get the name, typically a mimetype
+gboolean koto_playback_engine_gst_caps_iter(
+	GstCapsFeatures * features,
+	GstStructure * structure,
+	gpointer user_data
+) {
+	(void) features;
+	(void) user_data;
+	gchar * caps_name = (gchar*) gst_structure_get_name(structure); // Get the name, typically a mimetype
+
 
 	if (g_str_has_prefix(caps_name, "unknown")) { // Is unknown
 		return TRUE;
@@ -42,11 +48,16 @@ gboolean koto_playback_engine_gst_caps_iter(GstCapsFeatures *features, GstStruct
 	return TRUE;
 }
 
-void koto_playback_engine_gst_pad_iter(gpointer list_data, gpointer user_data) {
+void koto_playback_engine_gst_pad_iter(
+	gpointer list_data,
+	gpointer user_data
+) {
 	(void) user_data;
-	GstStaticPadTemplate *templ = list_data;
+	GstStaticPadTemplate * templ = list_data;
+
+
 	if (templ->direction == GST_PAD_SINK) { // Is a sink pad
-		GstCaps *capabilities = gst_static_pad_template_get_caps(templ); // Get the capabilities
+		GstCaps * capabilities = gst_static_pad_template_get_caps(templ); // Get the capabilities
 		gst_caps_foreach(capabilities, koto_playback_engine_gst_caps_iter, NULL); // Iterate over and add to mimes
 		gst_caps_unref(capabilities);
 	}
@@ -55,12 +66,14 @@ void koto_playback_engine_gst_pad_iter(gpointer list_data, gpointer user_data) {
 void koto_playback_engine_get_supported_mimetypes() {
 	// Credit for code goes to https://github.com/mopidy/mopidy/issues/812#issuecomment-75868363
 	// These are GstElementFactory
-	GList *elements = gst_element_factory_list_get_elements(GST_ELEMENT_FACTORY_TYPE_DEPAYLOADER | GST_ELEMENT_FACTORY_TYPE_DEMUXER | GST_ELEMENT_FACTORY_TYPE_PARSER | GST_ELEMENT_FACTORY_TYPE_DECODER | GST_ELEMENT_FACTORY_TYPE_MEDIA_AUDIO, GST_RANK_NONE);
+	GList * elements = gst_element_factory_list_get_elements(GST_ELEMENT_FACTORY_TYPE_DEPAYLOADER | GST_ELEMENT_FACTORY_TYPE_DEMUXER | GST_ELEMENT_FACTORY_TYPE_PARSER | GST_ELEMENT_FACTORY_TYPE_DECODER | GST_ELEMENT_FACTORY_TYPE_MEDIA_AUDIO, GST_RANK_NONE);
 
-	GList *ele;
+	GList * ele;
+
+
 	for (ele = elements; ele != NULL; ele = ele->next) { // For each of the elements
 		// GList of GstStaticPadTemplate
-		GList *static_pads = (GList*) gst_element_factory_get_static_pad_templates(ele->data); // Get the pads
+		GList * static_pads = (GList*) gst_element_factory_get_static_pad_templates(ele->data); // Get the pads
 		g_list_foreach(static_pads, koto_playback_engine_gst_pad_iter, NULL);
 	}
 }

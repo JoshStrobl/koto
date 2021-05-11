@@ -22,11 +22,33 @@
 G_BEGIN_DECLS
 
 void grab_media_keys();
-void handle_media_keys_async_done(GObject *source_object, GAsyncResult *res, gpointer user_data);
-void handle_media_keys_signal(GDBusProxy *proxy, const gchar *sender_name, const gchar *signal_name, GVariant *parameters, gpointer user_data);
-void handle_window_enter(GtkEventControllerFocus *controller, gpointer user_data);
-void handle_window_leave(GtkEventControllerFocus *controller, gpointer user_data);
+
+void handle_media_keys_async_done(
+	GObject * source_object,
+	GAsyncResult * res,
+	gpointer user_data
+);
+
+void handle_media_keys_signal(
+	GDBusProxy * proxy,
+	const gchar * sender_name,
+	const gchar * signal_name,
+	GVariant * parameters,
+	gpointer user_data
+);
+
+void handle_window_enter(
+	GtkEventControllerFocus * controller,
+	gpointer user_data
+);
+
+void handle_window_leave(
+	GtkEventControllerFocus * controller,
+	gpointer user_data
+);
+
 void release_media_keys();
+
 void setup_mediakeys_interface();
 
 G_END_DECLS

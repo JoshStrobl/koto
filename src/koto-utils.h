@@ -21,12 +21,30 @@
 
 G_BEGIN_DECLS
 
-GtkFileChooserNative* koto_utils_create_image_file_chooser(gchar *file_chooser_label);
-GtkWidget* koto_utils_create_image_from_filepath(gchar *filepath, gchar *fallback_icon, guint width, guint height);
-gchar* koto_utils_get_filename_without_extension(gchar *filename);
-gboolean koto_utils_is_string_valid(gchar *str);
-void koto_utils_push_queue_element_to_store(gpointer data, gpointer user_data);
-gchar *koto_utils_replace_string_all(gchar *str, gchar *find, gchar *repl);
-gchar* koto_utils_unquote_string(gchar *s);
+GtkFileChooserNative * koto_utils_create_image_file_chooser(gchar * file_chooser_label);
+
+GtkWidget * koto_utils_create_image_from_filepath(
+	gchar * filepath,
+	gchar * fallback_icon,
+	guint width,
+	guint height
+);
+
+gchar * koto_utils_get_filename_without_extension(gchar * filename);
+
+gboolean koto_utils_is_string_valid(gchar * str);
+
+void koto_utils_push_queue_element_to_store(
+	gpointer data,
+	gpointer user_data
+);
+
+gchar * koto_utils_replace_string_all(
+	gchar * str,
+	gchar * find,
+	gchar * repl
+);
+
+gchar * koto_utils_unquote_string(gchar * s);
 
 G_END_DECLS

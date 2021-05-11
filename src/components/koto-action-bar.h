@@ -39,20 +39,67 @@ GType koto_action_bar_get_type(void) G_GNUC_CONST;
 
 /**
  * Action Bar Functions
-**/
+ **/
 
-KotoActionBar* koto_action_bar_new(void);
-void koto_action_bar_close(KotoActionBar *self);
-GtkActionBar* koto_action_bar_get_main(KotoActionBar *self);
-void koto_action_bar_handle_close_button_clicked(GtkGestureClick *gesture, int n_press, double x, double y, gpointer data);
-void koto_action_bar_handle_go_to_artist_button_clicked(GtkButton *button, gpointer data);
-void koto_action_bar_handle_playlists_button_clicked(GtkButton *button, gpointer data);
-void koto_action_bar_handle_play_track_button_clicked(GtkButton *button, gpointer data);
-void koto_action_bar_handle_remove_from_playlist_button_clicked(GtkButton *button, gpointer data);
-void koto_action_bar_set_tracks_in_album_selection(KotoActionBar *self, gchar *album_uuid, GList *tracks);
-void koto_action_bar_set_tracks_in_playlist_selection(KotoActionBar *self, gchar *playlist_uuid, GList *tracks);
-void koto_action_bar_toggle_go_to_artist_visibility(KotoActionBar *self, gboolean visible);
-void koto_action_bar_toggle_play_button_visibility(KotoActionBar *self, gboolean visible);
-void koto_action_bar_toggle_reveal(KotoActionBar *self, gboolean state);
+KotoActionBar * koto_action_bar_new(void);
+
+void koto_action_bar_close(KotoActionBar * self);
+
+GtkActionBar * koto_action_bar_get_main(KotoActionBar * self);
+
+void koto_action_bar_handle_close_button_clicked(
+	GtkGestureClick * gesture,
+	int n_press,
+	double x,
+	double y,
+	gpointer data
+);
+
+void koto_action_bar_handle_go_to_artist_button_clicked(
+	GtkButton * button,
+	gpointer data
+);
+
+void koto_action_bar_handle_playlists_button_clicked(
+	GtkButton * button,
+	gpointer data
+);
+
+void koto_action_bar_handle_play_track_button_clicked(
+	GtkButton * button,
+	gpointer data
+);
+
+void koto_action_bar_handle_remove_from_playlist_button_clicked(
+	GtkButton * button,
+	gpointer data
+);
+
+void koto_action_bar_set_tracks_in_album_selection(
+	KotoActionBar * self,
+	gchar * album_uuid,
+	GList * tracks
+);
+
+void koto_action_bar_set_tracks_in_playlist_selection(
+	KotoActionBar * self,
+	gchar * playlist_uuid,
+	GList * tracks
+);
+
+void koto_action_bar_toggle_go_to_artist_visibility(
+	KotoActionBar * self,
+	gboolean visible
+);
+
+void koto_action_bar_toggle_play_button_visibility(
+	KotoActionBar * self,
+	gboolean visible
+);
+
+void koto_action_bar_toggle_reveal(
+	KotoActionBar * self,
+	gboolean state
+);
 
 G_END_DECLS

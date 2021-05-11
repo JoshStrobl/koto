@@ -24,10 +24,10 @@
 struct _KotoCoverArtButton {
 	GObject parent_instance;
 
-	GtkWidget *art;
-	GtkWidget *main;
-	GtkWidget *revealer;
-	KotoButton *play_pause_button;
+	GtkWidget * art;
+	GtkWidget * main;
+	GtkWidget * revealer;
+	KotoButton * play_pause_button;
 
 	guint height;
 	guint width;
@@ -43,12 +43,27 @@ enum {
 	N_PROPERTIES
 };
 
-static GParamSpec *props[N_PROPERTIES] = { NULL, };
-static void koto_cover_art_button_get_property(GObject *obj, guint prop_id, GValue *val, GParamSpec *spec);
-static void koto_cover_art_button_set_property(GObject *obj, guint prop_id, const GValue *val, GParamSpec *spec);
+static GParamSpec * props[N_PROPERTIES] = {
+	NULL,
+};
+static void koto_cover_art_button_get_property(
+	GObject * obj,
+	guint prop_id,
+	GValue * val,
+	GParamSpec * spec
+);
 
-static void koto_cover_art_button_class_init(KotoCoverArtButtonClass *c) {
-	GObjectClass *gobject_class;
+static void koto_cover_art_button_set_property(
+	GObject * obj,
+	guint prop_id,
+	const GValue * val,
+	GParamSpec * spec
+);
+
+static void koto_cover_art_button_class_init(KotoCoverArtButtonClass * c) {
+	GObjectClass * gobject_class;
+
+
 	gobject_class = G_OBJECT_CLASS(c);
 	gobject_class->get_property = koto_cover_art_button_get_property;
 	gobject_class->set_property = koto_cover_art_button_set_property;
@@ -60,7 +75,7 @@ static void koto_cover_art_button_class_init(KotoCoverArtButtonClass *c) {
 		0,
 		G_MAXUINT,
 		0,
-		G_PARAM_CONSTRUCT|G_PARAM_EXPLICIT_NOTIFY|G_PARAM_WRITABLE
+		G_PARAM_CONSTRUCT | G_PARAM_EXPLICIT_NOTIFY | G_PARAM_WRITABLE
 	);
 
 	props[PROP_DESIRED_WIDTH] = g_param_spec_uint(
@@ -70,7 +85,7 @@ static void koto_cover_art_button_class_init(KotoCoverArtButtonClass *c) {
 		0,
 		G_MAXUINT,
 		0,
-		G_PARAM_CONSTRUCT|G_PARAM_EXPLICIT_NOTIFY|G_PARAM_WRITABLE
+		G_PARAM_CONSTRUCT | G_PARAM_EXPLICIT_NOTIFY | G_PARAM_WRITABLE
 	);
 
 	props[PROP_ART_PATH] = g_param_spec_string(
@@ -78,20 +93,22 @@ static void koto_cover_art_button_class_init(KotoCoverArtButtonClass *c) {
 		"Path to art",
 		"Path to art",
 		NULL,
-		G_PARAM_CONSTRUCT|G_PARAM_EXPLICIT_NOTIFY|G_PARAM_WRITABLE
+		G_PARAM_CONSTRUCT | G_PARAM_EXPLICIT_NOTIFY | G_PARAM_WRITABLE
 	);
 
 	g_object_class_install_properties(gobject_class, N_PROPERTIES, props);
 }
 
-static void koto_cover_art_button_init(KotoCoverArtButton *self) {
+static void koto_cover_art_button_init(KotoCoverArtButton * self) {
 	self->main = gtk_overlay_new(); // Create our overlay container
 	gtk_widget_add_css_class(self->main, "cover-art-button");
 	self->revealer = gtk_revealer_new(); // Create a new revealer
 	gtk_revealer_set_transition_type(GTK_REVEALER(self->revealer), GTK_REVEALER_TRANSITION_TYPE_CROSSFADE);
 	gtk_revealer_set_transition_duration(GTK_REVEALER(self->revealer), 400);
 
-	GtkWidget *controls = gtk_center_box_new(); // Create a center box for the controls
+	GtkWidget * controls = gtk_center_box_new(); // Create a center box for the controls
+
+
 	self->play_pause_button = koto_button_new_with_icon("", "media-playback-start-symbolic", "media-playback-pause-symbolic", KOTO_BUTTON_PIXBUF_SIZE_NORMAL);
 	gtk_center_box_set_center_widget(GTK_CENTER_BOX(controls), GTK_WIDGET(self->play_pause_button));
 
@@ -99,13 +116,20 @@ static void koto_cover_art_button_init(KotoCoverArtButton *self) {
 	koto_cover_art_button_hide_overlay_controls(NULL, self); // Hide by default
 	gtk_overlay_add_overlay(GTK_OVERLAY(self->main), self->revealer); // Add our revealer as the overlay
 
-	GtkEventController *motion_controller = gtk_event_controller_motion_new(); // Create our new motion event controller to track mouse leave and enter
+	GtkEventController * motion_controller = gtk_event_controller_motion_new(); // Create our new motion event controller to track mouse leave and enter
+
+
 	g_signal_connect(motion_controller, "enter", G_CALLBACK(koto_cover_art_button_show_overlay_controls), self);
 	g_signal_connect(motion_controller, "leave", G_CALLBACK(koto_cover_art_button_hide_overlay_controls), self);
 	gtk_widget_add_controller(self->main, motion_controller);
 }
 
-static void koto_cover_art_button_get_property(GObject *obj, guint prop_id, GValue *val, GParamSpec *spec) {
+static void koto_cover_art_button_get_property(
+	GObject * obj,
+	guint prop_id,
+	GValue * val,
+	GParamSpec * spec
+) {
 	(void) val;
 
 	switch (prop_id) {
@@ -115,8 +139,14 @@ static void koto_cover_art_button_get_property(GObject *obj, guint prop_id, GVal
 	}
 }
 
-static void koto_cover_art_button_set_property(GObject *obj, guint prop_id, const GValue *val, GParamSpec *spec) {
-	KotoCoverArtButton *self = KOTO_COVER_ART_BUTTON(obj);
+static void koto_cover_art_button_set_property(
+	GObject * obj,
+	guint prop_id,
+	const GValue * val,
+	GParamSpec * spec
+) {
+	KotoCoverArtButton * self = KOTO_COVER_ART_BUTTON(obj);
+
 
 	switch (prop_id) {
 		case PROP_ART_PATH:
@@ -134,13 +164,18 @@ static void koto_cover_art_button_set_property(GObject *obj, guint prop_id, cons
 	}
 }
 
-void koto_cover_art_button_hide_overlay_controls(GtkEventControllerFocus *controller, gpointer data) {
+void koto_cover_art_button_hide_overlay_controls(
+	GtkEventControllerFocus * controller,
+	gpointer data
+) {
 	(void) controller;
 	KotoCoverArtButton* self = data;
+
+
 	gtk_revealer_set_reveal_child(GTK_REVEALER(self->revealer), FALSE);
 }
 
-KotoButton* koto_cover_art_button_get_button(KotoCoverArtButton *self) {
+KotoButton * koto_cover_art_button_get_button(KotoCoverArtButton * self) {
 	if (!KOTO_IS_COVER_ART_BUTTON(self)) {
 		return NULL;
 	}
@@ -148,7 +183,7 @@ KotoButton* koto_cover_art_button_get_button(KotoCoverArtButton *self) {
 	return self->play_pause_button;
 }
 
-GtkWidget* koto_cover_art_button_get_main(KotoCoverArtButton *self) {
+GtkWidget * koto_cover_art_button_get_main(KotoCoverArtButton * self) {
 	if (!KOTO_IS_COVER_ART_BUTTON(self)) {
 		return NULL;
 	}
@@ -156,12 +191,16 @@ GtkWidget* koto_cover_art_button_get_main(KotoCoverArtButton *self) {
 	return self->main;
 }
 
-void koto_cover_art_button_set_art_path(KotoCoverArtButton *self, gchar *art_path) {
+void koto_cover_art_button_set_art_path(
+	KotoCoverArtButton * self,
+	gchar * art_path
+) {
 	if (!KOTO_IS_COVER_ART_BUTTON(self)) {
 		return;
 	}
 
 	gboolean defined_artwork = koto_utils_is_string_valid(art_path);
+
 
 	if (GTK_IS_IMAGE(self->art)) { // Already have an image
 		if (!defined_artwork) { // No art path or empty string
@@ -175,7 +214,11 @@ void koto_cover_art_button_set_art_path(KotoCoverArtButton *self, gchar *art_pat
 	}
 }
 
-void koto_cover_art_button_set_dimensions(KotoCoverArtButton *self, guint height, guint width) {
+void koto_cover_art_button_set_dimensions(
+	KotoCoverArtButton * self,
+	guint height,
+	guint width
+) {
 	if (!KOTO_IS_COVER_ART_BUTTON(self)) {
 		return;
 	}
@@ -197,15 +240,24 @@ void koto_cover_art_button_set_dimensions(KotoCoverArtButton *self, guint height
 	}
 }
 
-void koto_cover_art_button_show_overlay_controls(GtkEventControllerFocus *controller, gpointer data) {
+void koto_cover_art_button_show_overlay_controls(
+	GtkEventControllerFocus * controller,
+	gpointer data
+) {
 	(void) controller;
 	KotoCoverArtButton* self = data;
+
 
 	gtk_revealer_set_reveal_child(GTK_REVEALER(self->revealer), TRUE);
 }
 
-KotoCoverArtButton* koto_cover_art_button_new(guint height, guint width, gchar *art_path) {
-	return g_object_new(KOTO_TYPE_COVER_ART_BUTTON,
+KotoCoverArtButton * koto_cover_art_button_new(
+	guint height,
+	guint width,
+	gchar * art_path
+) {
+	return g_object_new(
+		KOTO_TYPE_COVER_ART_BUTTON,
 		"desired-height",
 		height,
 		"desired-width",

@@ -24,8 +24,8 @@
 #include "../koto-window.h"
 #include "create-modify-dialog.h"
 
-extern KotoCartographer *koto_maps;
-extern KotoWindow *main_window;
+extern KotoCartographer * koto_maps;
+extern KotoWindow * main_window;
 
 enum {
 	PROP_DIALOG_0,
@@ -33,29 +33,44 @@ enum {
 	N_PROPS
 };
 
-static GParamSpec *dialog_props[N_PROPS] = { NULL, };
+static GParamSpec * dialog_props[N_PROPS] = {
+	NULL,
+};
 
 
 struct _KotoCreateModifyPlaylistDialog {
 	GtkBox parent_instance;
-	GtkWidget *playlist_image;
-	GtkWidget *name_entry;
+	GtkWidget * playlist_image;
+	GtkWidget * name_entry;
 
-	GtkWidget *create_button;
+	GtkWidget * create_button;
 
-	gchar *playlist_image_path;
-	gchar *playlist_uuid;
+	gchar * playlist_image_path;
+	gchar * playlist_uuid;
 };
 
 G_DEFINE_TYPE(KotoCreateModifyPlaylistDialog, koto_create_modify_playlist_dialog, GTK_TYPE_BOX);
 
-KotoCreateModifyPlaylistDialog *playlist_create_modify_dialog;
+KotoCreateModifyPlaylistDialog * playlist_create_modify_dialog;
 
-static void koto_create_modify_playlist_dialog_get_property(GObject *obj, guint prop_id, GValue *val, GParamSpec *spec);
-static void koto_create_modify_playlist_dialog_set_property(GObject *obj, guint prop_id, const GValue *val, GParamSpec *spec);
+static void koto_create_modify_playlist_dialog_get_property(
+	GObject * obj,
+	guint prop_id,
+	GValue * val,
+	GParamSpec * spec
+);
 
-static void koto_create_modify_playlist_dialog_class_init(KotoCreateModifyPlaylistDialogClass *c) {
-	GObjectClass *gobject_class;
+static void koto_create_modify_playlist_dialog_set_property(
+	GObject * obj,
+	guint prop_id,
+	const GValue * val,
+	GParamSpec * spec
+);
+
+static void koto_create_modify_playlist_dialog_class_init(KotoCreateModifyPlaylistDialogClass * c) {
+	GObjectClass * gobject_class;
+
+
 	gobject_class = G_OBJECT_CLASS(c);
 	gobject_class->set_property = koto_create_modify_playlist_dialog_set_property;
 	gobject_class->get_property = koto_create_modify_playlist_dialog_get_property;
@@ -65,13 +80,13 @@ static void koto_create_modify_playlist_dialog_class_init(KotoCreateModifyPlayli
 		"Playlist UUID",
 		"Playlist UUID",
 		NULL,
-		G_PARAM_CONSTRUCT|G_PARAM_EXPLICIT_NOTIFY|G_PARAM_READWRITE
+		G_PARAM_CONSTRUCT | G_PARAM_EXPLICIT_NOTIFY | G_PARAM_READWRITE
 	);
 
 	g_object_class_install_properties(gobject_class, N_PROPS, dialog_props);
 }
 
-static void koto_create_modify_playlist_dialog_init(KotoCreateModifyPlaylistDialog *self) {
+static void koto_create_modify_playlist_dialog_init(KotoCreateModifyPlaylistDialog * self) {
 	self->playlist_image_path = NULL;
 
 	gtk_widget_set_halign(GTK_WIDGET(self), GTK_ALIGN_CENTER);
@@ -82,11 +97,15 @@ static void koto_create_modify_playlist_dialog_init(KotoCreateModifyPlaylistDial
 	gtk_widget_set_size_request(self->playlist_image, 220, 220);
 	gtk_box_append(GTK_BOX(self), self->playlist_image); // Add our image
 
-	GtkDropTarget *target = gtk_drop_target_new(G_TYPE_FILE, GDK_ACTION_COPY);
+	GtkDropTarget * target = gtk_drop_target_new(G_TYPE_FILE, GDK_ACTION_COPY);
+
+
 	g_signal_connect(GTK_EVENT_CONTROLLER(target), "drop", G_CALLBACK(koto_create_modify_playlist_dialog_handle_drop), self);
 	gtk_widget_add_controller(self->playlist_image, GTK_EVENT_CONTROLLER(target));
 
-	GtkGesture *image_click_controller = gtk_gesture_click_new(); // Create a click gesture for the image clicking
+	GtkGesture * image_click_controller = gtk_gesture_click_new(); // Create a click gesture for the image clicking
+
+
 	gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(image_click_controller), 1); // Only allow left click
 	g_signal_connect(GTK_EVENT_CONTROLLER(image_click_controller), "pressed", G_CALLBACK(koto_create_modify_playlist_dialog_handle_image_click), self);
 
@@ -105,8 +124,14 @@ static void koto_create_modify_playlist_dialog_init(KotoCreateModifyPlaylistDial
 	gtk_box_append(GTK_BOX(self), self->create_button); // Add the create button
 }
 
-static void koto_create_modify_playlist_dialog_get_property(GObject *obj, guint prop_id, GValue *val, GParamSpec *spec){
-	KotoCreateModifyPlaylistDialog *self = KOTO_CREATE_MODIFY_PLAYLIST_DIALOG(obj);
+static void koto_create_modify_playlist_dialog_get_property(
+	GObject * obj,
+	guint prop_id,
+	GValue * val,
+	GParamSpec * spec
+) {
+	KotoCreateModifyPlaylistDialog * self = KOTO_CREATE_MODIFY_PLAYLIST_DIALOG(obj);
+
 
 	switch (prop_id) {
 		case PROP_PLAYLIST_UUID:
@@ -118,9 +143,17 @@ static void koto_create_modify_playlist_dialog_get_property(GObject *obj, guint 
 	}
 }
 
-static void koto_create_modify_playlist_dialog_set_property(GObject *obj, guint prop_id, const GValue *val, GParamSpec *spec) {
-	KotoCreateModifyPlaylistDialog *self = KOTO_CREATE_MODIFY_PLAYLIST_DIALOG(obj);
-	(void) self; (void) val;
+static void koto_create_modify_playlist_dialog_set_property(
+	GObject * obj,
+	guint prop_id,
+	const GValue * val,
+	GParamSpec * spec
+) {
+	KotoCreateModifyPlaylistDialog * self = KOTO_CREATE_MODIFY_PLAYLIST_DIALOG(obj);
+
+
+	(void) self;
+	(void) val;
 
 	switch (prop_id) {
 		case PROP_PLAYLIST_UUID:
@@ -132,19 +165,26 @@ static void koto_create_modify_playlist_dialog_set_property(GObject *obj, guint 
 	}
 }
 
-void koto_create_modify_playlist_dialog_handle_chooser_response(GtkNativeDialog *native, int response, gpointer user_data) {
+void koto_create_modify_playlist_dialog_handle_chooser_response(
+	GtkNativeDialog * native,
+	int response,
+	gpointer user_data
+) {
 	if (response != GTK_RESPONSE_ACCEPT) { // Not accept
 		g_object_unref(native);
 		return;
 	}
 
-	KotoCreateModifyPlaylistDialog *self = user_data;
+	KotoCreateModifyPlaylistDialog * self = user_data;
+
+
 	if (!KOTO_IS_CURRENT_MODIFY_PLAYLIST(self)) {
 		return;
 	}
 
-	GFile *file = gtk_file_chooser_get_file(GTK_FILE_CHOOSER(native));
-	gchar *file_path = g_file_get_path(file); // Get the absolute path
+	GFile * file = gtk_file_chooser_get_file(GTK_FILE_CHOOSER(native));
+	gchar * file_path = g_file_get_path(file); // Get the absolute path
+
 
 	if (file_path != NULL) {
 		self->playlist_image_path = g_strdup(file_path);
@@ -156,10 +196,14 @@ void koto_create_modify_playlist_dialog_handle_chooser_response(GtkNativeDialog 
 	g_object_unref(native);
 }
 
-void koto_create_modify_playlist_dialog_handle_create_click(GtkButton *button, gpointer user_data) {
+void koto_create_modify_playlist_dialog_handle_create_click(
+	GtkButton * button,
+	gpointer user_data
+) {
 	(void) button;
 
-	KotoCreateModifyPlaylistDialog *self = user_data;
+	KotoCreateModifyPlaylistDialog * self = user_data;
+
 
 	if (!KOTO_IS_CURRENT_MODIFY_PLAYLIST(self)) {
 		return;
@@ -170,8 +214,9 @@ void koto_create_modify_playlist_dialog_handle_create_click(GtkButton *button, g
 		return;
 	}
 
-	KotoPlaylist *playlist = NULL;
+	KotoPlaylist * playlist = NULL;
 	gboolean modify_existing_playlist = koto_utils_is_string_valid(self->playlist_uuid);
+
 
 	if (modify_existing_playlist) { // Modifying an existing playlist
 		playlist = koto_cartographer_get_playlist_by_uuid(koto_maps, self->playlist_uuid);
@@ -196,21 +241,32 @@ void koto_create_modify_playlist_dialog_handle_create_click(GtkButton *button, g
 	koto_window_hide_dialogs(main_window); // Hide the dialogs
 }
 
-gboolean koto_create_modify_playlist_dialog_handle_drop(GtkDropTarget *target, const GValue *val, double x, double y, gpointer user_data) {
-	(void) target; (void) x; (void) y;
+gboolean koto_create_modify_playlist_dialog_handle_drop(
+	GtkDropTarget * target,
+	const GValue * val,
+	double x,
+	double y,
+	gpointer user_data
+) {
+	(void) target;
+	(void) x;
+	(void) y;
 
 	if (!G_VALUE_HOLDS(val, G_TYPE_FILE)) { // Not a file
 		return FALSE;
 	}
 
-	KotoCreateModifyPlaylistDialog *self = user_data;
+	KotoCreateModifyPlaylistDialog * self = user_data;
+
 
 	if (!KOTO_IS_CURRENT_MODIFY_PLAYLIST(self)) { // No dialog
 		return FALSE;
 	}
 
-	GFile *dropped_file = g_value_get_object(val); // Get the GValue
-	gchar *file_path = g_file_get_path(dropped_file); // Get the absolute path
+	GFile * dropped_file = g_value_get_object(val); // Get the GValue
+	gchar * file_path = g_file_get_path(dropped_file); // Get the absolute path
+
+
 	g_object_unref(dropped_file); // Unref the file
 
 	if (file_path == NULL) {
@@ -218,6 +274,7 @@ gboolean koto_create_modify_playlist_dialog_handle_drop(GtkDropTarget *target, c
 	}
 
 	magic_t magic_cookie = magic_open(MAGIC_MIME);
+
 
 	if (magic_cookie == NULL) {
 		return FALSE;
@@ -227,7 +284,8 @@ gboolean koto_create_modify_playlist_dialog_handle_drop(GtkDropTarget *target, c
 		goto cookie_closure;
 	}
 
-	const char *mime_type = magic_file(magic_cookie, file_path);
+	const char * mime_type = magic_file(magic_cookie, file_path);
+
 
 	if ((mime_type != NULL) && g_str_has_prefix(mime_type, "image/")) { // Is an image
 		self->playlist_image_path = g_strdup(file_path);
@@ -237,21 +295,32 @@ gboolean koto_create_modify_playlist_dialog_handle_drop(GtkDropTarget *target, c
 	}
 
 cookie_closure:
-		magic_close(magic_cookie);
-		return FALSE;
+	magic_close(magic_cookie);
+	return FALSE;
 }
 
-void koto_create_modify_playlist_dialog_handle_image_click(GtkGestureClick *gesture, int n_press, double x, double y, gpointer user_data) {
-	(void) gesture; (void) n_press; (void) x; (void) y;
+void koto_create_modify_playlist_dialog_handle_image_click(
+	GtkGestureClick * gesture,
+	int n_press,
+	double x,
+	double y,
+	gpointer user_data
+) {
+	(void) gesture;
+	(void) n_press;
+	(void) x;
+	(void) y;
 
-	KotoCreateModifyPlaylistDialog *self = user_data;
+	KotoCreateModifyPlaylistDialog * self = user_data;
 
 	GtkFileChooserNative* chooser = koto_utils_create_image_file_chooser("Choose playlist image");
+
+
 	g_signal_connect(chooser, "response", G_CALLBACK(koto_create_modify_playlist_dialog_handle_chooser_response), self);
 	gtk_native_dialog_show(GTK_NATIVE_DIALOG(chooser)); // Show our file chooser
 }
 
-void koto_create_modify_playlist_dialog_reset(KotoCreateModifyPlaylistDialog *self) {
+void koto_create_modify_playlist_dialog_reset(KotoCreateModifyPlaylistDialog * self) {
 	if (!KOTO_IS_CURRENT_MODIFY_PLAYLIST(self)) {
 		return;
 	}
@@ -262,12 +331,16 @@ void koto_create_modify_playlist_dialog_reset(KotoCreateModifyPlaylistDialog *se
 	gtk_button_set_label(GTK_BUTTON(self->create_button), "Create");
 }
 
-void koto_create_modify_playlist_dialog_set_playlist_uuid(KotoCreateModifyPlaylistDialog *self, gchar *playlist_uuid) {
+void koto_create_modify_playlist_dialog_set_playlist_uuid(
+	KotoCreateModifyPlaylistDialog * self,
+	gchar * playlist_uuid
+) {
 	if (!koto_utils_is_string_valid(playlist_uuid)) { // Not a valid playlist UUID string
 		return;
 	}
 
-	KotoPlaylist *playlist = koto_cartographer_get_playlist_by_uuid(koto_maps, playlist_uuid);
+	KotoPlaylist * playlist = koto_cartographer_get_playlist_by_uuid(koto_maps, playlist_uuid);
+
 
 	if (!KOTO_IS_PLAYLIST(playlist)) {
 		return;
@@ -277,7 +350,8 @@ void koto_create_modify_playlist_dialog_set_playlist_uuid(KotoCreateModifyPlayli
 	gtk_entry_buffer_set_text(gtk_entry_get_buffer(GTK_ENTRY(self->name_entry)), koto_playlist_get_name(playlist), -1); // Update the input buffer
 	gtk_entry_set_placeholder_text(GTK_ENTRY(self->name_entry), ""); // Clear placeholder
 
-	gchar *art = koto_playlist_get_artwork(playlist);
+	gchar * art = koto_playlist_get_artwork(playlist);
+
 
 	if (!koto_utils_is_string_valid(art)) { // If art is not defined
 		gtk_image_set_from_icon_name(GTK_IMAGE(self->playlist_image), "insert-image-symbolic"); // Reset the image
@@ -289,13 +363,8 @@ void koto_create_modify_playlist_dialog_set_playlist_uuid(KotoCreateModifyPlayli
 	gtk_button_set_label(GTK_BUTTON(self->create_button), "Save");
 }
 
-KotoCreateModifyPlaylistDialog* koto_create_modify_playlist_dialog_new(char *playlist_uuid) {
+KotoCreateModifyPlaylistDialog * koto_create_modify_playlist_dialog_new(char * playlist_uuid) {
 	(void) playlist_uuid;
 
-	return g_object_new(KOTO_TYPE_CREATE_MODIFY_PLAYLIST_DIALOG,
-		"orientation",
-		GTK_ORIENTATION_VERTICAL,
-		"spacing",
-		40,
-	NULL);
+	return g_object_new(KOTO_TYPE_CREATE_MODIFY_PLAYLIST_DIALOG, "orientation", GTK_ORIENTATION_VERTICAL, "spacing", 40, NULL);
 }

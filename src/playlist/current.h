@@ -23,7 +23,7 @@ G_BEGIN_DECLS
 
 /**
  * Type Definition
-**/
+ **/
 
 #define KOTO_TYPE_CURRENT_PLAYLIST koto_current_playlist_get_type()
 G_DECLARE_FINAL_TYPE(KotoCurrentPlaylist, koto_current_playlist, KOTO, CURRENT_PLAYLIST, GObject);
@@ -31,10 +31,15 @@ G_DECLARE_FINAL_TYPE(KotoCurrentPlaylist, koto_current_playlist, KOTO, CURRENT_P
 
 /**
  * Current Playlist Functions
-**/
+ **/
 
-KotoCurrentPlaylist* koto_current_playlist_new();
-KotoPlaylist* koto_current_playlist_get_playlist(KotoCurrentPlaylist *self);
-void koto_current_playlist_set_playlist(KotoCurrentPlaylist *self, KotoPlaylist *playlist);
+KotoCurrentPlaylist * koto_current_playlist_new();
+
+KotoPlaylist * koto_current_playlist_get_playlist(KotoCurrentPlaylist * self);
+
+void koto_current_playlist_set_playlist(
+	KotoCurrentPlaylist * self,
+	KotoPlaylist * playlist
+);
 
 G_END_DECLS

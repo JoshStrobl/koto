@@ -26,52 +26,55 @@
 #include "../koto-utils.h"
 #include "../koto-window.h"
 
-extern KotoAddRemoveTrackPopover *koto_add_remove_track_popup;
-extern KotoCartographer *koto_maps;
-extern KotoPageMusicLocal *music_local_page;
-extern KotoPlaybackEngine *playback_engine;
-extern KotoWindow *main_window;
+extern KotoAddRemoveTrackPopover * koto_add_remove_track_popup;
+extern KotoCartographer * koto_maps;
+extern KotoPageMusicLocal * music_local_page;
+extern KotoPlaybackEngine * playback_engine;
+extern KotoWindow * main_window;
 
 enum {
 	SIGNAL_CLOSED,
 	N_SIGNALS
 };
 
-static guint actionbar_signals[N_SIGNALS] = { 0 };
+static guint actionbar_signals[N_SIGNALS] = {
+	0
+};
 
 struct _KotoActionBar {
 	GObject parent_instance;
 
-	GtkActionBar *main;
+	GtkActionBar * main;
 
-	GtkWidget *center_box_content;
-	GtkWidget *start_box_content;
-	GtkWidget *stop_box_content;
+	GtkWidget * center_box_content;
+	GtkWidget * start_box_content;
+	GtkWidget * stop_box_content;
 
-	KotoButton *close_button;
-	GtkWidget *go_to_artist;
-	GtkWidget *playlists;
-	GtkWidget *play_track;
-	GtkWidget *remove_from_playlist;
+	KotoButton * close_button;
+	GtkWidget * go_to_artist;
+	GtkWidget * playlists;
+	GtkWidget * play_track;
+	GtkWidget * remove_from_playlist;
 
-	GList *current_list;
-	gchar *current_album_uuid;
-	gchar *current_playlist_uuid;
+	GList * current_list;
+	gchar * current_album_uuid;
+	gchar * current_playlist_uuid;
 	KotoActionBarRelative relative;
 };
 
 struct _KotoActionBarClass {
 	GObjectClass parent_class;
 
-	void (* closed) (KotoActionBar *self);
+	void (* closed) (KotoActionBar * self);
 };
 
 G_DEFINE_TYPE(KotoActionBar, koto_action_bar, G_TYPE_OBJECT);
 
 KotoActionBar* action_bar;
 
-static void koto_action_bar_class_init(KotoActionBarClass *c) {
-	GObjectClass *gobject_class = G_OBJECT_CLASS(c);
+static void koto_action_bar_class_init(KotoActionBarClass * c) {
+	GObjectClass * gobject_class = G_OBJECT_CLASS(c);
+
 
 	actionbar_signals[SIGNAL_CLOSED] = g_signal_new(
 		"closed",
@@ -86,7 +89,7 @@ static void koto_action_bar_class_init(KotoActionBarClass *c) {
 	);
 }
 
-static void koto_action_bar_init(KotoActionBar *self) {
+static void koto_action_bar_init(KotoActionBar * self) {
 	self->main = GTK_ACTION_BAR(gtk_action_bar_new()); // Create a new action bar
 	self->current_list = NULL;
 
@@ -135,7 +138,7 @@ static void koto_action_bar_init(KotoActionBar *self) {
 	koto_action_bar_toggle_reveal(self, FALSE); // Hide by default
 }
 
-void koto_action_bar_close(KotoActionBar *self) {
+void koto_action_bar_close(KotoActionBar * self) {
 	if (!KOTO_IS_ACTION_BAR(self)) {
 		return;
 	}
@@ -151,7 +154,7 @@ void koto_action_bar_close(KotoActionBar *self) {
 	);
 }
 
-GtkActionBar* koto_action_bar_get_main(KotoActionBar *self) {
+GtkActionBar * koto_action_bar_get_main(KotoActionBar * self) {
 	if (!KOTO_IS_ACTION_BAR(self)) {
 		return NULL;
 	}
@@ -159,14 +162,27 @@ GtkActionBar* koto_action_bar_get_main(KotoActionBar *self) {
 	return self->main;
 }
 
-void koto_action_bar_handle_close_button_clicked(GtkGestureClick *gesture, int n_press, double x, double y, gpointer data) {
-	(void) gesture; (void) n_press; (void) x; (void) y;
+void koto_action_bar_handle_close_button_clicked(
+	GtkGestureClick * gesture,
+	int n_press,
+	double x,
+	double y,
+	gpointer data
+) {
+	(void) gesture;
+	(void) n_press;
+	(void) x;
+	(void) y;
 	koto_action_bar_close(data);
 }
 
-void koto_action_bar_handle_go_to_artist_button_clicked(GtkButton *button, gpointer data) {
+void koto_action_bar_handle_go_to_artist_button_clicked(
+	GtkButton * button,
+	gpointer data
+) {
 	(void) button;
-	KotoActionBar *self = data;
+	KotoActionBar * self = data;
+
 
 	if (!KOTO_IS_ACTION_BAR(self)) {
 		return;
@@ -176,13 +192,16 @@ void koto_action_bar_handle_go_to_artist_button_clicked(GtkButton *button, gpoin
 		return;
 	}
 
-	KotoIndexedTrack *selected_track = g_list_nth_data(self->current_list, 0); // Get the first item
+	KotoIndexedTrack * selected_track = g_list_nth_data(self->current_list, 0); // Get the first item
+
 
 	if (!KOTO_IS_INDEXED_TRACK(selected_track)) { // Not a track
 		return;
 	}
 
-	gchar *artist_uuid = NULL;
+	gchar * artist_uuid = NULL;
+
+
 	g_object_get(
 		selected_track,
 		"artist-uuid",
@@ -190,13 +209,17 @@ void koto_action_bar_handle_go_to_artist_button_clicked(GtkButton *button, gpoin
 		NULL
 	);
 
-	koto_page_music_local_go_to_artist_by_uuid(music_local_page, artist_uuid); // Go to the artist	
+	koto_page_music_local_go_to_artist_by_uuid(music_local_page, artist_uuid); // Go to the artist
 	koto_window_go_to_page(main_window, "music.local"); // Navigate to the local music stack so we can see the substack page
 	koto_action_bar_close(self); // Close the action bar
 }
-void koto_action_bar_handle_playlists_button_clicked(GtkButton *button, gpointer data) {
+void koto_action_bar_handle_playlists_button_clicked(
+	GtkButton * button,
+	gpointer data
+) {
 	(void) button;
-	KotoActionBar *self = data;
+	KotoActionBar * self = data;
+
 
 	if (!KOTO_IS_ACTION_BAR(self)) {
 		return;
@@ -211,9 +234,13 @@ void koto_action_bar_handle_playlists_button_clicked(GtkButton *button, gpointer
 	gtk_widget_show(GTK_WIDGET(koto_add_remove_track_popup));
 }
 
-void koto_action_bar_handle_play_track_button_clicked(GtkButton *button, gpointer data) {
+void koto_action_bar_handle_play_track_button_clicked(
+	GtkButton * button,
+	gpointer data
+) {
 	(void) button;
-	KotoActionBar *self = data;
+	KotoActionBar * self = data;
+
 
 	if (!KOTO_IS_ACTION_BAR(self)) {
 		return;
@@ -223,7 +250,8 @@ void koto_action_bar_handle_play_track_button_clicked(GtkButton *button, gpointe
 		goto doclose;
 	}
 
-	KotoIndexedTrack *track = g_list_nth_data(self->current_list, 0); // Get the first track
+	KotoIndexedTrack * track = g_list_nth_data(self->current_list, 0); // Get the first track
+
 
 	if (!KOTO_IS_INDEXED_TRACK(track)) { // Not a track
 		goto doclose;
@@ -235,9 +263,13 @@ doclose:
 	koto_action_bar_close(self);
 }
 
-void koto_action_bar_handle_remove_from_playlist_button_clicked(GtkButton *button, gpointer data) {
+void koto_action_bar_handle_remove_from_playlist_button_clicked(
+	GtkButton * button,
+	gpointer data
+) {
 	(void) button;
-	KotoActionBar *self = data;
+	KotoActionBar * self = data;
+
 
 	if (!KOTO_IS_ACTION_BAR(self)) {
 		return;
@@ -251,15 +283,18 @@ void koto_action_bar_handle_remove_from_playlist_button_clicked(GtkButton *butto
 		goto doclose;
 	}
 
-	KotoPlaylist *playlist = koto_cartographer_get_playlist_by_uuid(koto_maps, self->current_playlist_uuid);
+	KotoPlaylist * playlist = koto_cartographer_get_playlist_by_uuid(koto_maps, self->current_playlist_uuid);
+
 
 	if (!KOTO_IS_PLAYLIST(playlist)) { // Not a playlist
 		goto doclose;
 	}
 
-	GList *cur_list;
+	GList * cur_list;
+
+
 	for (cur_list = self->current_list; cur_list != NULL; cur_list = cur_list->next) { // For each KotoIndexedTrack
-		KotoIndexedTrack *track = cur_list->data;
+		KotoIndexedTrack * track = cur_list->data;
 		koto_playlist_remove_track_by_uuid(playlist, koto_indexed_track_get_uuid(track)); // Remove this track
 	}
 
@@ -267,7 +302,11 @@ doclose:
 	koto_action_bar_close(self);
 }
 
-void koto_action_bar_set_tracks_in_album_selection(KotoActionBar *self, gchar *album_uuid, GList *tracks) {
+void koto_action_bar_set_tracks_in_album_selection(
+	KotoActionBar * self,
+	gchar * album_uuid,
+	GList * tracks
+) {
 	if (!KOTO_IS_ACTION_BAR(self)) {
 		return;
 	}
@@ -297,7 +336,11 @@ void koto_action_bar_set_tracks_in_album_selection(KotoActionBar *self, gchar *a
 	gtk_widget_hide(GTK_WIDGET(self->remove_from_playlist));
 }
 
-void koto_action_bar_set_tracks_in_playlist_selection(KotoActionBar *self, gchar *playlist_uuid, GList *tracks) {
+void koto_action_bar_set_tracks_in_playlist_selection(
+	KotoActionBar * self,
+	gchar * playlist_uuid,
+	GList * tracks
+) {
 	if (!KOTO_IS_ACTION_BAR(self)) {
 		return;
 	}
@@ -318,13 +361,18 @@ void koto_action_bar_set_tracks_in_playlist_selection(KotoActionBar *self, gchar
 	self->current_list = g_list_copy(tracks);
 
 	gboolean single_selected = g_list_length(tracks) == 1;
+
+
 	koto_action_bar_toggle_go_to_artist_visibility(self, single_selected);
 	koto_action_bar_toggle_play_button_visibility(self, single_selected);
 	gtk_widget_hide(GTK_WIDGET(self->playlists));
 	gtk_widget_show(GTK_WIDGET(self->remove_from_playlist));
 }
 
-void koto_action_bar_toggle_go_to_artist_visibility(KotoActionBar *self, gboolean visible) {
+void koto_action_bar_toggle_go_to_artist_visibility(
+	KotoActionBar * self,
+	gboolean visible
+) {
 	if (!KOTO_IS_ACTION_BAR(self)) {
 		return;
 	}
@@ -332,7 +380,10 @@ void koto_action_bar_toggle_go_to_artist_visibility(KotoActionBar *self, gboolea
 	(visible) ? gtk_widget_show(GTK_WIDGET(self->go_to_artist)) : gtk_widget_hide(GTK_WIDGET(self->go_to_artist));
 }
 
-void koto_action_bar_toggle_play_button_visibility(KotoActionBar *self, gboolean visible) {
+void koto_action_bar_toggle_play_button_visibility(
+	KotoActionBar * self,
+	gboolean visible
+) {
 	if (!KOTO_IS_ACTION_BAR(self)) {
 		return;
 	}
@@ -340,7 +391,10 @@ void koto_action_bar_toggle_play_button_visibility(KotoActionBar *self, gboolean
 	(visible) ? gtk_widget_show(GTK_WIDGET(self->play_track)) : gtk_widget_hide(GTK_WIDGET(self->play_track));
 }
 
-void koto_action_bar_toggle_reveal(KotoActionBar *self, gboolean state) {
+void koto_action_bar_toggle_reveal(
+	KotoActionBar * self,
+	gboolean state
+) {
 	if (!KOTO_IS_ACTION_BAR(self)) {
 		return;
 	}
@@ -348,7 +402,7 @@ void koto_action_bar_toggle_reveal(KotoActionBar *self, gboolean state) {
 	gtk_action_bar_set_revealed(self->main, state);
 }
 
-KotoActionBar* koto_action_bar_new() {
+KotoActionBar * koto_action_bar_new() {
 	return g_object_new(
 		KOTO_TYPE_ACTION_BAR,
 		NULL

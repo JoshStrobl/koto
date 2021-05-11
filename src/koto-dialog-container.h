@@ -23,7 +23,7 @@ G_BEGIN_DECLS
 
 /**
  * Type Definition
-**/
+ **/
 
 #define KOTO_TYPE_DIALOG_CONTAINER koto_dialog_container_get_type()
 G_DECLARE_FINAL_TYPE(KotoDialogContainer, koto_dialog_container, KOTO, DIALOG_CONTAINER, GtkBox);
@@ -31,12 +31,29 @@ G_DECLARE_FINAL_TYPE(KotoDialogContainer, koto_dialog_container, KOTO, DIALOG_CO
 
 /**
  * Functions
-**/
+ **/
 
-KotoDialogContainer* koto_dialog_container_new();
-void koto_dialog_container_add_dialog(KotoDialogContainer *self, gchar *dialog_name, GtkWidget *dialog);
-void koto_dialog_container_handle_close_click(GtkGestureClick *gesture, int n_press, double x, double y, gpointer user_data);
-void koto_dialog_container_hide(KotoDialogContainer *self);
-void koto_dialog_container_show_dialog(KotoDialogContainer *self, gchar *dialog_name);
+KotoDialogContainer * koto_dialog_container_new();
+
+void koto_dialog_container_add_dialog(
+	KotoDialogContainer * self,
+	gchar * dialog_name,
+	GtkWidget * dialog
+);
+
+void koto_dialog_container_handle_close_click(
+	GtkGestureClick * gesture,
+	int n_press,
+	double x,
+	double y,
+	gpointer user_data
+);
+
+void koto_dialog_container_hide(KotoDialogContainer * self);
+
+void koto_dialog_container_show_dialog(
+	KotoDialogContainer * self,
+	gchar * dialog_name
+);
 
 G_END_DECLS

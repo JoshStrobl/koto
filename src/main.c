@@ -27,23 +27,23 @@
 #include "koto-window.h"
 
 extern guint mpris_bus_id;
-extern GDBusNodeInfo *introspection_data;
+extern GDBusNodeInfo * introspection_data;
 
-extern KotoCartographer *koto_maps;
-extern sqlite3 *koto_db;
+extern KotoCartographer * koto_maps;
+extern sqlite3 * koto_db;
 
-extern GHashTable *supported_mimes_hash;
-extern GList *supported_mimes;
+extern GHashTable * supported_mimes_hash;
+extern GList * supported_mimes;
 
-GtkApplication *app = NULL;
-GtkWindow *main_window;
+GtkApplication * app = NULL;
+GtkWindow * main_window;
 
-static void on_activate (GtkApplication *app) {
-	g_assert(GTK_IS_APPLICATION (app));
+static void on_activate (GtkApplication * app) {
+	g_assert(GTK_IS_APPLICATION(app));
 
-	main_window = gtk_application_get_active_window (app);
+	main_window = gtk_application_get_active_window(app);
 	if (main_window == NULL) {
-		main_window = g_object_new(KOTO_TYPE_WINDOW,  "application", app,  "default-width", 1200,  "default-height", 675, NULL);
+		main_window = g_object_new(KOTO_TYPE_WINDOW, "application", app, "default-width", 1200, "default-height", 675, NULL);
 		setup_mpris_interfaces(); // Set up our MPRIS interfaces
 		setup_mediakeys_interface(); // Set up our media key support
 	}
@@ -51,20 +51,24 @@ static void on_activate (GtkApplication *app) {
 	gtk_window_present(main_window);
 }
 
-static void on_shutdown(GtkApplication *app) {
+static void on_shutdown(GtkApplication * app) {
 	(void) app;
 	close_db(); // Close the database
 	g_bus_unown_name(mpris_bus_id);
 	g_dbus_node_info_unref(introspection_data);
 }
 
-int main (int argc, char *argv[]) {
+int main (
+	int argc,
+	char * argv[]
+) {
 	int ret;
 
+
 	/* Set up gettext translations */
-	bindtextdomain (GETTEXT_PACKAGE, LOCALEDIR);
-	bind_textdomain_codeset (GETTEXT_PACKAGE, "UTF-8");
-	textdomain (GETTEXT_PACKAGE);
+	bindtextdomain(GETTEXT_PACKAGE, LOCALEDIR);
+	bind_textdomain_codeset(GETTEXT_PACKAGE, "UTF-8");
+	textdomain(GETTEXT_PACKAGE);
 
 	gtk_init();
 	gst_init(&argc, &argv);
@@ -76,10 +80,10 @@ int main (int argc, char *argv[]) {
 	koto_maps = koto_cartographer_new(); // Create our new cartographer and their collection of maps
 	open_db(); // Open our database
 
-	app = gtk_application_new ("com.github.joshstrobl.koto", G_APPLICATION_FLAGS_NONE);
-	g_signal_connect (app, "activate", G_CALLBACK (on_activate), NULL);
+	app = gtk_application_new("com.github.joshstrobl.koto", G_APPLICATION_FLAGS_NONE);
+	g_signal_connect(app, "activate", G_CALLBACK(on_activate), NULL);
 	g_signal_connect(app, "shutdown", G_CALLBACK(on_shutdown), NULL);
-	ret = g_application_run (G_APPLICATION (app), argc, argv);
+	ret = g_application_run(G_APPLICATION(app), argc, argv);
 
 	return ret;
 }

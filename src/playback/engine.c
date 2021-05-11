@@ -38,25 +38,26 @@ enum {
 	N_SIGNALS
 };
 
-static guint playback_engine_signals[N_SIGNALS] = { 0 };
+static guint playback_engine_signals[N_SIGNALS] = {
+	0
+};
 
-extern KotoCartographer *koto_maps;
-extern KotoCurrentPlaylist *current_playlist;
+extern KotoCartographer * koto_maps;
+extern KotoCurrentPlaylist * current_playlist;
 
-KotoPlaybackEngine *playback_engine;
+KotoPlaybackEngine * playback_engine;
 
 struct _KotoPlaybackEngine {
 	GObject parent_class;
-	GstElement *player;
-	GstElement *playbin;
-	GstElement *suppress_video;
-	GstBus *monitor;
+	GstElement * player;
+	GstElement * playbin;
+	GstElement * suppress_video;
+	GstBus * monitor;
 
-	GstQuery *duration_query;
-	GstQuery *position_query;
+	GstQuery * duration_query;
+	GstQuery * position_query;
 
-	KotoIndexedTrack *current_track;
-	NotifyNotification *track_notification;
+	KotoIndexedTrack * current_track;
 
 	gboolean is_muted;
 	gboolean is_repeat_enabled;
@@ -74,22 +75,24 @@ struct _KotoPlaybackEngine {
 struct _KotoPlaybackEngineClass {
 	GObjectClass parent_class;
 
-	void (* is_playing) (KotoPlaybackEngine *engine);
-	void (* is_paused) (KotoPlaybackEngine *engine);
-	void (* play_state_changed) (KotoPlaybackEngine *engine);
-	void (* tick_duration) (KotoPlaybackEngine *engine);
-	void (* tick_track) (KotoPlaybackEngine *engine);
-	void (* track_changed) (KotoPlaybackEngine *engine);
-	void (* track_repeat_changed) (KotoPlaybackEngine *engine);
-	void (* track_shuffle_changed) (KotoPlaybackEngine *engine);
+	void (* is_playing) (KotoPlaybackEngine * engine);
+	void (* is_paused) (KotoPlaybackEngine * engine);
+	void (* play_state_changed) (KotoPlaybackEngine * engine);
+	void (* tick_duration) (KotoPlaybackEngine * engine);
+	void (* tick_track) (KotoPlaybackEngine * engine);
+	void (* track_changed) (KotoPlaybackEngine * engine);
+	void (* track_repeat_changed) (KotoPlaybackEngine * engine);
+	void (* track_shuffle_changed) (KotoPlaybackEngine * engine);
 };
 
 G_DEFINE_TYPE(KotoPlaybackEngine, koto_playback_engine, G_TYPE_OBJECT);
 
-static void koto_playback_engine_class_init(KotoPlaybackEngineClass *c) {
+static void koto_playback_engine_class_init(KotoPlaybackEngineClass * c) {
 	c->play_state_changed = NULL;
 
-	GObjectClass *gobject_class;
+	GObjectClass * gobject_class;
+
+
 	gobject_class = G_OBJECT_CLASS(c);
 
 	playback_engine_signals[SIGNAL_IS_PLAYING] = g_signal_new(
@@ -189,7 +192,7 @@ static void koto_playback_engine_class_init(KotoPlaybackEngineClass *c) {
 	);
 }
 
-static void koto_playback_engine_init(KotoPlaybackEngine *self) {
+static void koto_playback_engine_init(KotoPlaybackEngine * self) {
 	self->current_track = NULL;
 
 	self->player = gst_pipeline_new("player");
@@ -223,8 +226,9 @@ static void koto_playback_engine_init(KotoPlaybackEngine *self) {
 	}
 }
 
-void koto_playback_engine_backwards(KotoPlaybackEngine *self) {
-	KotoPlaylist *playlist = koto_current_playlist_get_playlist(current_playlist); // Get the current playlist
+void koto_playback_engine_backwards(KotoPlaybackEngine * self) {
+	KotoPlaylist * playlist = koto_current_playlist_get_playlist(current_playlist); // Get the current playlist
+
 
 	if (!KOTO_IS_PLAYLIST(playlist)) { // If we do not have a playlist currently
 		return;
@@ -242,7 +246,8 @@ void koto_playback_engine_current_playlist_changed() {
 		return;
 	}
 
-	KotoPlaylist *playlist = koto_current_playlist_get_playlist(current_playlist); // Get the current playlist
+	KotoPlaylist * playlist = koto_current_playlist_get_playlist(current_playlist); // Get the current playlist
+
 
 	if (!KOTO_IS_PLAYLIST(playlist)) { // If we do not have a playlist currently
 		return;
@@ -251,8 +256,9 @@ void koto_playback_engine_current_playlist_changed() {
 	koto_playback_engine_set_track_by_uuid(playback_engine, koto_playlist_go_to_next(playlist)); // Go to "next" which is the first track
 }
 
-void koto_playback_engine_forwards(KotoPlaybackEngine *self) {
-	KotoPlaylist *playlist = koto_current_playlist_get_playlist(current_playlist); // Get the current playlist
+void koto_playback_engine_forwards(KotoPlaybackEngine * self) {
+	KotoPlaylist * playlist = koto_current_playlist_get_playlist(current_playlist); // Get the current playlist
+
 
 	if (!KOTO_IS_PLAYLIST(playlist)) { // If we do not have a playlist currently
 		return;
@@ -265,12 +271,14 @@ void koto_playback_engine_forwards(KotoPlaybackEngine *self) {
 	}
 }
 
-KotoIndexedTrack* koto_playback_engine_get_current_track(KotoPlaybackEngine *self) {
+KotoIndexedTrack * koto_playback_engine_get_current_track(KotoPlaybackEngine * self) {
 	return self->current_track;
 }
 
-gint64 koto_playback_engine_get_duration(KotoPlaybackEngine *self) {
+gint64 koto_playback_engine_get_duration(KotoPlaybackEngine * self) {
 	gint64 duration = 0;
+
+
 	if (gst_element_query(self->player, self->duration_query)) { // Able to query our duration
 		gst_query_parse_duration(self->duration_query, NULL, &duration); // Get the duration
 		duration = duration / GST_SECOND; // Divide by NS to get seconds
@@ -279,9 +287,11 @@ gint64 koto_playback_engine_get_duration(KotoPlaybackEngine *self) {
 	return duration;
 }
 
-gdouble koto_playback_engine_get_progress(KotoPlaybackEngine *self) {
+gdouble koto_playback_engine_get_progress(KotoPlaybackEngine * self) {
 	gdouble progress = 0.0;
 	gint64 gstprog = 0;
+
+
 	if (gst_element_query(self->playbin, self->position_query)) { // Able to get our position
 		gst_query_parse_position(self->position_query, NULL, &gstprog); // Get the progress
 
@@ -295,31 +305,39 @@ gdouble koto_playback_engine_get_progress(KotoPlaybackEngine *self) {
 	return progress;
 }
 
-GstState koto_playback_engine_get_state(KotoPlaybackEngine *self) {
+GstState koto_playback_engine_get_state(KotoPlaybackEngine * self) {
 	return GST_STATE(self->player);
 }
 
-gboolean koto_playback_engine_get_track_repeat(KotoPlaybackEngine *self) {
+gboolean koto_playback_engine_get_track_repeat(KotoPlaybackEngine * self) {
 	return self->is_repeat_enabled;
 }
 
-gboolean koto_playback_engine_get_track_shuffle(KotoPlaybackEngine *self) {
+gboolean koto_playback_engine_get_track_shuffle(KotoPlaybackEngine * self) {
 	(void) self;
-	KotoPlaylist *playlist = koto_current_playlist_get_playlist(current_playlist);
+	KotoPlaylist * playlist = koto_current_playlist_get_playlist(current_playlist);
+
 
 	if (!KOTO_IS_PLAYLIST(playlist)) { // Don't have a playlist currently
 		return FALSE;
 	}
 
 	gboolean currently_shuffling = FALSE;
+
+
 	g_object_get(playlist, "is-shuffle-enabled", &currently_shuffling, NULL); // Get the current is-shuffle-enabled
 
 	return currently_shuffling;
 }
 
-gboolean koto_playback_engine_monitor_changed(GstBus *bus, GstMessage *msg, gpointer user_data) {
+gboolean koto_playback_engine_monitor_changed(
+	GstBus * bus,
+	GstMessage * msg,
+	gpointer user_data
+) {
 	(void) bus;
-	KotoPlaybackEngine *self = user_data;
+	KotoPlaybackEngine * self = user_data;
+
 
 	switch (GST_MESSAGE_TYPE(msg)) {
 		case GST_MESSAGE_ASYNC_DONE:
@@ -357,7 +375,7 @@ gboolean koto_playback_engine_monitor_changed(GstBus *bus, GstMessage *msg, gpoi
 	return TRUE;
 }
 
-void koto_playback_engine_play(KotoPlaybackEngine *self) {
+void koto_playback_engine_play(KotoPlaybackEngine * self) {
 	self->is_playing = TRUE;
 	gst_element_set_state(self->player, GST_STATE_PLAYING); // Set our state to play
 
@@ -374,23 +392,33 @@ void koto_playback_engine_play(KotoPlaybackEngine *self) {
 	koto_update_mpris_playback_state(GST_STATE_PLAYING);
 }
 
-void koto_playback_engine_pause(KotoPlaybackEngine *self) {
+void koto_playback_engine_pause(KotoPlaybackEngine * self) {
 	self->is_playing = FALSE;
 	gst_element_change_state(self->player, GST_STATE_CHANGE_PLAYING_TO_PAUSED);
 	koto_update_mpris_playback_state(GST_STATE_PAUSED);
 }
 
-void koto_playback_engine_set_position(KotoPlaybackEngine *self, int position) {
+void koto_playback_engine_set_position(
+	KotoPlaybackEngine * self,
+	int position
+) {
 	gst_element_seek_simple(self->playbin, GST_FORMAT_TIME, GST_SEEK_FLAG_FLUSH, position * GST_SECOND);
 }
 
-void koto_playback_engine_set_track_repeat(KotoPlaybackEngine *self, gboolean enable_repeat) {
+void koto_playback_engine_set_track_repeat(
+	KotoPlaybackEngine * self,
+	gboolean enable_repeat
+) {
 	self->is_repeat_enabled = enable_repeat;
 	g_signal_emit(self, playback_engine_signals[SIGNAL_TRACK_REPEAT_CHANGE], 0); // Emit our track repeat changed event
 }
 
-void koto_playback_engine_set_track_shuffle(KotoPlaybackEngine *self, gboolean enable_shuffle) {
-	KotoPlaylist *playlist = koto_current_playlist_get_playlist(current_playlist);
+void koto_playback_engine_set_track_shuffle(
+	KotoPlaybackEngine * self,
+	gboolean enable_shuffle
+) {
+	KotoPlaylist * playlist = koto_current_playlist_get_playlist(current_playlist);
+
 
 	if (!KOTO_IS_PLAYLIST(playlist)) { // Don't have a playlist currently
 		return;
@@ -400,12 +428,16 @@ void koto_playback_engine_set_track_shuffle(KotoPlaybackEngine *self, gboolean e
 	g_signal_emit(self, playback_engine_signals[SIGNAL_TRACK_SHUFFLE_CHANGE], 0); // Emit our track shuffle changed event
 }
 
-void koto_playback_engine_set_track_by_uuid(KotoPlaybackEngine *self, gchar *track_uuid) {
+void koto_playback_engine_set_track_by_uuid(
+	KotoPlaybackEngine * self,
+	gchar * track_uuid
+) {
 	if (track_uuid == NULL) {
 		return;
 	}
 
-	KotoIndexedTrack *track = koto_cartographer_get_track_by_uuid(koto_maps, track_uuid); // Get the track from cartographer
+	KotoIndexedTrack * track = koto_cartographer_get_track_by_uuid(koto_maps, track_uuid); // Get the track from cartographer
+
 
 	if (!KOTO_IS_INDEXED_TRACK(track)) { // Not a track
 		return;
@@ -413,12 +445,15 @@ void koto_playback_engine_set_track_by_uuid(KotoPlaybackEngine *self, gchar *tra
 
 	self->current_track = track;
 
-	gchar *track_file_path = NULL;
+	gchar * track_file_path = NULL;
+
+
 	g_object_get(track, "path", &track_file_path, NULL); // Get the path to the track
 
 	koto_playback_engine_stop(self); // Stop current track
 
-	gchar *gst_filename = gst_filename_to_uri(track_file_path, NULL); // Get the gst supported file naem
+	gchar * gst_filename = gst_filename_to_uri(track_file_path, NULL); // Get the gst supported file naem
+
 
 	g_object_set(self->playbin, "uri", gst_filename, NULL);
 	g_free(gst_filename); // Free the filename
@@ -429,34 +464,36 @@ void koto_playback_engine_set_track_by_uuid(KotoPlaybackEngine *self, gchar *tra
 	koto_playback_engine_set_position(self, 0);
 	koto_playback_engine_set_volume(self, self->volume); // Re-enforce our volume on the updated playbin
 
-	GVariant *metadata = koto_indexed_track_get_metadata_vardict(track); // Get the GVariantBuilder variable dict for the metadata
-	GVariantDict *metadata_dict = g_variant_dict_new(metadata);
+	GVariant * metadata = koto_indexed_track_get_metadata_vardict(track); // Get the GVariantBuilder variable dict for the metadata
+	GVariantDict * metadata_dict = g_variant_dict_new(metadata);
+
 
 	g_signal_emit(self, playback_engine_signals[SIGNAL_TRACK_CHANGE], 0); // Emit our track change signal
 	koto_update_mpris_info_for_track(self->current_track);
 
-	GVariant *track_name_var = g_variant_dict_lookup_value(metadata_dict, "xesam:title", NULL); // Get the GVariant for the name of the track
-	const gchar *track_name = g_variant_get_string(track_name_var, NULL); // Get the string of the track name
+	GVariant * track_name_var = g_variant_dict_lookup_value(metadata_dict, "xesam:title", NULL); // Get the GVariant for the name of the track
+	const gchar * track_name = g_variant_get_string(track_name_var, NULL); // Get the string of the track name
 
-	GVariant *album_name_var = g_variant_dict_lookup_value(metadata_dict, "xesam:album", NULL); // Get the GVariant for the album name
-	const gchar *album_name = g_variant_get_string(album_name_var, NULL); // Get the string for the album name
+	GVariant * album_name_var = g_variant_dict_lookup_value(metadata_dict, "xesam:album", NULL); // Get the GVariant for the album name
+	const gchar * album_name = g_variant_get_string(album_name_var, NULL); // Get the string for the album name
 
-	GVariant *artist_name_var = g_variant_dict_lookup_value(metadata_dict, "playbackengine:artist", NULL); // Get the GVariant for the name of the artist
-	const gchar *artist_name = g_variant_get_string(artist_name_var, NULL); // Get the string for the artist name
+	GVariant * artist_name_var = g_variant_dict_lookup_value(metadata_dict, "playbackengine:artist", NULL); // Get the GVariant for the name of the artist
+	const gchar * artist_name = g_variant_get_string(artist_name_var, NULL); // Get the string for the artist name
 
-	gchar *artist_album_combo = g_strjoin(" - ", artist_name, album_name, NULL); // Join artist and album name separated by " - "
+	gchar * artist_album_combo = g_strjoin(" - ", artist_name, album_name, NULL); // Join artist and album name separated by " - "
 
-	gchar *icon_name = "audio-x-generic-symbolic";
+	gchar * icon_name = "audio-x-generic-symbolic";
+
 
 	if (g_variant_dict_contains(metadata_dict, "mpris:artUrl")) { // If we have artwork specified
-		GVariant *art_url_var = g_variant_dict_lookup_value(metadata_dict, "mpris:artUrl", NULL); // Get the GVariant for the art URL
-		const gchar *art_uri = g_variant_get_string(art_url_var, NULL); // Get the string for the artwork
+		GVariant * art_url_var = g_variant_dict_lookup_value(metadata_dict, "mpris:artUrl", NULL); // Get the GVariant for the art URL
+		const gchar * art_uri = g_variant_get_string(art_url_var, NULL); // Get the string for the artwork
 		icon_name = koto_utils_replace_string_all(g_strdup(art_uri), "file://", "");
 	}
 
 	// Super important note: We are not using libnotify directly because the synchronous nature of notify_notification_send seems to result in dbus timeouts
 	if (g_find_program_in_path("notify-send") != NULL) { // Have notify-send
-		char *argv[12];
+		char * argv[12];
 		argv[0] = "notify-send";
 		argv[1] = "-a";
 		argv[2] = "Koto";
@@ -474,14 +511,18 @@ void koto_playback_engine_set_track_by_uuid(KotoPlaybackEngine *self, gchar *tra
 	}
 }
 
-void koto_playback_engine_set_volume(KotoPlaybackEngine *self, gdouble volume) {
+void koto_playback_engine_set_volume(
+	KotoPlaybackEngine * self,
+	gdouble volume
+) {
 	self->volume = volume;
 	g_object_set(self->playbin, "volume", self->volume, NULL);
 }
 
-void koto_playback_engine_stop(KotoPlaybackEngine *self) {
+void koto_playback_engine_stop(KotoPlaybackEngine * self) {
 	gst_element_set_state(self->player, GST_STATE_NULL);
-	GstPad *pad = gst_element_get_static_pad(self->player, "sink"); // Get the static pad of the audio element
+	GstPad * pad = gst_element_get_static_pad(self->player, "sink"); // Get the static pad of the audio element
+
 
 	if (!GST_IS_PAD(pad)) {
 		return;
@@ -491,7 +532,7 @@ void koto_playback_engine_stop(KotoPlaybackEngine *self) {
 	koto_update_mpris_playback_state(GST_STATE_NULL);
 }
 
-void koto_playback_engine_toggle(KotoPlaybackEngine *self) {
+void koto_playback_engine_toggle(KotoPlaybackEngine * self) {
 	if (self->is_playing) { // Currently playing
 		koto_playback_engine_pause(self); // Pause
 	} else {
@@ -500,7 +541,8 @@ void koto_playback_engine_toggle(KotoPlaybackEngine *self) {
 }
 
 gboolean koto_playback_engine_tick_duration(gpointer user_data) {
-	KotoPlaybackEngine *self = user_data;
+	KotoPlaybackEngine * self = user_data;
+
 
 	if (self->is_playing) { // Is playing
 		g_signal_emit(self, playback_engine_signals[SIGNAL_TICK_DURATION], 0); // Emit our 1s track tick
@@ -512,7 +554,8 @@ gboolean koto_playback_engine_tick_duration(gpointer user_data) {
 }
 
 gboolean koto_playback_engine_tick_track(gpointer user_data) {
-	KotoPlaybackEngine *self = user_data;
+	KotoPlaybackEngine * self = user_data;
+
 
 	if (self->is_playing) { // Is playing
 		g_signal_emit(self, playback_engine_signals[SIGNAL_TICK_TRACK], 0); // Emit our 100ms track tick
@@ -523,14 +566,14 @@ gboolean koto_playback_engine_tick_track(gpointer user_data) {
 	return self->is_playing;
 }
 
-void koto_playback_engine_toggle_track_repeat(KotoPlaybackEngine *self) {
+void koto_playback_engine_toggle_track_repeat(KotoPlaybackEngine * self) {
 	koto_playback_engine_set_track_repeat(self, !self->is_repeat_enabled);
 }
 
-void koto_playback_engine_toggle_track_shuffle(KotoPlaybackEngine *self) {
+void koto_playback_engine_toggle_track_shuffle(KotoPlaybackEngine * self) {
 	koto_playback_engine_set_track_shuffle(self, !koto_playback_engine_get_track_shuffle(self)); // Invert the currently shuffling vale
 }
 
-KotoPlaybackEngine* koto_playback_engine_new() {
+KotoPlaybackEngine * koto_playback_engine_new() {
 	return g_object_new(KOTO_TYPE_PLAYBACK_ENGINE, NULL);
 }

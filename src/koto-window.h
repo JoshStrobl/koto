@@ -25,18 +25,43 @@ G_BEGIN_DECLS
 
 #define KOTO_TYPE_WINDOW (koto_window_get_type())
 
-G_DECLARE_FINAL_TYPE (KotoWindow, koto_window, KOTO, WINDOW, GtkApplicationWindow)
+G_DECLARE_FINAL_TYPE(KotoWindow, koto_window, KOTO, WINDOW, GtkApplicationWindow)
 
-void koto_window_add_page(KotoWindow *self, gchar *page_name, GtkWidget *page);
-void koto_window_go_to_page(KotoWindow *self, gchar *page_name);
-void koto_window_handle_playlist_added(KotoCartographer *carto, KotoPlaylist *playlist, gpointer user_data);
-void koto_window_hide_dialogs(KotoWindow *self);
-void koto_window_remove_page(KotoWindow *self, gchar *page_name);
-void koto_window_show_dialog(KotoWindow *self, gchar *dialog_name);
+void koto_window_add_page(
+	KotoWindow * self,
+	gchar * page_name,
+	GtkWidget * page
+);
 
-void create_new_headerbar(KotoWindow *self);
+void koto_window_go_to_page(
+	KotoWindow * self,
+	gchar * page_name
+);
+
+void koto_window_handle_playlist_added(
+	KotoCartographer * carto,
+	KotoPlaylist * playlist,
+	gpointer user_data
+);
+
+void koto_window_hide_dialogs(KotoWindow * self);
+
+void koto_window_remove_page(
+	KotoWindow * self,
+	gchar * page_name
+);
+
+void koto_window_show_dialog(
+	KotoWindow * self,
+	gchar * dialog_name
+);
+
+void create_new_headerbar(KotoWindow * self);
+
 void handle_album_added();
-void load_library(KotoWindow *self);
-void set_optimal_default_window_size(KotoWindow *self);
+
+void load_library(KotoWindow * self);
+
+void set_optimal_default_window_size(KotoWindow * self);
 
 G_END_DECLS

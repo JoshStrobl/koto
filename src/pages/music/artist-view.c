@@ -24,17 +24,17 @@
 #include "koto-config.h"
 #include "koto-utils.h"
 
-extern KotoCartographer *koto_maps;
+extern KotoCartographer * koto_maps;
 
 struct _KotoArtistView {
 	GObject parent_instance;
-	KotoIndexedArtist *artist;
-	GtkWidget *scrolled_window;
-	GtkWidget *content;
-	GtkWidget *favorites_list;
-	GtkWidget *album_list;
+	KotoIndexedArtist * artist;
+	GtkWidget * scrolled_window;
+	GtkWidget * content;
+	GtkWidget * favorites_list;
+	GtkWidget * album_list;
 
-	GHashTable *albums_to_component;
+	GHashTable * albums_to_component;
 
 	gboolean constructed;
 };
@@ -47,13 +47,29 @@ enum {
 	N_PROPERTIES
 };
 
-static GParamSpec *props[N_PROPERTIES] = { NULL, };
-static void koto_artist_view_constructed(GObject *obj);
-static void koto_artist_view_get_property(GObject *obj, guint prop_id, GValue *val, GParamSpec *spec);
-static void koto_artist_view_set_property(GObject *obj, guint prop_id, const GValue *val, GParamSpec *spec);
+static GParamSpec * props[N_PROPERTIES] = {
+	NULL,
+};
+static void koto_artist_view_constructed(GObject * obj);
 
-static void koto_artist_view_class_init(KotoArtistViewClass *c) {
-	GObjectClass *gobject_class;
+static void koto_artist_view_get_property(
+	GObject * obj,
+	guint prop_id,
+	GValue * val,
+	GParamSpec * spec
+);
+
+static void koto_artist_view_set_property(
+	GObject * obj,
+	guint prop_id,
+	const GValue * val,
+	GParamSpec * spec
+);
+
+static void koto_artist_view_class_init(KotoArtistViewClass * c) {
+	GObjectClass * gobject_class;
+
+
 	gobject_class = G_OBJECT_CLASS(c);
 	gobject_class->constructed = koto_artist_view_constructed;
 	gobject_class->set_property = koto_artist_view_set_property;
@@ -64,14 +80,20 @@ static void koto_artist_view_class_init(KotoArtistViewClass *c) {
 		"Artist",
 		"Artist",
 		KOTO_TYPE_INDEXED_ARTIST,
-		G_PARAM_CONSTRUCT_ONLY|G_PARAM_EXPLICIT_NOTIFY|G_PARAM_READWRITE
+		G_PARAM_CONSTRUCT_ONLY | G_PARAM_EXPLICIT_NOTIFY | G_PARAM_READWRITE
 	);
 
 	g_object_class_install_properties(gobject_class, N_PROPERTIES, props);
 }
 
-static void koto_artist_view_get_property(GObject *obj, guint prop_id, GValue *val, GParamSpec *spec) {
-	KotoArtistView *self = KOTO_ARTIST_VIEW(obj);
+static void koto_artist_view_get_property(
+	GObject * obj,
+	guint prop_id,
+	GValue * val,
+	GParamSpec * spec
+) {
+	KotoArtistView * self = KOTO_ARTIST_VIEW(obj);
+
 
 	switch (prop_id) {
 		case PROP_ARTIST:
@@ -83,8 +105,14 @@ static void koto_artist_view_get_property(GObject *obj, guint prop_id, GValue *v
 	}
 }
 
-static void koto_artist_view_set_property(GObject *obj, guint prop_id, const GValue *val, GParamSpec *spec) {
-	KotoArtistView *self = KOTO_ARTIST_VIEW(obj);
+static void koto_artist_view_set_property(
+	GObject * obj,
+	guint prop_id,
+	const GValue * val,
+	GParamSpec * spec
+) {
+	KotoArtistView * self = KOTO_ARTIST_VIEW(obj);
+
 
 	switch (prop_id) {
 		case PROP_ARTIST:
@@ -96,13 +124,15 @@ static void koto_artist_view_set_property(GObject *obj, guint prop_id, const GVa
 	}
 }
 
-static void koto_artist_view_init(KotoArtistView *self) {
+static void koto_artist_view_init(KotoArtistView * self) {
 	self->artist = NULL;
 	self->constructed = FALSE;
 }
 
-static void koto_artist_view_constructed(GObject *obj) {
-	KotoArtistView *self = KOTO_ARTIST_VIEW(obj);
+static void koto_artist_view_constructed(GObject * obj) {
+	KotoArtistView * self = KOTO_ARTIST_VIEW(obj);
+
+
 	self->albums_to_component = g_hash_table_new(g_str_hash, g_str_equal);
 	self->scrolled_window = gtk_scrolled_window_new(); // Create our scrolled window
 	self->content = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0); // Create our content as a GtkBox
@@ -132,23 +162,33 @@ static void koto_artist_view_constructed(GObject *obj) {
 	gtk_widget_set_hexpand(GTK_WIDGET(self->favorites_list), TRUE);
 	gtk_widget_set_hexpand(GTK_WIDGET(self->album_list), TRUE);
 
-	G_OBJECT_CLASS (koto_artist_view_parent_class)->constructed (obj);
+	G_OBJECT_CLASS(koto_artist_view_parent_class)->constructed(obj);
 	self->constructed = TRUE;
 }
 
-void koto_artist_view_add_album(KotoArtistView *self, KotoIndexedAlbum *album) {
-	gchar *album_art = koto_indexed_album_get_album_art(album); // Get the art for the album
+void koto_artist_view_add_album(
+	KotoArtistView * self,
+	KotoIndexedAlbum * album
+) {
+	gchar * album_art = koto_indexed_album_get_album_art(album); // Get the art for the album
 
-	GtkWidget *art_image = koto_utils_create_image_from_filepath(album_art, "audio-x-generic-symbolic", 220, 220);
+	GtkWidget * art_image = koto_utils_create_image_from_filepath(album_art, "audio-x-generic-symbolic", 220, 220);
+
+
 	gtk_widget_set_halign(art_image, GTK_ALIGN_START); // Align to start
 	gtk_flow_box_insert(GTK_FLOW_BOX(self->favorites_list), art_image, -1); // Append the album art
 
 	KotoAlbumView* album_view = koto_album_view_new(album); // Create our new album view
 	GtkWidget* album_view_main = koto_album_view_get_main(album_view);
+
+
 	gtk_flow_box_insert(GTK_FLOW_BOX(self->album_list), album_view_main, -1); // Append the album view to the album list
 }
 
-void koto_artist_view_add_artist(KotoArtistView *self, KotoIndexedArtist *artist) {
+void koto_artist_view_add_artist(
+	KotoArtistView * self,
+	KotoIndexedArtist * artist
+) {
 	if (artist == NULL) {
 		return;
 	}
@@ -159,11 +199,13 @@ void koto_artist_view_add_artist(KotoArtistView *self, KotoIndexedArtist *artist
 		return;
 	}
 
-	GList *albums = koto_indexed_artist_get_albums(self->artist); // Get the albums
+	GList * albums = koto_indexed_artist_get_albums(self->artist); // Get the albums
 
-	GList *a;
+	GList * a;
+
+
 	for (a = albums; a != NULL; a = a->next) {
-		KotoIndexedAlbum *album = koto_cartographer_get_album_by_uuid(koto_maps, (gchar*) a->data);
+		KotoIndexedAlbum * album = koto_cartographer_get_album_by_uuid(koto_maps, (gchar*) a->data);
 
 		if (album != NULL) {
 			koto_artist_view_add_album(self, album); // Add the album
@@ -171,10 +213,10 @@ void koto_artist_view_add_artist(KotoArtistView *self, KotoIndexedArtist *artist
 	}
 }
 
-GtkWidget* koto_artist_view_get_main(KotoArtistView *self) {
+GtkWidget * koto_artist_view_get_main(KotoArtistView * self) {
 	return self->scrolled_window;
 }
 
-KotoArtistView* koto_artist_view_new() {
+KotoArtistView * koto_artist_view_new() {
 	return g_object_new(KOTO_TYPE_ARTIST_VIEW, NULL);
 }

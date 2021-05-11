@@ -21,8 +21,17 @@
 
 G_BEGIN_DECLS
 
-gboolean koto_bplayback_engine_gst_caps_iter(GstCapsFeatures *features, GstStructure *structure, gpointer user_data);
-void koto_playback_engine_gst_pad_iter(gpointer list_data, gpointer user_data);
-void koto_playback_engine_get_supported_mimetypes(GList *mimes);
+gboolean koto_bplayback_engine_gst_caps_iter(
+	GstCapsFeatures * features,
+	GstStructure * structure,
+	gpointer user_data
+);
+
+void koto_playback_engine_gst_pad_iter(
+	gpointer list_data,
+	gpointer user_data
+);
+
+void koto_playback_engine_get_supported_mimetypes(GList * mimes);
 
 G_END_DECLS

@@ -23,7 +23,7 @@ G_BEGIN_DECLS
 
 /**
  * Type Definition
-**/
+ **/
 
 #define KOTO_TYPE_CREATE_MODIFY_PLAYLIST_DIALOG koto_create_modify_playlist_dialog_get_type()
 G_DECLARE_FINAL_TYPE(KotoCreateModifyPlaylistDialog, koto_create_modify_playlist_dialog, KOTO, CREATE_MODIFY_PLAYLIST_DIALOG, GtkBox);
@@ -31,14 +31,42 @@ G_DECLARE_FINAL_TYPE(KotoCreateModifyPlaylistDialog, koto_create_modify_playlist
 
 /**
  * Functions
-**/
+ **/
 
-KotoCreateModifyPlaylistDialog* koto_create_modify_playlist_dialog_new();
-void koto_create_modify_playlist_dialog_handle_chooser_response(GtkNativeDialog *native, int response, gpointer user_data);
-void koto_create_modify_playlist_dialog_handle_create_click(GtkButton *button, gpointer user_data);
-gboolean koto_create_modify_playlist_dialog_handle_drop(GtkDropTarget *target, const GValue *val, double x, double y, gpointer user_data);
-void koto_create_modify_playlist_dialog_handle_image_click(GtkGestureClick *gesture, int n_press, double x, double y, gpointer user_data);
-void koto_create_modify_playlist_dialog_reset(KotoCreateModifyPlaylistDialog *self);
-void koto_create_modify_playlist_dialog_set_playlist_uuid(KotoCreateModifyPlaylistDialog *self, gchar *playlist_uuid);
+KotoCreateModifyPlaylistDialog * koto_create_modify_playlist_dialog_new();
+
+void koto_create_modify_playlist_dialog_handle_chooser_response(
+	GtkNativeDialog * native,
+	int response,
+	gpointer user_data
+);
+
+void koto_create_modify_playlist_dialog_handle_create_click(
+	GtkButton * button,
+	gpointer user_data
+);
+
+gboolean koto_create_modify_playlist_dialog_handle_drop(
+	GtkDropTarget * target,
+	const GValue * val,
+	double x,
+	double y,
+	gpointer user_data
+);
+
+void koto_create_modify_playlist_dialog_handle_image_click(
+	GtkGestureClick * gesture,
+	int n_press,
+	double x,
+	double y,
+	gpointer user_data
+);
+
+void koto_create_modify_playlist_dialog_reset(KotoCreateModifyPlaylistDialog * self);
+
+void koto_create_modify_playlist_dialog_set_playlist_uuid(
+	KotoCreateModifyPlaylistDialog * self,
+	gchar * playlist_uuid
+);
 
 G_END_DECLS

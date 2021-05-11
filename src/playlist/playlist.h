@@ -32,10 +32,10 @@ typedef enum {
 
 /**
  * Type Definition
-**/
+ **/
 
 #define KOTO_TYPE_PLAYLIST koto_playlist_get_type()
-#define KOTO_PLAYLIST(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), KOTO_TYPE_PLAYLIST, KotoPlaylist))
+#define KOTO_PLAYLIST(obj) (G_TYPE_CHECK_INSTANCE_CAST((obj), KOTO_TYPE_PLAYLIST, KotoPlaylist))
 #define KOTO_IS_PLAYLIST(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), KOTO_TYPE_PLAYLIST))
 
 typedef struct _KotoPlaylist KotoPlaylist;
@@ -46,41 +46,131 @@ GType koto_playlist_get_type(void) G_GNUC_CONST;
 
 /**
  * Playlist Functions
-**/
+ **/
 
-KotoPlaylist* koto_playlist_new();
-KotoPlaylist* koto_playlist_new_with_uuid(const gchar *uuid);
-void koto_playlist_add_to_played_tracks(KotoPlaylist *self, gchar *uuid);
-void koto_playlist_add_track(KotoPlaylist *self, KotoIndexedTrack *track, gboolean current, gboolean commit_to_table);
-void koto_playlist_add_track_by_uuid(KotoPlaylist *self, gchar *uuid, gboolean current, gboolean commit_to_table);
-void koto_playlist_apply_model(KotoPlaylist *self, KotoPreferredModelType preferred_model);
-void koto_playlist_commit(KotoPlaylist *self);
-void koto_playlist_commit_tracks(gpointer data, gpointer user_data);
-gint koto_playlist_compare_track_uuids(gconstpointer a, gconstpointer b);
-gchar* koto_playlist_get_artwork(KotoPlaylist *self);
-KotoPreferredModelType koto_playlist_get_current_model(KotoPlaylist *self);
-guint koto_playlist_get_current_position(KotoPlaylist *self);
-guint koto_playlist_get_length(KotoPlaylist *self);
-gboolean koto_playlist_get_is_finalized(KotoPlaylist *self);
-gchar* koto_playlist_get_name(KotoPlaylist *self);
-gint koto_playlist_get_position_of_track(KotoPlaylist *self, KotoIndexedTrack *track);
-GListStore* koto_playlist_get_store(KotoPlaylist *self);
-GQueue* koto_playlist_get_tracks(KotoPlaylist *self);
-gchar* koto_playlist_get_uuid(KotoPlaylist *self);
-gchar* koto_playlist_go_to_next(KotoPlaylist *self);
-gchar* koto_playlist_go_to_previous(KotoPlaylist *self);
-void koto_playlist_mark_as_finalized(KotoPlaylist *self);
-gint koto_playlist_model_sort_by_uuid(gconstpointer first_item, gconstpointer second_item, gpointer data_list);
-gint koto_playlist_model_sort_by_track(gconstpointer first_item, gconstpointer second_item, gpointer model_ptr);
-void koto_playlist_remove_from_played_tracks(KotoPlaylist *self, gchar *uuid);
-void koto_playlist_remove_track_by_uuid(KotoPlaylist *self, gchar *uuid);
-void koto_playlist_set_artwork(KotoPlaylist *self, const gchar *path);
-void koto_playlist_save_state(KotoPlaylist *self);
-void koto_playlist_set_name(KotoPlaylist *self, const gchar *name);
-void koto_playlist_set_position(KotoPlaylist *self, gint position);
-void koto_playlist_set_track_as_current(KotoPlaylist *self, gchar *track_uuid);
-void koto_playlist_set_uuid(KotoPlaylist *self, const gchar *uuid);
-void koto_playlist_tracks_queue_push_to_store(gpointer data, gpointer user_data);
-void koto_playlist_unmap(KotoPlaylist *self);
+KotoPlaylist * koto_playlist_new();
+
+KotoPlaylist * koto_playlist_new_with_uuid(const gchar * uuid);
+
+void koto_playlist_add_to_played_tracks(
+	KotoPlaylist * self,
+	gchar * uuid
+);
+
+void koto_playlist_add_track(
+	KotoPlaylist * self,
+	KotoIndexedTrack * track,
+	gboolean current,
+	gboolean commit_to_table
+);
+
+void koto_playlist_add_track_by_uuid(
+	KotoPlaylist * self,
+	gchar * uuid,
+	gboolean current,
+	gboolean commit_to_table
+);
+
+void koto_playlist_apply_model(
+	KotoPlaylist * self,
+	KotoPreferredModelType preferred_model
+);
+
+void koto_playlist_commit(KotoPlaylist * self);
+
+void koto_playlist_commit_tracks(
+	gpointer data,
+	gpointer user_data
+);
+
+gint koto_playlist_compare_track_uuids(
+	gconstpointer a,
+	gconstpointer b
+);
+
+gchar * koto_playlist_get_artwork(KotoPlaylist * self);
+
+KotoPreferredModelType koto_playlist_get_current_model(KotoPlaylist * self);
+
+guint koto_playlist_get_current_position(KotoPlaylist * self);
+
+guint koto_playlist_get_length(KotoPlaylist * self);
+
+gboolean koto_playlist_get_is_finalized(KotoPlaylist * self);
+
+gchar * koto_playlist_get_name(KotoPlaylist * self);
+
+gint koto_playlist_get_position_of_track(
+	KotoPlaylist * self,
+	KotoIndexedTrack * track
+);
+
+GListStore * koto_playlist_get_store(KotoPlaylist * self);
+
+GQueue * koto_playlist_get_tracks(KotoPlaylist * self);
+
+gchar * koto_playlist_get_uuid(KotoPlaylist * self);
+
+gchar * koto_playlist_go_to_next(KotoPlaylist * self);
+
+gchar * koto_playlist_go_to_previous(KotoPlaylist * self);
+
+void koto_playlist_mark_as_finalized(KotoPlaylist * self);
+
+gint koto_playlist_model_sort_by_uuid(
+	gconstpointer first_item,
+	gconstpointer second_item,
+	gpointer data_list
+);
+
+gint koto_playlist_model_sort_by_track(
+	gconstpointer first_item,
+	gconstpointer second_item,
+	gpointer model_ptr
+);
+
+void koto_playlist_remove_from_played_tracks(
+	KotoPlaylist * self,
+	gchar * uuid
+);
+
+void koto_playlist_remove_track_by_uuid(
+	KotoPlaylist * self,
+	gchar * uuid
+);
+
+void koto_playlist_set_artwork(
+	KotoPlaylist * self,
+	const gchar * path
+);
+
+void koto_playlist_save_state(KotoPlaylist * self);
+
+void koto_playlist_set_name(
+	KotoPlaylist * self,
+	const gchar * name
+);
+
+void koto_playlist_set_position(
+	KotoPlaylist * self,
+	gint position
+);
+
+void koto_playlist_set_track_as_current(
+	KotoPlaylist * self,
+	gchar * track_uuid
+);
+
+void koto_playlist_set_uuid(
+	KotoPlaylist * self,
+	const gchar * uuid
+);
+
+void koto_playlist_tracks_queue_push_to_store(
+	gpointer data,
+	gpointer user_data
+);
+
+void koto_playlist_unmap(KotoPlaylist * self);
 
 G_END_DECLS

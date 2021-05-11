@@ -24,7 +24,7 @@
 #include "../../koto-utils.h"
 #include "music-local.h"
 
-extern KotoCartographer *koto_maps;
+extern KotoCartographer * koto_maps;
 
 enum {
 	PROP_0,
@@ -32,15 +32,17 @@ enum {
 	N_PROPERTIES
 };
 
-static GParamSpec *props[N_PROPERTIES] = { NULL, };
+static GParamSpec * props[N_PROPERTIES] = {
+	NULL,
+};
 
 struct _KotoPageMusicLocal {
 	GtkBox parent_instance;
-	GtkWidget *scrolled_window;
-	GtkWidget *artist_list;
-	GtkWidget *stack;
+	GtkWidget * scrolled_window;
+	GtkWidget * artist_list;
+	GtkWidget * stack;
 
-	KotoIndexedLibrary *lib;
+	KotoIndexedLibrary * lib;
 	gboolean constructed;
 };
 
@@ -50,14 +52,28 @@ struct _KotoPageMusicLocalClass {
 
 G_DEFINE_TYPE(KotoPageMusicLocal, koto_page_music_local, GTK_TYPE_BOX);
 
-KotoPageMusicLocal *music_local_page;
+KotoPageMusicLocal * music_local_page;
 
-static void koto_page_music_local_constructed(GObject *obj);
-static void koto_page_music_local_get_property(GObject *obj, guint prop_id, GValue *val, GParamSpec *spec);
-static void koto_page_music_local_set_property(GObject *obj, guint prop_id, const GValue *val, GParamSpec *spec);
+static void koto_page_music_local_constructed(GObject * obj);
 
-static void koto_page_music_local_class_init(KotoPageMusicLocalClass *c) {
-	GObjectClass *gobject_class;
+static void koto_page_music_local_get_property(
+	GObject * obj,
+	guint prop_id,
+	GValue * val,
+	GParamSpec * spec
+);
+
+static void koto_page_music_local_set_property(
+	GObject * obj,
+	guint prop_id,
+	const GValue * val,
+	GParamSpec * spec
+);
+
+static void koto_page_music_local_class_init(KotoPageMusicLocalClass * c) {
+	GObjectClass * gobject_class;
+
+
 	gobject_class = G_OBJECT_CLASS(c);
 	gobject_class->constructed = koto_page_music_local_constructed;
 	gobject_class->set_property = koto_page_music_local_set_property;
@@ -68,14 +84,20 @@ static void koto_page_music_local_class_init(KotoPageMusicLocalClass *c) {
 		"Library",
 		"Library",
 		KOTO_TYPE_INDEXED_LIBRARY,
-		G_PARAM_CONSTRUCT|G_PARAM_EXPLICIT_NOTIFY|G_PARAM_READWRITE
+		G_PARAM_CONSTRUCT | G_PARAM_EXPLICIT_NOTIFY | G_PARAM_READWRITE
 	);
 
 	g_object_class_install_properties(gobject_class, N_PROPERTIES, props);
 }
 
-static void koto_page_music_local_get_property(GObject *obj, guint prop_id, GValue *val, GParamSpec *spec) {
-	KotoPageMusicLocal *self = KOTO_PAGE_MUSIC_LOCAL(obj);
+static void koto_page_music_local_get_property(
+	GObject * obj,
+	guint prop_id,
+	GValue * val,
+	GParamSpec * spec
+) {
+	KotoPageMusicLocal * self = KOTO_PAGE_MUSIC_LOCAL(obj);
+
 
 	switch (prop_id) {
 		case PROP_LIB:
@@ -87,8 +109,14 @@ static void koto_page_music_local_get_property(GObject *obj, guint prop_id, GVal
 	}
 }
 
-static void koto_page_music_local_set_property(GObject *obj, guint prop_id, const GValue *val, GParamSpec *spec) {
-	KotoPageMusicLocal *self = KOTO_PAGE_MUSIC_LOCAL(obj);
+static void koto_page_music_local_set_property(
+	GObject * obj,
+	guint prop_id,
+	const GValue * val,
+	GParamSpec * spec
+) {
+	KotoPageMusicLocal * self = KOTO_PAGE_MUSIC_LOCAL(obj);
+
 
 	switch (prop_id) {
 		case PROP_LIB:
@@ -100,7 +128,7 @@ static void koto_page_music_local_set_property(GObject *obj, guint prop_id, cons
 	}
 }
 
-static void koto_page_music_local_init(KotoPageMusicLocal *self) {
+static void koto_page_music_local_init(KotoPageMusicLocal * self) {
 	self->lib = NULL;
 	self->constructed = FALSE;
 
@@ -130,36 +158,55 @@ static void koto_page_music_local_init(KotoPageMusicLocal *self) {
 	gtk_box_append(GTK_BOX(self), self->stack);
 }
 
-static void koto_page_music_local_constructed(GObject *obj) {
-	KotoPageMusicLocal *self = KOTO_PAGE_MUSIC_LOCAL(obj);
+static void koto_page_music_local_constructed(GObject * obj) {
+	KotoPageMusicLocal * self = KOTO_PAGE_MUSIC_LOCAL(obj);
 
-	G_OBJECT_CLASS (koto_page_music_local_parent_class)->constructed (obj);
+
+	G_OBJECT_CLASS(koto_page_music_local_parent_class)->constructed(obj);
 	self->constructed = TRUE;
 }
 
-void koto_page_music_local_add_artist(KotoPageMusicLocal *self, KotoIndexedArtist *artist) {
-	gchar *artist_name;
+void koto_page_music_local_add_artist(
+	KotoPageMusicLocal * self,
+	KotoIndexedArtist * artist
+) {
+	gchar * artist_name;
+
+
 	g_object_get(artist, "name", &artist_name, NULL);
-	KotoButton *artist_button = koto_button_new_plain(artist_name);
+	KotoButton * artist_button = koto_button_new_plain(artist_name);
+
+
 	gtk_list_box_prepend(GTK_LIST_BOX(self->artist_list), GTK_WIDGET(artist_button));
 
-	KotoArtistView *artist_view = koto_artist_view_new(); // Create our new artist view
+	KotoArtistView * artist_view = koto_artist_view_new(); // Create our new artist view
+
+
 	koto_artist_view_add_artist(artist_view, artist); // Add the artist
 	gtk_stack_add_named(GTK_STACK(self->stack), koto_artist_view_get_main(artist_view), artist_name);
 }
 
-void koto_page_music_local_go_to_artist_by_name(KotoPageMusicLocal *self, gchar *artist_name) {
+void koto_page_music_local_go_to_artist_by_name(
+	KotoPageMusicLocal * self,
+	gchar * artist_name
+) {
 	gtk_stack_set_visible_child_name(GTK_STACK(self->stack), artist_name);
 }
 
-void koto_page_music_local_go_to_artist_by_uuid(KotoPageMusicLocal *self, gchar *artist_uuid) {
-	KotoIndexedArtist *artist = koto_cartographer_get_artist_by_uuid(koto_maps, artist_uuid); // Get the artist
+void koto_page_music_local_go_to_artist_by_uuid(
+	KotoPageMusicLocal * self,
+	gchar * artist_uuid
+) {
+	KotoIndexedArtist * artist = koto_cartographer_get_artist_by_uuid(koto_maps, artist_uuid); // Get the artist
+
 
 	if (!KOTO_IS_INDEXED_ARTIST(artist)) { // No artist for this UUID
 		return;
 	}
 
-	gchar *artist_name = NULL;
+	gchar * artist_name = NULL;
+
+
 	g_object_get(
 		artist,
 		"name",
@@ -174,17 +221,26 @@ void koto_page_music_local_go_to_artist_by_uuid(KotoPageMusicLocal *self, gchar 
 	koto_page_music_local_go_to_artist_by_name(self, artist_name);
 }
 
-void koto_page_music_local_handle_artist_click(GtkListBox *box, GtkListBoxRow *row, gpointer data) {
+void koto_page_music_local_handle_artist_click(
+	GtkListBox * box,
+	GtkListBoxRow * row,
+	gpointer data
+) {
 	(void) box;
-	KotoPageMusicLocal *self = (KotoPageMusicLocal*) data;
-	KotoButton *btn = KOTO_BUTTON(gtk_list_box_row_get_child(row));
+	KotoPageMusicLocal * self = (KotoPageMusicLocal*) data;
+	KotoButton * btn = KOTO_BUTTON(gtk_list_box_row_get_child(row));
 
-	gchar *artist_name;
+	gchar * artist_name;
+
+
 	g_object_get(btn, "button-text", &artist_name, NULL);
 	koto_page_music_local_go_to_artist_by_name(self, artist_name);
 }
 
-void koto_page_music_local_set_library(KotoPageMusicLocal *self, KotoIndexedLibrary *lib) {
+void koto_page_music_local_set_library(
+	KotoPageMusicLocal * self,
+	KotoIndexedLibrary * lib
+) {
 	if (lib == NULL) {
 		return;
 	}
@@ -203,11 +259,12 @@ void koto_page_music_local_set_library(KotoPageMusicLocal *self, KotoIndexedLibr
 	gpointer artist_key;
 	gpointer artist_data;
 
-	GHashTable *artists = koto_indexed_library_get_artists(self->lib); // Get the artists
+	GHashTable * artists = koto_indexed_library_get_artists(self->lib); // Get the artists
+
 
 	g_hash_table_iter_init(&artist_list_iter, artists);
 	while (g_hash_table_iter_next(&artist_list_iter, &artist_key, &artist_data)) { // For each of the music artists
-		KotoIndexedArtist *artist = koto_cartographer_get_artist_by_uuid(koto_maps, (gchar*) artist_data); // Cast our data as a KotoIndexedArtist
+		KotoIndexedArtist * artist = koto_cartographer_get_artist_by_uuid(koto_maps, (gchar*) artist_data); // Cast our data as a KotoIndexedArtist
 
 		if (artist != NULL) {
 			koto_page_music_local_add_artist(self, artist);
@@ -215,13 +272,18 @@ void koto_page_music_local_set_library(KotoPageMusicLocal *self, KotoIndexedLibr
 	}
 }
 
-int koto_page_music_local_sort_artists(GtkListBoxRow *artist1, GtkListBoxRow *artist2, gpointer user_data) {
+int koto_page_music_local_sort_artists(
+	GtkListBoxRow * artist1,
+	GtkListBoxRow * artist2,
+	gpointer user_data
+) {
 	(void) user_data;
-	KotoButton *artist1_btn = KOTO_BUTTON(gtk_list_box_row_get_child(artist1));
-	KotoButton *artist2_btn = KOTO_BUTTON(gtk_list_box_row_get_child(artist2));
+	KotoButton * artist1_btn = KOTO_BUTTON(gtk_list_box_row_get_child(artist1));
+	KotoButton * artist2_btn = KOTO_BUTTON(gtk_list_box_row_get_child(artist2));
 
-	gchar *artist1_text;
-	gchar *artist2_text;
+	gchar * artist1_text;
+	gchar * artist2_text;
+
 
 	g_object_get(artist1_btn, "button-text", &artist1_text, NULL);
 	g_object_get(artist2_btn, "button-text", &artist2_text, NULL);
@@ -229,9 +291,11 @@ int koto_page_music_local_sort_artists(GtkListBoxRow *artist1, GtkListBoxRow *ar
 	return g_utf8_collate(artist1_text, artist2_text);
 }
 
-KotoPageMusicLocal* koto_page_music_local_new() {
-	return g_object_new(KOTO_TYPE_PAGE_MUSIC_LOCAL,
-		"orientation", GTK_ORIENTATION_HORIZONTAL,
+KotoPageMusicLocal * koto_page_music_local_new() {
+	return g_object_new(
+		KOTO_TYPE_PAGE_MUSIC_LOCAL,
+		"orientation",
+		GTK_ORIENTATION_HORIZONTAL,
 		NULL
 	);
 }

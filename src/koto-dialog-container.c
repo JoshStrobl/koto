@@ -22,25 +22,20 @@
 
 struct _KotoDialogContainer {
 	GtkBox parent_instance;
-	KotoButton *close_button;
-	GtkWidget *dialogs;
+	KotoButton * close_button;
+	GtkWidget * dialogs;
 };
 
 G_DEFINE_TYPE(KotoDialogContainer, koto_dialog_container, GTK_TYPE_BOX);
 
-static void koto_dialog_container_class_init(KotoDialogContainerClass *c) {
+static void koto_dialog_container_class_init(KotoDialogContainerClass * c) {
 	(void) c;
 }
 
-static void koto_dialog_container_init(KotoDialogContainer *self) {
+static void koto_dialog_container_init(KotoDialogContainer * self) {
 	gtk_widget_add_css_class(GTK_WIDGET(self), "koto-dialog-container");
 
-	g_object_set(GTK_WIDGET(self),
-		"hexpand",
-		TRUE,
-		"vexpand",
-		TRUE,
-	NULL);
+	g_object_set(GTK_WIDGET(self), "hexpand", TRUE, "vexpand", TRUE, NULL);
 
 	self->close_button = koto_button_new_with_icon(NULL, "window-close-symbolic", NULL, KOTO_BUTTON_PIXBUF_SIZE_LARGE);
 	gtk_widget_set_halign(GTK_WIDGET(self->close_button), GTK_ALIGN_END);
@@ -60,7 +55,11 @@ static void koto_dialog_container_init(KotoDialogContainer *self) {
 	gtk_widget_hide(GTK_WIDGET(self)); // Hide by default
 }
 
-void koto_dialog_container_add_dialog(KotoDialogContainer *self, gchar *dialog_name, GtkWidget *dialog) {
+void koto_dialog_container_add_dialog(
+	KotoDialogContainer * self,
+	gchar * dialog_name,
+	GtkWidget * dialog
+) {
 	if (!KOTO_IS_DIALOG_CONTAINER(self)) { // Not a dialog container
 		return;
 	}
@@ -68,12 +67,21 @@ void koto_dialog_container_add_dialog(KotoDialogContainer *self, gchar *dialog_n
 	gtk_stack_add_named(GTK_STACK(self->dialogs), dialog, dialog_name); // Add the dialog to the stack
 }
 
-void koto_dialog_container_handle_close_click(GtkGestureClick *gesture, int n_press, double x, double y, gpointer user_data) {
-	(void) gesture; (void) n_press; (void) x; (void) y;
+void koto_dialog_container_handle_close_click(
+	GtkGestureClick * gesture,
+	int n_press,
+	double x,
+	double y,
+	gpointer user_data
+) {
+	(void) gesture;
+	(void) n_press;
+	(void) x;
+	(void) y;
 	koto_dialog_container_hide((KotoDialogContainer*) user_data);
 }
 
-void koto_dialog_container_hide(KotoDialogContainer *self) {
+void koto_dialog_container_hide(KotoDialogContainer * self) {
 	if (!KOTO_IS_DIALOG_CONTAINER(self)) { // Not a dialog container
 		return;
 	}
@@ -81,7 +89,10 @@ void koto_dialog_container_hide(KotoDialogContainer *self) {
 	gtk_widget_hide(GTK_WIDGET(self));
 }
 
-void koto_dialog_container_show_dialog(KotoDialogContainer *self, gchar *dialog_name) {
+void koto_dialog_container_show_dialog(
+	KotoDialogContainer * self,
+	gchar * dialog_name
+) {
 	if (!KOTO_IS_DIALOG_CONTAINER(self)) { // Not a dialog container
 		return;
 	}
@@ -90,8 +101,9 @@ void koto_dialog_container_show_dialog(KotoDialogContainer *self, gchar *dialog_
 	gtk_widget_show(GTK_WIDGET(self)); // Ensure we show self
 }
 
-KotoDialogContainer* koto_dialog_container_new() {
-	return g_object_new(KOTO_TYPE_DIALOG_CONTAINER,
+KotoDialogContainer * koto_dialog_container_new() {
+	return g_object_new(
+		KOTO_TYPE_DIALOG_CONTAINER,
 		"orientation",
 		GTK_ORIENTATION_VERTICAL,
 		NULL

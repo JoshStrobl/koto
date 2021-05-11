@@ -21,30 +21,30 @@
 #include "engine.h"
 #include "media-keys.h"
 
-extern GtkWindow *main_window;
-extern KotoPlaybackEngine *playback_engine;
+extern GtkWindow * main_window;
+extern KotoPlaybackEngine * playback_engine;
 
-GDBusConnection *media_keys_dbus_conn = NULL;
-GDBusProxy *media_keys_proxy = NULL;
-GDBusNodeInfo *media_keys_introspection_data = NULL;
+GDBusConnection * media_keys_dbus_conn = NULL;
+GDBusProxy * media_keys_proxy = NULL;
+GDBusNodeInfo * media_keys_introspection_data = NULL;
 
 static const gchar introspection_xml[] =
-"<node name='/org/gnome/SettingsDaemon/MediaKeys'>"
-"  <interface name='org.gnome.SettingsDaemon.MediaKeys'>"
-"    <annotation name='org.freedesktop.DBus.GLib.CSymbol' value='gsd_media_keys_manager'/>"
-"    <method name='GrabMediaPlayerKeys'>"
-"      <arg name='application' direction='in' type='s'/>"
-"      <arg name='time' direction='in' type='u'/>"
-"    </method>"
-"    <method name='ReleaseMediaPlayerKeys'>"
-"      <arg name='application' direction='in' type='s'/>"
-"    </method>"
-"    <signal name='MediaPlayerKeyPressed'>"
-"      <arg name='application' type='s'/>"
-"      <arg name='key' type='s'/>"
-"    </signal>"
-"  </interface>"
-"</node>";
+	"<node name='/org/gnome/SettingsDaemon/MediaKeys'>"
+	"  <interface name='org.gnome.SettingsDaemon.MediaKeys'>"
+	"    <annotation name='org.freedesktop.DBus.GLib.CSymbol' value='gsd_media_keys_manager'/>"
+	"    <method name='GrabMediaPlayerKeys'>"
+	"      <arg name='application' direction='in' type='s'/>"
+	"      <arg name='time' direction='in' type='u'/>"
+	"    </method>"
+	"    <method name='ReleaseMediaPlayerKeys'>"
+	"      <arg name='application' direction='in' type='s'/>"
+	"    </method>"
+	"    <signal name='MediaPlayerKeyPressed'>"
+	"      <arg name='application' type='s'/>"
+	"      <arg name='key' type='s'/>"
+	"    </signal>"
+	"  </interface>"
+	"</node>";
 
 void grab_media_keys() {
 	if (media_keys_proxy == NULL) { // No connection
@@ -63,19 +63,32 @@ void grab_media_keys() {
 	);
 }
 
-void handle_media_keys_async_done(GObject *source_object, GAsyncResult *res, gpointer user_data) {
+void handle_media_keys_async_done(
+	GObject * source_object,
+	GAsyncResult * res,
+	gpointer user_data
+) {
 	(void) user_data;
 	g_dbus_proxy_call_finish(G_DBUS_PROXY(source_object), res, NULL); // Ensure we finish our call
 }
 
-void handle_media_keys_signal(GDBusProxy *proxy, const gchar *sender_name, const gchar *signal_name, GVariant *parameters, gpointer user_data) {
-	(void) proxy; (void) sender_name; (void) user_data;
+void handle_media_keys_signal(
+	GDBusProxy * proxy,
+	const gchar * sender_name,
+	const gchar * signal_name,
+	GVariant * parameters,
+	gpointer user_data
+) {
+	(void) proxy;
+	(void) sender_name;
+	(void) user_data;
 	if (g_strcmp0(signal_name, "MediaPlayerKeyPressed") != 0) { // Not MediaPlayerKeyPressed
 		return;
 	}
 
-	gchar *application_name = NULL;
-	gchar *key = NULL;
+	gchar * application_name = NULL;
+	gchar * key = NULL;
+
 
 	g_variant_get(parameters, "(ss)", &application_name, &key);
 
@@ -100,13 +113,21 @@ void handle_media_keys_signal(GDBusProxy *proxy, const gchar *sender_name, const
 	}
 }
 
-void handle_window_enter(GtkEventControllerFocus *controller, gpointer user_data) {
-	(void) controller; (void) user_data;
+void handle_window_enter(
+	GtkEventControllerFocus * controller,
+	gpointer user_data
+) {
+	(void) controller;
+	(void) user_data;
 	grab_media_keys(); // Grab our media keys
 }
 
-void handle_window_leave(GtkEventControllerFocus *controller, gpointer user_data) {
-	(void) controller; (void) user_data;
+void handle_window_leave(
+	GtkEventControllerFocus * controller,
+	gpointer user_data
+) {
+	(void) controller;
+	(void) user_data;
 	release_media_keys(); // Release our media keys
 }
 
@@ -115,7 +136,8 @@ void release_media_keys() {
 		return;
 	}
 
-	GVariant *params = g_variant_new_string(g_strdup("com.github.joshstrobl.koto"));
+	GVariant * params = g_variant_new_string(g_strdup("com.github.joshstrobl.koto"));
+
 
 	g_dbus_proxy_call(
 		media_keys_proxy,
@@ -133,8 +155,9 @@ void setup_mediakeys_interface() {
 	media_keys_introspection_data = g_dbus_node_info_new_for_xml(introspection_xml, NULL);
 	g_assert(media_keys_introspection_data != NULL);
 
-	GDBusConnection *bus;
-	GError *error = NULL;
+	GDBusConnection * bus;
+	GError * error = NULL;
+
 
 	bus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, &error);
 
@@ -169,7 +192,9 @@ void setup_mediakeys_interface() {
 		0
 	);
 
-	GtkEventController *focus_controller = gtk_event_controller_focus_new(); // Create a new focus controller
+	GtkEventController * focus_controller = gtk_event_controller_focus_new(); // Create a new focus controller
+
+
 	g_signal_connect(focus_controller, "enter", G_CALLBACK(handle_window_enter), NULL);
 	g_signal_connect(focus_controller, "leave", G_CALLBACK(handle_window_leave), NULL);
 	gtk_widget_add_controller(GTK_WIDGET(main_window), focus_controller);

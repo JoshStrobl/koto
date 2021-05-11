@@ -25,11 +25,19 @@ G_BEGIN_DECLS
 
 #define KOTO_TYPE_ARTIST_VIEW (koto_artist_view_get_type())
 
-G_DECLARE_FINAL_TYPE (KotoArtistView, koto_artist_view, KOTO, ARTIST_VIEW, GObject)
+G_DECLARE_FINAL_TYPE(KotoArtistView, koto_artist_view, KOTO, ARTIST_VIEW, GObject)
 
 KotoArtistView* koto_artist_view_new();
-void koto_artist_view_add_album(KotoArtistView *self, KotoIndexedAlbum *album);
-void koto_artist_view_add_artist(KotoArtistView *self, KotoIndexedArtist *artist);
-GtkWidget* koto_artist_view_get_main(KotoArtistView *self);
+void koto_artist_view_add_album(
+	KotoArtistView * self,
+	KotoIndexedAlbum * album
+);
+
+void koto_artist_view_add_artist(
+	KotoArtistView * self,
+	KotoIndexedArtist * artist
+);
+
+GtkWidget * koto_artist_view_get_main(KotoArtistView * self);
 
 G_END_DECLS
