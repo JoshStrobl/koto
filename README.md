@@ -1,4 +1,4 @@
-# koto
+# Koto
 
 ![koto alpha](https://raw.githubusercontent.com/JoshStrobl/koto/master/.github/koto-alpha-image.png)
 
