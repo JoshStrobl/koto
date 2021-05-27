@@ -136,11 +136,9 @@ static void koto_playlist_page_init(KotoPlaylistPage * self) {
 	self->playlist_image = koto_cover_art_button_new(220, 220, NULL); // Create our Cover Art Button with no art by default
 	KotoButton * cover_art_button = koto_cover_art_button_get_button(self->playlist_image); // Get the button for the cover art
 
-
 	koto_button_add_click_handler(cover_art_button, KOTO_BUTTON_CLICK_TYPE_PRIMARY, G_CALLBACK(koto_playlist_page_handle_cover_art_clicked), self);
 
 	GtkWidget * info_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
-
 
 	gtk_widget_set_size_request(info_box, -1, 220);
 	gtk_widget_add_css_class(info_box, "playlist-page-header-info");

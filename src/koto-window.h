@@ -18,6 +18,7 @@
 #pragma once
 
 #include <gtk-4.0/gtk/gtk.h>
+#include "config/config.h"
 #include "db/cartographer.h"
 #include "playlist/playlist.h"
 
@@ -42,6 +43,12 @@ void koto_window_handle_playlist_added(
 	KotoCartographer * carto,
 	KotoPlaylist * playlist,
 	gpointer user_data
+);
+
+void koto_window_manage_style(
+	KotoConfig * config,
+	guint prop_id,
+	KotoWindow * self
 );
 
 void koto_window_hide_dialogs(KotoWindow * self);

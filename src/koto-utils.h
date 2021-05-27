@@ -30,6 +30,8 @@ GtkWidget * koto_utils_create_image_from_filepath(
 	guint height
 );
 
+gchar * koto_utils_gboolean_to_string(gboolean b);
+
 gchar * koto_utils_get_filename_without_extension(gchar * filename);
 
 gboolean koto_utils_is_string_valid(gchar * str);

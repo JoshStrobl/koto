@@ -193,7 +193,6 @@ void koto_add_remove_track_popover_handle_playlist_removed(
 	(void) carto;
 	KotoAddRemoveTrackPopover * self = user_data;
 
-
 	if (!KOTO_JS_ADD_REMOVE_TRACK_POPOVER(self)) {
 		return;
 	}

@@ -20,9 +20,11 @@
 #include <gtk-4.0/gtk/gtk.h>
 #include "engine.h"
 #include "media-keys.h"
+#include "../koto-paths.h"
 
 extern GtkWindow * main_window;
 extern KotoPlaybackEngine * playback_engine;
+extern gchar * koto_rev_dns;
 
 GDBusConnection * media_keys_dbus_conn = NULL;
 GDBusProxy * media_keys_proxy = NULL;
@@ -54,7 +56,7 @@ void grab_media_keys() {
 	g_dbus_proxy_call(
 		media_keys_proxy,
 		"GrabMediaPlayerKeys",
-		g_variant_new("(su)", "com.github.joshstrobl.koto", 0),
+		g_variant_new("(su)", koto_rev_dns, 0),
 		G_DBUS_CALL_FLAGS_NONE,
 		-1,
 		NULL,
@@ -92,7 +94,7 @@ void handle_media_keys_signal(
 
 	g_variant_get(parameters, "(ss)", &application_name, &key);
 
-	if (g_strcmp0(application_name, "com.github.joshstrobl.koto") != 0) { // Not for Koto
+	if (g_strcmp0(application_name, koto_rev_dns) != 0) { // Not for Koto
 		return;
 	}
 
@@ -136,7 +138,7 @@ void release_media_keys() {
 		return;
 	}
 
-	GVariant * params = g_variant_new_string(g_strdup("com.github.joshstrobl.koto"));
+	GVariant * params = g_variant_new_string(g_strdup(koto_rev_dns));
 
 
 	g_dbus_proxy_call(

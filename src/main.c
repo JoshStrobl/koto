@@ -14,17 +14,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-#include <glib/gi18n.h>
+#include <glib.h>
 #include <gstreamer-1.0/gst/gst.h>
+#include "config/config.h"
 #include "db/cartographer.h"
 #include "db/db.h"
 #include "playback/media-keys.h"
 #include "playback/mimes.h"
 #include "playback/mpris.h"
+#include "paths.h"
 
-#include "koto-config.h"
+#include "config/config.h"
+#include "koto-paths.h"
 #include "koto-window.h"
+
+extern KotoConfig * config;
 
 extern guint mpris_bus_id;
 extern GDBusNodeInfo * introspection_data;
@@ -34,6 +38,9 @@ extern sqlite3 * koto_db;
 
 extern GHashTable * supported_mimes_hash;
 extern GList * supported_mimes;
+
+extern gchar * koto_path_to_conf;
+extern gchar * koto_rev_dns;
 
 GtkApplication * app = NULL;
 GtkWindow * main_window;
@@ -53,6 +60,7 @@ static void on_activate (GtkApplication * app) {
 
 static void on_shutdown(GtkApplication * app) {
 	(void) app;
+	koto_config_save(config); // Save our config
 	close_db(); // Close the database
 	g_bus_unown_name(mpris_bus_id);
 	g_dbus_node_info_unref(introspection_data);
@@ -64,23 +72,22 @@ int main (
 ) {
 	int ret;
 
-
-	/* Set up gettext translations */
-	bindtextdomain(GETTEXT_PACKAGE, LOCALEDIR);
-	bind_textdomain_codeset(GETTEXT_PACKAGE, "UTF-8");
-	textdomain(GETTEXT_PACKAGE);
-
 	gtk_init();
 	gst_init(&argc, &argv);
+
+	koto_paths_setup(); // Set up our required paths
 
 	supported_mimes_hash = g_hash_table_new(g_str_hash, g_str_equal);
 	supported_mimes = NULL; // Ensure our mimes GList is initialized
 	koto_playback_engine_get_supported_mimetypes(supported_mimes);
 
 	koto_maps = koto_cartographer_new(); // Create our new cartographer and their collection of maps
+
+	config = koto_config_new(); // Set our config
+	koto_config_load(config, koto_path_to_conf);
 	open_db(); // Open our database
 
-	app = gtk_application_new("com.github.joshstrobl.koto", G_APPLICATION_FLAGS_NONE);
+	app = gtk_application_new(koto_rev_dns, G_APPLICATION_FLAGS_NONE);
 	g_signal_connect(app, "activate", G_CALLBACK(on_activate), NULL);
 	g_signal_connect(app, "shutdown", G_CALLBACK(on_shutdown), NULL);
 	ret = g_application_run(G_APPLICATION(app), argc, argv);

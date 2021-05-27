@@ -35,19 +35,9 @@ void koto_album_view_add_track_to_listbox(
 	KotoTrack * track
 );
 
-void koto_album_view_hide_overlay_controls(
-	GtkEventControllerFocus * controller,
-	gpointer data
-);
-
 void koto_album_view_set_album(
 	KotoAlbumView * self,
 	KotoAlbum * album
-);
-
-void koto_album_view_show_overlay_controls(
-	GtkEventControllerFocus * controller,
-	gpointer data
 );
 
 void koto_album_view_toggle_album_playback(

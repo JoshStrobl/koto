@@ -309,13 +309,11 @@ void koto_playlist_add_track_by_uuid(
 ) {
 	KotoTrack * track = koto_cartographer_get_track_by_uuid(koto_maps, uuid); // Get the track
 
-
 	if (!KOTO_IS_TRACK(track)) {
 		return;
 	}
 
 	GList * found_tracks_uuids = g_queue_find_custom(self->tracks, uuid, koto_playlist_compare_track_uuids);
-
 
 	if (found_tracks_uuids != NULL) { // Is somewhere in the tracks already
 		g_list_free(found_tracks_uuids);
@@ -354,7 +352,6 @@ void koto_playlist_apply_model(
 ) {
 	GList * sort_user_data = NULL;
 
-
 	sort_user_data = g_list_prepend(sort_user_data, GUINT_TO_POINTER(preferred_model)); // Prepend our preferred model first
 	sort_user_data = g_list_prepend(sort_user_data, self); // Prepend ourself
 
@@ -362,10 +359,6 @@ void koto_playlist_apply_model(
 	g_list_store_sort(self->store, koto_playlist_model_sort_by_track, sort_user_data); // Sort tracks by indexed tracks
 
 	self->model = preferred_model; // Update our preferred model
-
-	/*if (self->current_position != -1) { // Have a position set
-	    koto_playlist_set_track_as_current(self, self->current_uuid); // Update the position based on the new model just by setting it as current again
-	   }*/
 }
 
 void koto_playlist_commit(KotoPlaylist * self) {
@@ -475,7 +468,6 @@ gint koto_playlist_get_position_of_track(
 gchar * koto_playlist_get_random_track(KotoPlaylist * self) {
 	gchar * track_uuid = NULL;
 	guint tracks_len = g_queue_get_length(self->sorted_tracks);
-
 
 	if (tracks_len == g_queue_get_length(self->played_tracks)) { // Played all tracks
 		track_uuid = g_list_nth_data(self->sorted_tracks->head, 0); // Get the first
@@ -757,13 +749,11 @@ void koto_playlist_remove_track_by_uuid(
 
 	gint file_index = g_queue_index(self->tracks, uuid); // Get the position of this uuid
 
-
 	if (file_index != -1) { // Have in tracks
 		g_queue_pop_nth(self->tracks, file_index); // Remove nth where it is the file index
 	}
 
 	gint file_index_in_sorted = g_queue_index(self->sorted_tracks, uuid); // Get position in sorted tracks
-
 
 	if (file_index_in_sorted != -1) { // Have in sorted tracks
 		g_queue_pop_nth(self->sorted_tracks, file_index_in_sorted); // Remove nth where it is the index in sorted tracks
@@ -873,8 +863,8 @@ void koto_playlist_set_track_as_current(
 ) {
 	gint position_of_track = g_queue_index(self->sorted_tracks, track_uuid); // Get the position of the UUID in our tracks
 
-
 	if (position_of_track != -1) { // In tracks
+		self->current_uuid = track_uuid;
 		self->current_position = position_of_track;
 	}
 }

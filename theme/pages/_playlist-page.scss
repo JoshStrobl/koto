@@ -58,10 +58,6 @@
 				& > .track-list-columned-item { // Track rows
 					font-size: x-large;
 				}
-
-				&:nth-child(odd):not(:selected) {
-					background-color: $midnight;
-				}
 			}
 		}
 

@@ -20,7 +20,7 @@
 #include "../../db/cartographer.h"
 #include "../../indexer/structs.h"
 #include "koto-button.h"
-#include "koto-config.h"
+#include "config/config.h"
 #include "../../koto-utils.h"
 #include "music-local.h"
 

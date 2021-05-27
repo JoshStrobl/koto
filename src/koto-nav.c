@@ -19,7 +19,7 @@
 #include "db/cartographer.h"
 #include "indexer/structs.h"
 #include "playlist/playlist.h"
-#include "koto-config.h"
+#include "config/config.h"
 #include "koto-button.h"
 #include "koto-expander.h"
 #include "koto-nav.h"
@@ -326,7 +326,6 @@ void koto_nav_handle_playlist_removed(
 ) {
 	(void) carto;
 	KotoNav * self = user_data;
-
 
 	if (!g_hash_table_contains(self->playlist_buttons, playlist_uuid)) { // Does not contain this
 		return;

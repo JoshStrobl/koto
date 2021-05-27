@@ -232,7 +232,6 @@ int process_artists(
 
 	KotoArtist * artist = koto_artist_new_with_uuid(artist_uuid); // Create our artist with the UUID
 
-
 	g_object_set(
 		artist,
 		"path",
@@ -422,7 +421,6 @@ int process_tracks(
 void read_from_db(KotoLibrary * self) {
 	int artists_rc = sqlite3_exec(koto_db, "SELECT * FROM artists", process_artists, self, NULL); // Process our artists
 
-
 	if (artists_rc != SQLITE_OK) { // Failed to get our artists
 		g_critical("Failed to read our artists: %s", sqlite3_errmsg(koto_db));
 		return;
@@ -431,7 +429,6 @@ void read_from_db(KotoLibrary * self) {
 	g_hash_table_foreach(self->music_artists, output_artists, NULL);
 
 	int playlist_rc = sqlite3_exec(koto_db, "SELECT * FROM playlist_meta", process_playlists, self, NULL); // Process our playlists
-
 
 	if (playlist_rc != SQLITE_OK) { // Failed to get our playlists
 		g_critical("Failed to read our playlists: %s", sqlite3_errmsg(koto_db));
@@ -551,26 +548,22 @@ void output_artists(
 	(void) data;
 	KotoArtist * artist = koto_cartographer_get_artist_by_uuid(koto_maps, (gchar*) artist_key);
 
-
 	if (artist == NULL) {
 		return;
 	}
 
 	gchar * artist_name;
 
-
 	g_object_get(artist, "name", &artist_name, NULL);
-	g_debug("Artist: %s", artist_name);
+	g_message("Artist: %s", artist_name);
 
 	GList * albums = koto_artist_get_albums(artist); // Get the albums for this artist
 
-
 	if (albums != NULL) {
-		g_debug("Length of Albums: %d", g_list_length(albums));
+		g_message("Length of Albums: %d", g_list_length(albums));
 	}
 
 	GList * a;
-
 
 	for (a = albums; a != NULL; a = a->next) {
 		gchar * album_uuid = a->data;

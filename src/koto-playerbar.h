@@ -29,6 +29,12 @@ G_DECLARE_FINAL_TYPE(KotoPlayerBar, koto_playerbar, KOTO, PLAYERBAR, GObject)
 KotoPlayerBar * koto_playerbar_new(void);
 GtkWidget * koto_playerbar_get_main(KotoPlayerBar* bar);
 
+void koto_playerbar_apply_configuration_state(
+	KotoConfig * config,
+	guint prop_id,
+	KotoPlayerBar * self
+);
+
 void koto_playerbar_create_playback_details(KotoPlayerBar* bar);
 
 void koto_playerbar_create_primary_controls(KotoPlayerBar* bar);

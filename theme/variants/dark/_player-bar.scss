@@ -1,0 +1,15 @@
+@import '../../vars';
+
+.player-bar {
+	background-color: $midnight;
+
+	.koto-button {
+		&:not(.toggled) {
+			color: $darkgrey;
+		}
+
+		&.toggled {
+			color: white;
+		}
+	}
+}

@@ -1,7 +1,7 @@
-@import 'components/cover-art-button';
 @import 'components/gtk-overrides';
 @import 'pages/music-local';
 @import 'pages/playlist-page';
+@import 'variants/dark/main';
 
 @import 'button';
 @import 'disc-view';
@@ -12,15 +12,11 @@
 @import 'vars';
 
 window {
-	background-color: $grey;
-
 	& > headerbar, & > headerbar:active {
-		background-color: $midnight;
 		background-image: none;
 	}
 
 	.koto-dialog-container {
-		background-color: transparentize($midnight, 0.5);
 		padding: 20px;
 	}
 

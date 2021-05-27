@@ -21,6 +21,7 @@
 #include "../db/cartographer.h"
 #include "../pages/music/music-local.h"
 #include "../playlist/add-remove-track-popover.h"
+#include "../playlist/current.h"
 #include "../playback/engine.h"
 #include "../koto-button.h"
 #include "../koto-utils.h"
@@ -28,6 +29,7 @@
 
 extern KotoAddRemoveTrackPopover * koto_add_remove_track_popup;
 extern KotoCartographer * koto_maps;
+extern KotoCurrentPlaylist * current_playlist;
 extern KotoPageMusicLocal * music_local_page;
 extern KotoPlaybackEngine * playback_engine;
 extern KotoWindow * main_window;
@@ -241,7 +243,6 @@ void koto_action_bar_handle_play_track_button_clicked(
 	(void) button;
 	KotoActionBar * self = data;
 
-
 	if (!KOTO_IS_ACTION_BAR(self)) {
 		return;
 	}
@@ -252,12 +253,20 @@ void koto_action_bar_handle_play_track_button_clicked(
 
 	KotoTrack * track = g_list_nth_data(self->current_list, 0); // Get the first track
 
-
 	if (!KOTO_IS_TRACK(track)) { // Not a track
 		goto doclose;
 	}
 
-	koto_playback_engine_set_track_by_uuid(playback_engine, koto_track_get_uuid(track)); // Set the track to play
+	if (self->relative == KOTO_ACTION_BAR_IS_PLAYLIST_RELATIVE) { // Relative to a playlist
+		KotoPlaylist * playlist = koto_cartographer_get_playlist_by_uuid(koto_maps, self->current_playlist_uuid);
+
+		if (KOTO_IS_PLAYLIST(playlist)) { // Is a playlist
+			koto_current_playlist_set_playlist(current_playlist, playlist); // Update our playlist to the one associated with the track we are playing
+			koto_playlist_set_track_as_current(playlist, koto_track_get_uuid(track)); // Get this track as the current track in the position
+		}
+	}
+
+	koto_playback_engine_set_track_by_uuid(playback_engine, koto_track_get_uuid(track), TRUE); // Set the track to play
 
 doclose:
 	koto_action_bar_close(self);

@@ -1,8 +1,9 @@
 project('koto', 'c',
 	version: '0.1.0',
 	meson_version: '>= 0.57.0',
-	default_options: [ 'warning_level=2',
+	default_options: [
 		'c_std=gnu11',
+		'warning_level=2',
 		'werror=true',
 	],
 )
@@ -18,9 +19,9 @@ configure_file(
 	output: 'koto-config.h',
 	configuration: config_h,
 )
-add_project_arguments([
-	'-I' + meson.current_build_dir(),
-], language: 'c')
+
+c = meson.get_compiler('c')
+toml_dep = c.find_library('toml', required: true)
 
 subdir('theme')
 subdir('data')

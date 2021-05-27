@@ -21,6 +21,9 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include "db.h"
+#include "../koto-paths.h"
+
+extern gchar * koto_path_to_db;
 
 int KOTO_DB_SUCCESS = 0;
 int KOTO_DB_NEW = 1;
@@ -44,7 +47,6 @@ int create_db_tables() {
 	gchar * create_tables_errmsg = NULL;
 	int rc = sqlite3_exec(koto_db, tables_creation_queries, 0, 0, &create_tables_errmsg);
 
-
 	if (rc != SQLITE_OK) {
 		g_critical("Failed to create required tables: %s", create_tables_errmsg);
 	}
@@ -56,7 +58,6 @@ int enable_foreign_keys() {
 	gchar * enable_foreign_keys_err = NULL;
 	int rc = sqlite3_exec(koto_db, "PRAGMA foreign_keys = ON;", 0, 0, &enable_foreign_keys_err);
 
-
 	if (rc != SQLITE_OK) {
 		g_critical("Failed to enable foreign key support. Ensure your sqlite3 is compiled with neither SQLITE_OMIT_FOREIGN_KEY or SQLITE_OMIT_TRIGGER defined: %s", enable_foreign_keys_err);
 	}
@@ -65,39 +66,20 @@ int enable_foreign_keys() {
 	return (rc == SQLITE_OK) ? KOTO_DB_SUCCESS : KOTO_DB_FAIL;
 }
 
-gchar * get_db_path() {
-	if (db_filepath == NULL) {
-		const gchar * data_home = g_get_user_data_dir();
-		gchar * data_dir = g_build_path(G_DIR_SEPARATOR_S, data_home, "com.github.joshstrobl.koto", NULL);
-		db_filepath = g_build_filename(g_strdup(data_dir), "db", NULL); // Build out our path using XDG_DATA_HOME (e.g. .local/share/) + our namespace + db as the file name
-		g_free(data_dir);
-	}
-
-	return db_filepath;
-}
-
 int have_existing_db() {
 	struct stat db_stat;
-	int success = stat(get_db_path(), &db_stat);
-
-
+	int success = stat(koto_path_to_db, &db_stat);
 	return ((success == 0) && S_ISREG(db_stat.st_mode)) ? 0 : 1;
 }
 
 int open_db() {
 	int ret = KOTO_DB_SUCCESS; // Default to last return being SUCCESS
 
-
 	if (have_existing_db() == 1) { // If we do not have an existing DB
-		const gchar * data_home = g_get_user_data_dir();
-		const gchar * data_dir = g_path_get_dirname(db_filepath);
-		mkdir(data_home, 0755);
-		mkdir(data_dir, 0755);
-		chown(data_dir, getuid(), getgid());
 		ret = KOTO_DB_NEW;
 	}
 
-	if (sqlite3_open(db_filepath, &koto_db) != KOTO_DB_SUCCESS) { // If we failed to open the database file
+	if (sqlite3_open(koto_path_to_db, &koto_db) != KOTO_DB_SUCCESS) { // If we failed to open the database file
 		g_critical("Failed to open or create database: %s", sqlite3_errmsg(koto_db));
 		return KOTO_DB_FAIL;
 	}

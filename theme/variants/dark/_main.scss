@@ -1,0 +1,21 @@
+@import '../../vars';
+
+window {
+	&.koto-theme-dark {
+		background-color: $grey;
+
+		& > headerbar, & > headerbar:active {
+			background-color: $midnight;
+		}
+
+		.koto-dialog-container {
+			background-color: transparentize($midnight, 0.75);
+		}
+
+		@import 'cover-art-button';
+		@import 'disc-view';
+		@import 'music-local';
+		@import 'player-bar';
+		@import 'playlist-page';
+	}
+}

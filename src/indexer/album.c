@@ -543,7 +543,6 @@ void koto_album_set_as_current_playlist(KotoAlbum * self) {
 
 	KotoPlaylist * new_album_playlist = koto_playlist_new(); // Create a new playlist
 
-
 	g_object_set(new_album_playlist, "ephemeral", TRUE, NULL); // Set as ephemeral / temporary
 
 	// The following section effectively reverses our tracks, so the first is now last.

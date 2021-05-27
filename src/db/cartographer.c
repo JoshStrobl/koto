@@ -16,6 +16,7 @@
  */
 
 #include <glib-2.0/glib.h>
+#include "../koto-utils.h"
 #include "cartographer.h"
 
 enum {
@@ -253,7 +254,6 @@ void koto_cartographer_add_playlist(
 	KotoPlaylist * playlist
 ) {
 	gchar * playlist_uuid = NULL;
-
 
 	g_object_get(playlist, "uuid", &playlist_uuid, NULL);
 
@@ -494,16 +494,24 @@ void koto_cartographer_remove_playlist_by_uuid(
 	KotoCartographer * self,
 	gchar* playlist_uuid
 ) {
-	if (playlist_uuid != NULL) {
-		g_hash_table_remove(self->playlists, playlist_uuid);
-
-		g_signal_emit(
-			self,
-			cartographer_signals[SIGNAL_PLAYLIST_REMOVED],
-			0,
-			playlist_uuid
-		);
+	if (!koto_utils_is_string_valid(playlist_uuid)) { // Not a valid playlist UUID string
+		return;
 	}
+
+	KotoPlaylist * possible_playlist = koto_cartographer_get_playlist_by_uuid(self, playlist_uuid);
+
+	if (!KOTO_IS_PLAYLIST(possible_playlist)) { // If not a playlist
+		return;
+	}
+
+	g_signal_emit(
+		self,
+		cartographer_signals[SIGNAL_PLAYLIST_REMOVED],
+		0,
+		playlist_uuid
+	);
+
+	g_hash_table_remove(self->playlists, playlist_uuid);
 }
 
 void koto_cartographer_remove_track(

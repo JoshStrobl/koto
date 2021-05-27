@@ -63,7 +63,6 @@ static void koto_cover_art_button_set_property(
 static void koto_cover_art_button_class_init(KotoCoverArtButtonClass * c) {
 	GObjectClass * gobject_class;
 
-
 	gobject_class = G_OBJECT_CLASS(c);
 	gobject_class->get_property = koto_cover_art_button_get_property;
 	gobject_class->set_property = koto_cover_art_button_set_property;
@@ -200,7 +199,6 @@ void koto_cover_art_button_set_art_path(
 	}
 
 	gboolean defined_artwork = koto_utils_is_string_valid(art_path);
-
 
 	if (GTK_IS_IMAGE(self->art)) { // Already have an image
 		if (!defined_artwork) { // No art path or empty string

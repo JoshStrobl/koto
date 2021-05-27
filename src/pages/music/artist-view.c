@@ -21,7 +21,7 @@
 #include "../../indexer/structs.h"
 #include "album-view.h"
 #include "artist-view.h"
-#include "koto-config.h"
+#include "config/config.h"
 #include "koto-utils.h"
 
 extern KotoCartographer * koto_maps;

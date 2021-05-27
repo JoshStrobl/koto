@@ -23,11 +23,13 @@
 #include "../db/cartographer.h"
 #include "../playlist/current.h"
 #include "../playlist/playlist.h"
+#include "../koto-paths.h"
 #include "../koto-utils.h"
 #include "engine.h"
 #include "mimes.h"
 #include "mpris.h"
 
+extern gchar * koto_rev_dns;
 extern KotoCartographer * koto_maps;
 extern KotoCurrentPlaylist * current_playlist;
 extern GtkApplication * app;
@@ -187,7 +189,7 @@ GVariant * handle_get_property(
 	}
 
 	if (g_strcmp0(property_name, "DesktopEntry") == 0) { // Desktop Entry
-		ret = g_variant_new_string("com.github.joshstrobl.koto");
+		ret = g_variant_new_string(koto_rev_dns);
 	}
 
 	if (g_strcmp0(property_name, "SupportedUriSchemas") == 0) { // Supported URI Schemas

@@ -17,18 +17,20 @@
 
 #include <gstreamer-1.0/gst/gst.h>
 #include <gtk-4.0/gtk/gtk.h>
+#include "config/config.h"
 #include "db/cartographer.h"
 #include "playlist/add-remove-track-popover.h"
 #include "playlist/current.h"
 #include "playlist/playlist.h"
 #include "playback/engine.h"
 #include "koto-button.h"
-#include "koto-config.h"
+#include "config/config.h"
 #include "koto-playerbar.h"
 
 extern KotoAddRemoveTrackPopover * koto_add_remove_track_popup;
-extern KotoCurrentPlaylist * current_playlist;
 extern KotoCartographer * koto_maps;
+extern KotoConfig *config;
+extern KotoCurrentPlaylist * current_playlist;
 extern KotoPlaybackEngine * playback_engine;
 
 struct _KotoPlayerBar {
@@ -86,7 +88,6 @@ static void koto_playerbar_class_init(KotoPlayerBarClass * c) {
 static void koto_playerbar_constructed(GObject * obj) {
 	KotoPlayerBar * self = KOTO_PLAYERBAR(obj);
 
-
 	self->main = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
 	gtk_widget_add_css_class(self->main, "player-bar");
 
@@ -135,8 +136,13 @@ static void koto_playerbar_constructed(GObject * obj) {
 
 	gtk_widget_set_hexpand(GTK_WIDGET(self->main), TRUE);
 
+	// Set up our volume and other playback state bits from our config
+
+	koto_playerbar_apply_configuration_state(config, 0, self);
+
 	// Set up the bindings
 
+	g_signal_connect(config, "notify::playback-last-used-volume", G_CALLBACK(koto_playerbar_apply_configuration_state), self); // Bind onto the playback last used volume config option
 	g_signal_connect(playback_engine, "is-playing", G_CALLBACK(koto_playerbar_handle_is_playing), self);
 	g_signal_connect(playback_engine, "is-paused", G_CALLBACK(koto_playerbar_handle_is_paused), self);
 	g_signal_connect(playback_engine, "tick-duration", G_CALLBACK(koto_playerbar_handle_tick_duration), self);
@@ -153,6 +159,23 @@ static void koto_playerbar_init(KotoPlayerBar * self) {
 
 KotoPlayerBar * koto_playerbar_new(void) {
 	return g_object_new(KOTO_TYPE_PLAYERBAR, NULL);
+}
+
+void koto_playerbar_apply_configuration_state(
+	KotoConfig * config,
+	guint prop_id,
+	KotoPlayerBar * self
+) {
+	(void) prop_id;
+	gdouble config_last_used_volume = 0;
+	g_object_get(
+		config,
+		"playback-last-used-volume",
+		&config_last_used_volume,
+		NULL
+	);
+
+	gtk_scale_button_set_value(GTK_SCALE_BUTTON(self->volume_button), config_last_used_volume);
 }
 
 void koto_playerbar_create_playback_details(KotoPlayerBar* bar) {
@@ -248,7 +271,6 @@ void koto_playerbar_create_secondary_controls(KotoPlayerBar* bar) {
 		gtk_box_append(GTK_BOX(bar->secondary_controls_section), bar->volume_button);
 
 		g_signal_connect(GTK_SCALE_BUTTON(bar->volume_button), "value-changed", G_CALLBACK(koto_playerbar_handle_volume_button_change), bar);
-
 	}
 }
 

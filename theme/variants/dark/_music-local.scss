@@ -1,0 +1,7 @@
+.page-music-local {
+	& > .artist-list {
+		&, & > viewport, & > viewport > list {
+			background-color: $midnight;
+		}
+	}
+}

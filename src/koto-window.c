@@ -25,19 +25,23 @@
 #include "playlist/add-remove-track-popover.h"
 #include "playlist/current.h"
 #include "playlist/create-modify-dialog.h"
-#include "koto-config.h"
+#include "config/config.h"
 #include "koto-dialog-container.h"
 #include "koto-nav.h"
 #include "koto-playerbar.h"
+#include "koto-paths.h"
 #include "koto-window.h"
 
 extern KotoActionBar * action_bar;
 extern KotoAddRemoveTrackPopover * koto_add_remove_track_popup;
 extern KotoCartographer * koto_maps;
 extern KotoCreateModifyPlaylistDialog * playlist_create_modify_dialog;
+extern KotoConfig * config;
 extern KotoCurrentPlaylist * current_playlist;
 extern KotoPageMusicLocal * music_local_page;
 extern KotoPlaybackEngine * playback_engine;
+
+extern gchar * koto_rev_dns;
 
 struct _KotoWindow {
 	GtkApplicationWindow parent_instance;
@@ -45,6 +49,8 @@ struct _KotoWindow {
 	KotoCurrentPlaylist * current_playlist;
 
 	KotoDialogContainer * dialogs;
+
+	GtkCssProvider * provider;
 
 	GtkWidget * overlay;
 	GtkWidget        * header_bar;
@@ -69,11 +75,11 @@ static void koto_window_init (KotoWindow * self) {
 	current_playlist = koto_current_playlist_new();
 	playback_engine = koto_playback_engine_new();
 
-	GtkCssProvider* provider = gtk_css_provider_new();
-
-
-	gtk_css_provider_load_from_resource(provider, "/com/github/joshstrobl/koto/style.css");
-	gtk_style_context_add_provider_for_display(gdk_display_get_default(), GTK_STYLE_PROVIDER(provider), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+	self->provider = gtk_css_provider_new();
+	gtk_css_provider_load_from_resource(self->provider, "/com/github/joshstrobl/koto/style.css");
+	koto_window_manage_style(config, 0, self); // Immediately apply the theme
+	g_signal_connect(config, "notify::ui-theme-desired", G_CALLBACK(koto_window_manage_style), self); // Handle changes to desired theme
+	g_signal_connect(config, "notify::ui-theme-override", G_CALLBACK(koto_window_manage_style), self); // Handle changes to theme overriding
 
 	create_new_headerbar(self); // Create our headerbar
 
@@ -137,9 +143,10 @@ static void koto_window_init (KotoWindow * self) {
 #endif
 	gtk_window_set_title(GTK_WINDOW(self), "Koto");
 	gtk_window_set_icon_name(GTK_WINDOW(self), "audio-headphones");
-	gtk_window_set_startup_id(GTK_WINDOW(self), "com.github.joshstrobl.koto");
+	gtk_window_set_startup_id(GTK_WINDOW(self), koto_rev_dns);
 
 	gtk_widget_queue_draw(self->content_layout);
+
 	g_thread_new("load-library", (void*) load_library, self);
 }
 
@@ -149,6 +156,61 @@ void koto_window_add_page(
 	GtkWidget * page
 ) {
 	gtk_stack_add_named(GTK_STACK(self->pages), page, page_name);
+}
+
+void koto_window_manage_style(KotoConfig * c, guint prop_id, KotoWindow * self) {
+	(void) prop_id;
+
+	if (!KOTO_IS_WINDOW(self)) { // Not a Koto Window
+		g_warning("Not a window");
+	}
+
+	gchar * desired_theme = NULL;
+	gboolean overriding_theme = FALSE;
+	g_object_get(
+		c,
+		"ui-theme-desired",
+		&desired_theme,
+		"ui-theme-override",
+		&overriding_theme,
+		NULL
+	);
+
+	if (!koto_utils_is_string_valid(desired_theme)) { // Theme not valid
+		desired_theme = "dark";
+	}
+
+	GtkStyleContext * context = gtk_widget_get_style_context(GTK_WIDGET(self));
+	
+	if (!overriding_theme) { // If we are not overriding the theme
+		if (!gtk_style_context_has_class(context, "koto-theme-dark")) { // Don't have our css class for a theme
+			gtk_style_context_add_provider_for_display(gdk_display_get_default(), GTK_STYLE_PROVIDER(self->provider), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+		}
+
+		GList * themes = NULL;
+		themes = g_list_append(themes, "dark");
+		themes = g_list_append(themes, "gruvbox");
+		themes = g_list_append(themes, "light");
+
+		GList *themes_head;
+
+		for (themes_head = themes; themes_head != NULL; themes_head = themes_head->next) { // For each theme
+			gchar * theme_class_name = g_strdup_printf("koto-theme-%s", (gchar *) themes->data); // Get the theme
+
+			if (g_strcmp0((gchar *) themes->data, desired_theme) == 0) { // If we are using this theme
+				gtk_widget_add_css_class(GTK_WIDGET(self), theme_class_name); // Add the CSS class
+			} else {
+				gtk_widget_remove_css_class(GTK_WIDGET(self), theme_class_name); // Remove the CSS class
+			}
+
+			g_free(theme_class_name); // Free the CSS class
+		}
+
+		g_list_free(themes_head);
+		g_list_free(themes);
+	} else { // Overriding the built-in theme
+		gtk_style_context_remove_provider_for_display(gdk_display_get_default(), GTK_STYLE_PROVIDER(self->provider)); // Remove the provider
+	}
 }
 
 void koto_window_go_to_page(

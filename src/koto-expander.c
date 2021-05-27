@@ -17,7 +17,7 @@
 
 #include <glib/gi18n.h>
 #include <gtk-4.0/gtk/gtk.h>
-#include "koto-config.h"
+#include "config/config.h"
 #include "koto-button.h"
 #include "koto-expander.h"
 

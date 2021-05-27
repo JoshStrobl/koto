@@ -1,8 +1,13 @@
-add_project_arguments('-Db_sanitize=address', language: 'c')
+add_global_arguments([
+	'-I' + meson.current_build_dir(),
+	'-Db_sanitize=address',
+	'-Dwerror=true',
+], language: 'c')
 
 koto_sources = [
 	'components/koto-action-bar.c',
 	'components/koto-cover-art-button.c',
+	'config/config.c',
 	'db/cartographer.c',
 	'db/db.c',
 	'indexer/album.c',
@@ -28,6 +33,7 @@ koto_sources = [
 	'koto-expander.c',
 	'koto-nav.c',
 	'koto-playerbar.c',
+	'koto-paths.c',
 	'koto-track-item.c',
 	'koto-utils.c',
 	'koto-window.c',
@@ -42,6 +48,7 @@ koto_deps = [
 	dependency('libmagic', version: '>=5.39'),
 	dependency('sqlite3', version: '>=3.34'),
 	dependency('taglib_c', version: '>=1.11'),
+	toml_dep,
 ]
 
 gnome = import('gnome')

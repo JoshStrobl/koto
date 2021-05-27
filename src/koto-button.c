@@ -17,7 +17,7 @@
 
 #include <gtk-4.0/gtk/gtk.h>
 #include "koto-button.h"
-#include "koto-config.h"
+#include "config/config.h"
 #include "koto-utils.h"
 
 struct _PixbufSize {
@@ -113,7 +113,6 @@ static void koto_button_set_property(
 static void koto_button_class_init(KotoButtonClass * c) {
 	GObjectClass * gobject_class;
 
-
 	gobject_class = G_OBJECT_CLASS(c);
 	gobject_class->constructed = koto_button_constructed;
 	gobject_class->set_property = koto_button_set_property;
@@ -197,7 +196,6 @@ static void koto_button_init(KotoButton * self) {
 static void koto_button_constructed(GObject * obj) {
 	KotoButton * self = KOTO_BUTTON(obj);
 	GtkStyleContext * style = gtk_widget_get_style_context(GTK_WIDGET(self));
-
 
 	gtk_style_context_add_class(style, "koto-button");
 

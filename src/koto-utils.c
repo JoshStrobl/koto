@@ -65,6 +65,10 @@ GtkWidget * koto_utils_create_image_from_filepath(
 	return image;
 }
 
+gchar * koto_utils_gboolean_to_string(gboolean b) {
+	return g_strdup(b ? "true" : "false");
+}
+
 gchar * koto_utils_get_filename_without_extension(gchar * filename) {
 	gchar * trimmed_file_name = g_strdup(filename);
 	gchar ** split = g_strsplit(filename, ".", -1); // Split every time we see .

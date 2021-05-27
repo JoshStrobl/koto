@@ -2,10 +2,6 @@
 
 .page-music-local {
 	& > .artist-list {
-		&, & > viewport, & > viewport > list {
-			background-color: $midnight;
-		}
-
 		& > viewport > list {
 			& > row {
 				padding: $halvedpadding;
@@ -27,10 +23,6 @@
 					& > flowboxchild > .album-view {
 						& > overlay {
 							margin-right: $itempadding;
-
-							& > revealer > box { // Inner controls
-								background-color: rgba(0,0,0,0.75);
-							}
 						}
 
 						& > box {

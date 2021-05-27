@@ -19,6 +19,7 @@
 #include <glib-2.0/glib-object.h>
 #include <gstreamer-1.0/gst/gst.h>
 #include <gstreamer-1.0/gst/player/player.h>
+#include "../config/config.h"
 #include "../playlist/current.h"
 
 G_BEGIN_DECLS
@@ -43,9 +44,15 @@ GType koto_playback_engine_get_type(void) G_GNUC_CONST;
 
 KotoPlaybackEngine * koto_playback_engine_new();
 
+void koto_playback_engine_apply_configuration_state(
+	KotoConfig * config,
+	guint prop_id,
+	KotoPlaybackEngine * self
+);
+
 void koto_playback_engine_backwards(KotoPlaybackEngine * self);
 
-void koto_playback_engine_current_playlist_changed();
+void koto_playback_engine_current_playlist_changed(KotoCurrentPlaylist * current_pl, guint prop_id, KotoPlaybackEngine *self);
 
 void koto_playback_engine_forwards(KotoPlaybackEngine * self);
 
@@ -60,6 +67,8 @@ gdouble koto_playback_engine_get_progress(KotoPlaybackEngine * self);
 gboolean koto_playback_engine_get_track_repeat(KotoPlaybackEngine * self);
 
 gboolean koto_playback_engine_get_track_shuffle(KotoPlaybackEngine * self);
+
+gdouble koto_playback_engine_get_volume(KotoPlaybackEngine * self);
 
 void koto_playback_engine_mute(KotoPlaybackEngine * self);
 
@@ -92,7 +101,8 @@ void koto_playback_engine_set_track_shuffle(
 
 void koto_playback_engine_set_track_by_uuid(
 	KotoPlaybackEngine * self,
-	gchar * track_uuid
+	gchar * track_uuid,
+	gboolean playing_specific_track
 );
 
 void koto_playback_engine_set_volume(

@@ -1,3 +1,5 @@
+@import '../../vars';
+
 .cover-art-button {
 	& > revealer > box { // Inner controls
 		background-color: rgba(0,0,0,0.75);
