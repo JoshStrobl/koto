@@ -147,11 +147,10 @@ static void koto_create_modify_playlist_dialog_set_property(
 	KotoCreateModifyPlaylistDialog * self = KOTO_CREATE_MODIFY_PLAYLIST_DIALOG(obj);
 
 	(void) self;
-	(void) val;
 
 	switch (prop_id) {
 		case PROP_PLAYLIST_UUID:
-			// TODO: Implement
+			koto_create_modify_playlist_dialog_set_playlist_uuid(self, g_strdup(g_value_get_string(val)));
 			break;
 		default:
 			G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, prop_id, spec);
