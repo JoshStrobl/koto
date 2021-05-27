@@ -1,8 +1,30 @@
 @import "vars";
 
-.disc-view {
-	& > box { // Horizontal box with image and disc label
-		color: #ccc;
-		margin: 10px 0;
+.discs-list {
+	background-color: transparent;
+	border-color: transparent;
+	border-width: 0;
+
+	.disc-view {
+		& > box { // Horizontal box with image and disc label
+			color: $text-color-faded;
+			margin: 10px 0;
+		}
+
+		& .track-list {
+			& > row {
+				&:not(:active):not(:selected) { // Neither active nor selected, see gtk overrides
+					color: $text-color-bright;
+
+					&:nth-child(odd):not(:hover) {
+						background-color: $bg-primary;
+					}
+
+					&:nth-child(even), &:hover {
+						background-color: $bg-secondary;
+					}
+				}
+			}
+		}
 	}
 }

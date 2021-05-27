@@ -55,7 +55,7 @@ gnome = import('gnome')
 
 koto_sources += gnome.compile_resources('koto-resources',
 	'koto.gresource.xml',
-	dependencies: [ theme ],
+	dependencies: themes,
 	c_name: 'koto',
 )
 

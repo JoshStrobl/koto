@@ -105,7 +105,11 @@ static void koto_album_view_init(KotoAlbumView * self) {
 	gtk_box_append(GTK_BOX(self->album_tracks_box), self->discs); // Add the discs list box to the albums tracks box
 
 	self->album_cover = koto_cover_art_button_new(220, 220, NULL);
-	gtk_box_prepend(GTK_BOX(self->main), koto_cover_art_button_get_main(self->album_cover));
+	GtkWidget * album_cover_main = koto_cover_art_button_get_main(self->album_cover);
+
+	gtk_widget_set_valign(album_cover_main, GTK_ALIGN_START);
+
+	gtk_box_prepend(GTK_BOX(self->main), album_cover_main);
 	KotoButton * cover_art_button = koto_cover_art_button_get_button(self->album_cover); // Get the button for the cover art
 	koto_button_add_click_handler(cover_art_button, KOTO_BUTTON_CLICK_TYPE_PRIMARY, G_CALLBACK(koto_album_view_toggle_album_playback), self);
 }

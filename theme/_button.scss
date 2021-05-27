@@ -1,8 +1,14 @@
 @import "vars";
 
 .koto-button {
+	border-width: 0;
+
 	& > image {
 		margin-right: 10px;
+	}
+
+	&:not(.active) {
+		color: $text-color-bright;
 	}
 
 	&.active > image {

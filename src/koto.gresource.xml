@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <gresources>
 	<gresource prefix="/com/github/joshstrobl/koto">
-		<file alias="style.css">../theme/style.css</file>
+		<file alias="koto-builtin-dark.css">../theme/koto-builtin-dark.css</file>
+		<file alias="koto-builtin-gruvbox.css">../theme/koto-builtin-gruvbox.css</file>
+		<file alias="koto-builtin-light.css">../theme/koto-builtin-light.css</file>
 	</gresource>
 </gresources>

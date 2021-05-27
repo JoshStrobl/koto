@@ -6,7 +6,7 @@
 			margin-left: 40px;
 
 			& > label { // All labels
-				color: $palewhite;
+				color: $text-color-faded;
 			}
 
 			& > label:nth-child(1) { // First item (type of playlist)
@@ -55,6 +55,14 @@
 
 		& > .track-list-columned { // Column content
 			& > row {
+				&:not(:selected) {
+					color: $text-color-bright;
+				}
+
+				&:nth-child(odd):not(:selected) {
+					background-color: $bg-secondary;
+				}
+
 				& > .track-list-columned-item { // Track rows
 					font-size: x-large;
 				}

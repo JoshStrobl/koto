@@ -1,0 +1,11 @@
+.cover-art-button {
+	&:hover {
+		& > image {
+			opacity: 0.75;
+		}
+
+		& > revealer > box { // Inner controls
+			background-color: transparentize($bg-secondary, 0.25);
+		}
+	}
+}

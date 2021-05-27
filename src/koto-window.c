@@ -75,8 +75,6 @@ static void koto_window_init (KotoWindow * self) {
 	current_playlist = koto_current_playlist_new();
 	playback_engine = koto_playback_engine_new();
 
-	self->provider = gtk_css_provider_new();
-	gtk_css_provider_load_from_resource(self->provider, "/com/github/joshstrobl/koto/style.css");
 	koto_window_manage_style(config, 0, self); // Immediately apply the theme
 	g_signal_connect(config, "notify::ui-theme-desired", G_CALLBACK(koto_window_manage_style), self); // Handle changes to desired theme
 	g_signal_connect(config, "notify::ui-theme-override", G_CALLBACK(koto_window_manage_style), self); // Handle changes to theme overriding
@@ -184,12 +182,14 @@ void koto_window_manage_style(
 		desired_theme = "dark";
 	}
 
-	GtkStyleContext * context = gtk_widget_get_style_context(GTK_WIDGET(self));
+	if (!GTK_IS_CSS_PROVIDER(self->provider)) { // Don't have a CSS provider yet
+		self->provider = gtk_css_provider_new();
+	}
+
+	gtk_css_provider_load_from_resource(self->provider, g_strdup_printf("/com/github/joshstrobl/koto/koto-builtin-%s.css", desired_theme));
 
 	if (!overriding_theme) { // If we are not overriding the theme
-		if (!gtk_style_context_has_class(context, "koto-theme-dark")) { // Don't have our css class for a theme
-			gtk_style_context_add_provider_for_display(gdk_display_get_default(), GTK_STYLE_PROVIDER(self->provider), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
-		}
+		gtk_style_context_add_provider_for_display(gdk_display_get_default(), GTK_STYLE_PROVIDER(self->provider), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
 
 		GList * themes = NULL;
 		themes = g_list_append(themes, "dark");

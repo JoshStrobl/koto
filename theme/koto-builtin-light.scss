@@ -1,0 +1,5 @@
+$variant : 'light';
+
+@import 'vars'; // Root vars
+@import 'variants/light/vars'; // Light variant vars
+@import 'main';

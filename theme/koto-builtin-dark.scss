@@ -1,0 +1,5 @@
+$variant : 'dark';
+
+@import 'vars'; // Root vars
+@import 'variants/dark/vars'; // Dark variant vars
+@import 'main';

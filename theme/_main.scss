@@ -1,7 +1,7 @@
+@import 'components/cover-art-button';
 @import 'components/gtk-overrides';
 @import 'pages/music-local';
 @import 'pages/playlist-page';
-@import 'variants/dark/main';
 
 @import 'button';
 @import 'disc-view';
@@ -9,14 +9,18 @@
 @import 'player-bar';
 @import 'primary-nav';
 @import 'track-item';
-@import 'vars';
 
 window {
+	color: $text-color-bright;
+	background-color: $bg-primary;
+
 	& > headerbar, & > headerbar:active {
+		background-color: $bg-secondary;
 		background-image: none;
 	}
 
 	.koto-dialog-container {
+		background-color: transparentize($bg-secondary, 0.25);
 		padding: 20px;
 	}
 

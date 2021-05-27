@@ -1,12 +1,27 @@
 @import 'vars';
 
 .player-bar {
+	background-color: $bg-secondary;
 	background-image: none;
 	padding: $halvedpadding;
+
+	.koto-button {
+		&:not(.toggled) {
+			color: $player-bar-icon-color;
+		}
+
+		&.toggled {
+			color: $text-color-bright;
+		}
+	}
 
 	.playerbar-info { // Central info section
 		& > box { // Info labels
 			margin-left: 2ex;
+
+			& > image {
+				color: $text-color-faded;
+			}
 
 			& > label {
 				margin-top: 6px;

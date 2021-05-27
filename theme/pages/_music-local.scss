@@ -2,6 +2,10 @@
 
 .page-music-local {
 	& > .artist-list {
+		&, & > viewport, & > viewport > list {
+			background-color: $artist-list-bg;
+		}
+
 		& > viewport > list {
 			& > row {
 				padding: $halvedpadding;

@@ -1,8 +1,8 @@
 @import '../vars';
 
 @mixin selected-row-styling {
-	color: $midnight;
-	background-color: $green;
+	color: $selected-row-color-text;
+	background-color: $selected-row-color-bg;
 	border: 0; // Don't have a border
 	border-image: none; // GTK uses an image which is weird
 	border-image-width: 0;
@@ -12,15 +12,61 @@
 }
 
 button {
+	.text-button {
+		&:not(.destructive-action):not(.suggested-action) { // Is just a plain ol' normal text button
+			color: $button-normal-color-text;
+			background: $button-normal-color-bg;
+			border-color: $button-normal-color-border;
+		}
+	}
+
 	&.destructive-action {
-		background-color: $red;
+		color: $button-destructive-color-text;
+		background-color: $button-destructive-color-bg;
 		background-image: none;
+		border-width: 0;
 	}
 
 	&.suggested-action { // Adwaita makes it blue but we want it green
-		color: $midnight;
-		background-color: $green;
+		color: $button-suggested-color-text;
+		background-color: $button-suggested-color-bg;
 		background-image: none;
+		border-width: 0;
+	}
+}
+
+checkbutton {
+	color: $text-color-bright;
+
+	&:active {
+		background-color: transparent;
+	}
+}
+
+check {
+	background-image: none;
+
+	&:not(:checked) { // Not checked
+		color: $text-color-faded;
+	}
+
+	&:active {
+		background-color: transparent;
+	}
+
+	&:checked { // Checked but not actively pressing on it
+		color: $text-color-bright;
+		background-color: $koto-primary-color;
+	}
+}
+
+entry {
+	color: $text-color-bright;
+	background: $input-background;
+	border-color: $border-color;
+
+	placeholder { // Placeholder text
+		color: $text-color-faded;
 	}
 }
 
@@ -42,11 +88,26 @@ list:not(.discs-list), listview {
 	}
 }
 
+popover.background {
+	& > arrow, & > contents {
+		background-color: $bg-primary;
+		border-color: $border-color;
+	}
+
+	& > contents {
+		color: $text-color-bright;
+	}
+}
+
 range {
 	&.dragging { // Dragging a range
 		& > trough {
+			highlight {
+				border-color: $koto-primary-color;
+			}
+
 			& > slider {
-				background-color: $green;
+				background-color: $koto-primary-color;
 			}
 		}
 	}
@@ -54,10 +115,21 @@ range {
 
 scale { // Progress bar
 	highlight {
-		background-color: $green;
+		background-color: $koto-primary-color;
+		border-color: $koto-primary-color;
 	}
 
 	slider { // Slider
-		outline-color: $green;
+		outline-color: $koto-primary-color;
+	}
+}
+
+scalebutton {
+	&, button, image {
+		color: $player-bar-icon-color;
+	}
+
+	&:active, &:checked, &:hover, button:active, button:checked, button:hover {
+		background-color: transparent;
 	}
 }
