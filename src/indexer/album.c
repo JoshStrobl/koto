@@ -77,7 +77,6 @@ static void koto_album_set_property(
 static void koto_album_class_init(KotoAlbumClass * c) {
 	GObjectClass * gobject_class;
 
-
 	gobject_class = G_OBJECT_CLASS(c);
 	gobject_class->set_property = koto_album_set_property;
 	gobject_class->get_property = koto_album_get_property;
@@ -148,10 +147,10 @@ void koto_album_add_track(
 
 	gchar * track_uuid;
 
-
 	g_object_get(track, "uuid", &track_uuid, NULL);
 
 	if (g_list_index(self->tracks, track_uuid) == -1) {
+		koto_cartographer_add_track(koto_maps, track); // Add the track to cartographer
 		self->tracks = g_list_insert_sorted_with_data(self->tracks, track_uuid, koto_album_sort_tracks, NULL);
 	}
 }
@@ -175,7 +174,6 @@ void koto_album_commit(KotoAlbum * self) {
 	gchar * commit_op_errmsg = NULL;
 	int rc = sqlite3_exec(koto_db, commit_op, 0, 0, &commit_op_errmsg);
 
-
 	if (rc != SQLITE_OK) {
 		g_warning("Failed to write our album to the database: %s", commit_op_errmsg);
 	}
@@ -186,7 +184,6 @@ void koto_album_commit(KotoAlbum * self) {
 
 void koto_album_find_album_art(KotoAlbum * self) {
 	magic_t magic_cookie = magic_open(MAGIC_MIME);
-
 
 	if (magic_cookie == NULL) {
 		return;
@@ -199,13 +196,11 @@ void koto_album_find_album_art(KotoAlbum * self) {
 
 	DIR * dir = opendir(self->path); // Attempt to open our directory
 
-
 	if (dir == NULL) {
 		return;
 	}
 
 	struct dirent * entry;
-
 
 	while ((entry = readdir(dir))) {
 		if (entry->d_type != DT_REG) { // Not a regular file
@@ -274,13 +269,11 @@ void koto_album_find_tracks(
 
 	DIR * dir = opendir(path); // Attempt to open our directory
 
-
 	if (dir == NULL) {
 		return;
 	}
 
 	struct dirent * entry;
-
 
 	while ((entry = readdir(dir))) {
 		if (g_str_has_prefix(entry->d_name, ".")) { // Reference to parent dir, self, or a hidden item
@@ -353,7 +346,6 @@ static void koto_album_get_property(
 ) {
 	KotoAlbum * self = KOTO_ALBUM(obj);
 
-
 	switch (prop_id) {
 		case PROP_UUID:
 			g_value_set_string(val, self->uuid);
@@ -386,7 +378,6 @@ static void koto_album_set_property(
 	GParamSpec * spec
 ) {
 	KotoAlbum * self = KOTO_ALBUM(obj);
-
 
 	switch (prop_id) {
 		case PROP_UUID:
@@ -489,7 +480,6 @@ void koto_album_remove_file(
 
 	gchar * track_uuid;
 
-
 	g_object_get(track, "parsed-name", &track_uuid, NULL);
 	self->tracks = g_list_remove(self->tracks, track_uuid);
 }
@@ -551,14 +541,12 @@ void koto_album_set_as_current_playlist(KotoAlbum * self) {
 	// e.g. first track (0) being added last is actually first in the playlist's tracks
 	GList * reversed_tracks = g_list_copy(self->tracks); // Copy our tracks so we can reverse the order
 
-
 	reversed_tracks = g_list_reverse(reversed_tracks); // Actually reverse it
 
 	GList * t;
 
-
 	for (t = reversed_tracks; t != NULL; t = t->next) { // For each of the tracks
-		gchar* track_uuid = t->data;
+		gchar * track_uuid = t->data;
 		koto_playlist_add_track_by_uuid(new_album_playlist, track_uuid, FALSE, FALSE); // Add the UUID, skip commit to table since it is temporary
 	}
 
@@ -578,7 +566,6 @@ gint koto_album_sort_tracks(
 	KotoTrack * track1 = koto_cartographer_get_track_by_uuid(koto_maps, (gchar*) track1_uuid);
 	KotoTrack * track2 = koto_cartographer_get_track_by_uuid(koto_maps, (gchar*) track2_uuid);
 
-
 	if ((track1 == NULL) && (track2 == NULL)) { // Neither tracks actually exist
 		return 0;
 	} else if ((track1 != NULL) && (track2 == NULL)) { // Only track2 does not exist
@@ -589,7 +576,6 @@ gint koto_album_sort_tracks(
 
 	guint * track1_disc = (guint*) 1;
 	guint * track2_disc = (guint*) 2;
-
 
 	g_object_get(track1, "cd", &track1_disc, NULL);
 	g_object_get(track2, "cd", &track2_disc, NULL);
@@ -602,7 +588,6 @@ gint koto_album_sort_tracks(
 
 	guint16 * track1_pos;
 	guint16 * track2_pos;
-
 
 	g_object_get(track1, "position", &track1_pos, NULL);
 	g_object_get(track2, "position", &track2_pos, NULL);
@@ -624,7 +609,7 @@ gint koto_album_sort_tracks(
 
 void koto_album_update_path(
 	KotoAlbum * self,
-	gchar* new_path
+	gchar * new_path
 ) {
 	if (!KOTO_IS_ALBUM(self)) { // Not an album
 		return;
@@ -654,10 +639,9 @@ KotoAlbum * koto_album_new(
 ) {
 	gchar * artist_uuid = NULL;
 
-
 	g_object_get(artist, "uuid", &artist_uuid, NULL);
 
-	KotoAlbum* album = g_object_new(
+	KotoAlbum * album = g_object_new(
 		KOTO_TYPE_ALBUM,
 		"artist-uuid",
 		artist_uuid,
@@ -670,7 +654,6 @@ KotoAlbum * koto_album_new(
 		NULL
 	);
 
-
 	koto_album_commit(album);
 	koto_album_find_tracks(album, NULL, NULL); // Scan for tracks now that we committed to the database (hopefully)
 
@@ -682,7 +665,6 @@ KotoAlbum * koto_album_new_with_uuid(
 	const gchar * uuid
 ) {
 	gchar * artist_uuid = NULL;
-
 
 	g_object_get(artist, "uuid", &artist_uuid, NULL);
 

@@ -31,9 +31,17 @@ extern sqlite3 * koto_db;
 
 struct _KotoLibrary {
 	GObject parent_instance;
-	gchar * path;
+
+	gchar * path; // Compat
+
+	gchar * directory;
+	gchar * name;
+	KotoLibraryType type;
+	gchar * uuid;
+
+	gboolean override_builtin;
+
 	magic_t magic_cookie;
-	GHashTable * music_artists;
 };
 
 G_DEFINE_TYPE(KotoLibrary, koto_library, G_TYPE_OBJECT);
@@ -82,76 +90,7 @@ static void koto_library_class_init(KotoLibraryClass * c) {
 }
 
 static void koto_library_init(KotoLibrary * self) {
-	self->music_artists = g_hash_table_new(g_str_hash, g_str_equal);
-}
-
-void koto_library_add_artist(
-	KotoLibrary * self,
-	KotoArtist * artist
-) {
-	if (artist == NULL) { // No artist
-		return;
-	}
-
-	koto_library_get_artists(self); // Call to generate if needed
-
-	gchar * artist_name;
-	gchar * artist_uuid;
-
-	g_object_get(artist, "name", &artist_name, "uuid", &artist_uuid, NULL);
-
-	if (g_hash_table_contains(self->music_artists, artist_name)) { // Already have the artist
-		g_free(artist_name);
-		return;
-	}
-
-	g_hash_table_insert(self->music_artists, artist_name, artist_uuid); // Add the artist by its name (this needs to be done so we can get the artist when doing the depth of 2 indexing for the album)
-}
-
-KotoArtist * koto_library_get_artist(
-	KotoLibrary * self,
-	gchar * artist_name
-) {
-	if (artist_name == NULL) {
-		return NULL;
-	}
-
-	koto_library_get_artists(self); // Call to generate if needed
-
-	gchar * artist_uuid = g_hash_table_lookup(self->music_artists, artist_name); // Get the UUID from our music artists
-
-	if (artist_uuid != NULL) {
-		KotoArtist * artist = koto_cartographer_get_artist_by_uuid(koto_maps, artist_uuid); // Return any artist from cartographer
-		return artist;
-	} else {
-		return NULL;
-	}
-}
-
-GHashTable * koto_library_get_artists(KotoLibrary * self) {
-	if (self->music_artists == NULL) { // Not a HashTable
-		self->music_artists = g_hash_table_new(g_str_hash, g_str_equal);
-	}
-
-	return self->music_artists;
-}
-
-void koto_library_remove_artist(
-	KotoLibrary * self,
-	KotoArtist * artist
-) {
-	if (artist == NULL) {
-		return;
-	}
-
-	koto_library_get_artists(self); // Call to generate if needed
-
-	gchar * artist_name;
-
-
-	g_object_get(artist, "name", &artist_name, NULL);
-
-	g_hash_table_remove(self->music_artists, artist_name); // Remove the artist
+	(void) self;
 }
 
 static void koto_library_get_property(
@@ -161,7 +100,6 @@ static void koto_library_get_property(
 	GParamSpec * spec
 ) {
 	KotoLibrary * self = KOTO_LIBRARY(obj);
-
 
 	switch (prop_id) {
 		case PROP_PATH:
@@ -180,7 +118,6 @@ static void koto_library_set_property(
 	GParamSpec * spec
 ) {
 	KotoLibrary * self = KOTO_LIBRARY(obj);
-
 
 	switch (prop_id) {
 		case PROP_PATH:
@@ -219,10 +156,10 @@ int process_artists(
 	char ** fields,
 	char ** column_names
 ) {
+	(void) data;
 	(void) num_columns;
 	(void) column_names; // Don't need any of the params
 
-	KotoLibrary * library = (KotoLibrary*) data;
 	gchar * artist_uuid = g_strdup(koto_utils_unquote_string(fields[0])); // First column is UUID
 	gchar * artist_path = g_strdup(koto_utils_unquote_string(fields[1])); // Second column is path
 	gchar * artist_name = g_strdup(koto_utils_unquote_string(fields[3])); // Fourth column is artist name
@@ -238,10 +175,8 @@ int process_artists(
 		NULL);
 
 	koto_cartographer_add_artist(koto_maps, artist); // Add the artist to our global cartographer
-	koto_library_add_artist(library, artist);
 
 	int albums_rc = sqlite3_exec(koto_db, g_strdup_printf("SELECT * FROM albums WHERE artist_id=\"%s\"", artist_uuid), process_albums, artist, NULL); // Process our albums
-
 
 	if (albums_rc != SQLITE_OK) { // Failed to get our albums
 		g_critical("Failed to read our albums: %s", sqlite3_errmsg(koto_db));
@@ -274,7 +209,6 @@ int process_albums(
 
 	KotoAlbum * album = koto_album_new_with_uuid(artist, album_uuid); // Create our album
 
-
 	g_object_set(
 		album,
 		"path",
@@ -289,7 +223,6 @@ int process_albums(
 	koto_artist_add_album(artist, album_uuid); // Add the album
 
 	int tracks_rc = sqlite3_exec(koto_db, g_strdup_printf("SELECT * FROM tracks WHERE album_id=\"%s\"", album_uuid), process_tracks, album, NULL); // Process our tracks
-
 
 	if (tracks_rc != SQLITE_OK) { // Failed to get our tracks
 		g_critical("Failed to read our tracks: %s", sqlite3_errmsg(koto_db));
@@ -324,14 +257,12 @@ int process_playlists(
 
 	KotoPlaylist * playlist = koto_playlist_new_with_uuid(playlist_uuid); // Create a playlist using the existing UUID
 
-
 	koto_playlist_set_name(playlist, playlist_name); // Add the playlist name
 	koto_playlist_set_artwork(playlist, playlist_art_path); // Add the playlist art path
 
 	koto_cartographer_add_playlist(koto_maps, playlist); // Add to cartographer
 
 	int playlist_tracks_rc = sqlite3_exec(koto_db, g_strdup_printf("SELECT * FROM playlist_tracks WHERE playlist_id=\"%s\" ORDER BY position ASC", playlist_uuid), process_playlists_tracks, playlist, NULL); // Process our playlist tracks
-
 
 	if (playlist_tracks_rc != SQLITE_OK) { // Failed to get our playlist tracks
 		g_critical("Failed to read our playlist tracks: %s", sqlite3_errmsg(koto_db));
@@ -363,7 +294,6 @@ int process_playlists_tracks(
 
 	KotoPlaylist * playlist = koto_cartographer_get_playlist_by_uuid(koto_maps, playlist_uuid); // Get the playlist
 	KotoTrack * track = koto_cartographer_get_track_by_uuid(koto_maps, track_uuid); // Get the track
-
 
 	if (!KOTO_IS_PLAYLIST(playlist)) {
 		goto freeforret;
@@ -399,10 +329,8 @@ int process_tracks(
 
 	KotoTrack * track = koto_track_new_with_uuid(track_uuid); // Create our file
 
-
 	g_object_set(track, "artist-uuid", artist_uuid, "album-uuid", album_uuid, "path", path, "file-name", file_name, "parsed-name", name, "cd", disc_num, "position", position, NULL);
 
-	koto_cartographer_add_track(koto_maps, track); // Add the track to cartographer
 	koto_album_add_track(album, track); // Add the track
 
 	g_free(track_uuid);
@@ -423,8 +351,6 @@ void read_from_db(KotoLibrary * self) {
 		return;
 	}
 
-	g_hash_table_foreach(self->music_artists, output_artists, NULL);
-
 	int playlist_rc = sqlite3_exec(koto_db, "SELECT * FROM playlist_meta", process_playlists, self, NULL); // Process our playlists
 
 	if (playlist_rc != SQLITE_OK) { // Failed to get our playlists
@@ -436,7 +362,6 @@ void read_from_db(KotoLibrary * self) {
 void start_indexing(KotoLibrary * self) {
 	struct stat library_stat;
 	int success = stat(self->path, &library_stat);
-
 
 	if (success != 0) { // Failed to read the library path
 		return;
@@ -460,7 +385,6 @@ void start_indexing(KotoLibrary * self) {
 
 	index_folder(self, self->path, 0);
 	magic_close(self->magic_cookie);
-	g_hash_table_foreach(self->music_artists, output_artists, NULL);
 }
 
 KotoLibrary * koto_library_new(const gchar * path) {
@@ -481,13 +405,11 @@ void index_folder(
 
 	DIR * dir = opendir(path); // Attempt to open our directory
 
-
 	if (dir == NULL) {
 		return;
 	}
 
 	struct dirent * entry;
-
 
 	while ((entry = readdir(dir))) {
 		if (g_str_has_prefix(entry->d_name, ".")) { // A reference to parent dir, self, or a hidden item
@@ -509,14 +431,13 @@ void index_folder(
 				);
 
 				koto_cartographer_add_artist(koto_maps, artist); // Add the artist to cartographer
-				koto_library_add_artist(self, artist); // Add the artist
 				index_folder(self, full_path, depth); // Index this directory
 				g_free(artist_name);
 			} else if (depth == 2) { // If we are following FOLDER/ARTIST/ALBUM then this would be album
 				gchar * artist_name = g_path_get_basename(path); // Get the last entry from our path which is probably the artist
-				KotoArtist * artist = koto_library_get_artist(self, artist_name); // Get the artist
+				KotoArtist * artist = koto_cartographer_get_artist_by_name(koto_maps, artist_name);
 
-				if (artist == NULL) {
+				if (!KOTO_IS_ARTIST(artist)) { // Not an artist
 					continue;
 				}
 
@@ -534,74 +455,4 @@ void index_folder(
 	}
 
 	closedir(dir); // Close the directory
-}
-
-void output_artists(
-	gpointer artist_key,
-	gpointer artist_ptr,
-	gpointer data
-) {
-	(void) artist_ptr;
-	(void) data;
-	KotoArtist * artist = koto_cartographer_get_artist_by_uuid(koto_maps, (gchar*) artist_key);
-
-	if (artist == NULL) {
-		return;
-	}
-
-	gchar * artist_name;
-
-	g_object_get(artist, "name", &artist_name, NULL);
-	g_message("Artist: %s", artist_name);
-
-	GList * albums = koto_artist_get_albums(artist); // Get the albums for this artist
-
-	if (albums != NULL) {
-		g_message("Length of Albums: %d", g_list_length(albums));
-	}
-
-	GList * a;
-
-	for (a = albums; a != NULL; a = a->next) {
-		gchar * album_uuid = a->data;
-		KotoAlbum * album = koto_cartographer_get_album_by_uuid(koto_maps, album_uuid);
-
-		if (album == NULL) {
-			continue;
-		}
-
-		gchar * artwork = koto_album_get_album_art(album);
-		gchar * album_name;
-		g_object_get(album, "name", &album_name, NULL);
-		g_debug("Album Art: %s", artwork);
-		g_debug("Album Name: %s", album_name);
-
-		g_list_foreach(koto_album_get_tracks(album), output_track, NULL);
-	}
-}
-
-void output_track(
-	gpointer data,
-	gpointer user_data
-) {
-	(void) user_data;
-
-	KotoTrack * track = koto_cartographer_get_track_by_uuid(koto_maps, (gchar*) data);
-
-
-	if (track == NULL) {
-		return;
-	}
-
-	gchar * filepath;
-	gchar * parsed_name;
-	guint * pos;
-
-
-	g_object_get(track, "path", &filepath, "parsed-name", &parsed_name, "position", &pos, NULL);
-	g_debug("File Path: %s", filepath);
-	g_debug("Parsed Name: %s", parsed_name);
-	g_debug("Position: %d", GPOINTER_TO_INT(pos));
-	g_free(filepath);
-	g_free(parsed_name);
 }

@@ -210,7 +210,6 @@ static void koto_button_get_property(
 ) {
 	KotoButton * self = KOTO_BUTTON(obj);
 
-
 	switch (prop_id) {
 		case PROP_IMAGE_FILE_PATH:
 			g_value_set_string(val, self->image_file_path);
@@ -246,7 +245,6 @@ static void koto_button_set_property(
 	GParamSpec * spec
 ) {
 	KotoButton * self = KOTO_BUTTON(obj);
-
 
 	switch (prop_id) {
 		case PROP_PIX_SIZE:
@@ -370,7 +368,6 @@ void koto_button_set_icon_name(
 ) {
 	gchar * copied_icon_name = g_strdup(icon_name);
 
-
 	if (for_alt) { // Is for the alternate icon
 		if ((self->alt_icon_name != NULL) && strcmp(icon_name, self->alt_icon_name) != 0) { // If the icons are different
 			g_free(self->alt_icon_name);
@@ -386,7 +383,6 @@ void koto_button_set_icon_name(
 	}
 
 	gboolean hide_image = FALSE;
-
 
 	if (for_alt && self->currently_showing_alt && ((self->alt_icon_name == NULL) || strcmp(self->alt_icon_name, "") == 0)) { // For alt, alt is currently showing, and no longer have alt
 		hide_image = TRUE;

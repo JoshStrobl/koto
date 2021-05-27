@@ -101,7 +101,6 @@ static void koto_playlist_page_set_property(
 static void koto_playlist_page_class_init(KotoPlaylistPageClass * c) {
 	GObjectClass * gobject_class;
 
-
 	gobject_class = G_OBJECT_CLASS(c);
 	gobject_class->get_property = koto_playlist_page_get_property;
 	gobject_class->set_property = koto_playlist_page_set_property;
@@ -201,7 +200,6 @@ static void koto_playlist_page_get_property(
 ) {
 	KotoPlaylistPage * self = KOTO_PLAYLIST_PAGE(obj);
 
-
 	switch (prop_id) {
 		case PROP_PLAYLIST_UUID:
 			g_value_set_string(val, self->uuid);
@@ -219,7 +217,6 @@ static void koto_playlist_page_set_property(
 	GParamSpec * spec
 ) {
 	KotoPlaylistPage * self = KOTO_PLAYLIST_PAGE(obj);
-
 
 	switch (prop_id) {
 		case PROP_PLAYLIST_UUID:
@@ -245,7 +242,6 @@ void koto_playlist_page_bind_track_item(
 
 	KotoTrack * track = gtk_list_item_get_item(item); // Get the track UUID from our model
 
-
 	if (!KOTO_IS_TRACK(track)) {
 		return;
 	}
@@ -253,7 +249,6 @@ void koto_playlist_page_bind_track_item(
 	gchar * track_name = NULL;
 	gchar * album_uuid = NULL;
 	gchar * artist_uuid = NULL;
-
 
 	g_object_get(
 		track,
@@ -268,19 +263,16 @@ void koto_playlist_page_bind_track_item(
 
 	guint track_position = koto_playlist_get_position_of_track(self->playlist, track);
 
-
 	gtk_label_set_label(GTK_LABEL(track_position_label), g_strdup_printf("%u", track_position)); // Set the track position
 	gtk_label_set_label(GTK_LABEL(track_name_label), track_name); // Set our track name
 
 	KotoAlbum * album = koto_cartographer_get_album_by_uuid(koto_maps, album_uuid);
-
 
 	if (KOTO_IS_ALBUM(album)) {
 		gtk_label_set_label(GTK_LABEL(track_album_label), koto_album_get_album_name(album)); // Get the name of the album and set it to the label
 	}
 
 	KotoArtist * artist = koto_cartographer_get_artist_by_uuid(koto_maps, artist_uuid);
-
 
 	if (KOTO_IS_ARTIST(artist)) {
 		gtk_label_set_label(GTK_LABEL(track_artist_label), koto_artist_get_name(artist)); // Get the name of the artist and set it to the label
@@ -326,7 +318,6 @@ void koto_playlist_page_handle_action_bar_closed(
 	(void) bar;
 	KotoPlaylistPage * self = data;
 
-
 	if (!KOTO_IS_PLAYLIST(self->playlist)) { // No playlist set
 		return;
 	}
@@ -348,7 +339,6 @@ void koto_playlist_page_handle_cover_art_clicked(
 	(void) y;
 	KotoPlaylistPage * self = user_data;
 
-
 	if (!KOTO_IS_PLAYLIST(self->playlist)) { // No playlist set
 		return;
 	}
@@ -369,7 +359,6 @@ void koto_playlist_page_handle_edit_button_clicked(
 	(void) y;
 	KotoPlaylistPage * self = user_data;
 
-
 	koto_create_modify_playlist_dialog_set_playlist_uuid(playlist_create_modify_dialog, koto_playlist_get_uuid(self->playlist));
 	koto_window_show_dialog(main_window, "create-modify-playlist");
 }
@@ -384,20 +373,17 @@ void koto_playlist_page_handle_playlist_modified(
 
 	KotoPlaylistPage * self = user_data;
 
-
 	if (!KOTO_IS_PLAYLIST_PAGE(self)) {
 		return;
 	}
 
 	gchar * artwork = koto_playlist_get_artwork(playlist); // Get the artwork
 
-
 	if (koto_utils_is_string_valid(artwork)) { // Have valid artwork
 		koto_cover_art_button_set_art_path(self->playlist_image, artwork); // Update our Koto Cover Art Button
 	}
 
 	gchar * name = koto_playlist_get_name(playlist); // Get the name
-
 
 	if (koto_utils_is_string_valid(name)) { // Have valid name
 		gtk_label_set_label(GTK_LABEL(self->name_label), name); // Update the name label
@@ -417,7 +403,6 @@ void koto_playlist_page_handle_track_album_clicked(
 	(void) y;
 	KotoPlaylistPage * self = user_data;
 
-
 	gtk_widget_add_css_class(GTK_WIDGET(self->track_album_button), "active");
 	koto_button_hide_image(self->track_num_button); // Go back to hiding the image
 	koto_playlist_page_set_playlist_model(self, KOTO_PREFERRED_MODEL_TYPE_SORT_BY_ALBUM);
@@ -436,7 +421,6 @@ void koto_playlist_page_handle_track_artist_clicked(
 	(void) y;
 	KotoPlaylistPage * self = user_data;
 
-
 	gtk_widget_add_css_class(GTK_WIDGET(self->track_artist_button), "active");
 	koto_button_hide_image(self->track_num_button); // Go back to hiding the image
 	koto_playlist_page_set_playlist_model(self, KOTO_PREFERRED_MODEL_TYPE_SORT_BY_ARTIST);
@@ -454,7 +438,6 @@ void koto_playlist_page_handle_track_name_clicked(
 	(void) x;
 	(void) y;
 	KotoPlaylistPage * self = user_data;
-
 
 	gtk_widget_add_css_class(GTK_WIDGET(self->track_title_button), "active");
 	koto_button_hide_image(self->track_num_button); // Go back to hiding the image
@@ -476,7 +459,6 @@ void koto_playlist_page_handle_track_num_clicked(
 
 	KotoPreferredModelType current_model = koto_playlist_get_current_model(self->playlist);
 
-
 	if (current_model == KOTO_PREFERRED_MODEL_TYPE_DEFAULT) { // Set to newest currently
 		koto_playlist_page_set_playlist_model(self, KOTO_PREFERRED_MODEL_TYPE_OLDEST_FIRST); // Sort reversed (oldest)
 		koto_button_show_image(self->track_num_button, TRUE); // Use inverted value (pan-up-symbolic)
@@ -495,7 +477,6 @@ void koto_playlist_page_handle_tracks_selected(
 	(void) position;
 	KotoPlaylistPage * self = user_data;
 
-
 	if (n_items == 0) { // No items selected
 		koto_action_bar_toggle_reveal(action_bar, FALSE); // Hide the action bar
 		return;
@@ -508,7 +489,6 @@ void koto_playlist_page_handle_tracks_selected(
 
 	guint first_track_pos;
 
-
 	if (!gtk_bitset_iter_init_first(&iter, selected_items_bitset, &first_track_pos)) { // Failed to get the first item
 		return;
 	}
@@ -516,7 +496,6 @@ void koto_playlist_page_handle_tracks_selected(
 	selected_tracks_pos = g_list_append(selected_tracks_pos, GUINT_TO_POINTER(first_track_pos));
 
 	gboolean have_more_items = TRUE;
-
 
 	while (have_more_items) { // While we are able to get selected items
 		guint track_pos;
@@ -527,7 +506,6 @@ void koto_playlist_page_handle_tracks_selected(
 	}
 
 	GList * cur_pos_list;
-
 
 	for (cur_pos_list = selected_tracks_pos; cur_pos_list != NULL; cur_pos_list = cur_pos_list->next) { // Iterate over every position that we accumulated
 		KotoTrack * selected_track = g_list_model_get_item(self->model, GPOINTER_TO_UINT(cur_pos_list->data)); // Get the KotoTrack in the GListModel for this current position
@@ -560,7 +538,6 @@ void koto_playlist_page_set_playlist_uuid(
 
 	self->uuid = g_strdup(playlist_uuid); // Duplicate the playlist UUID
 	KotoPlaylist * playlist = koto_cartographer_get_playlist_by_uuid(koto_maps, self->uuid);
-
 
 	self->playlist = playlist;
 	koto_playlist_page_set_playlist_model(self, KOTO_PREFERRED_MODEL_TYPE_DEFAULT); // TODO: Enable this to be changed
@@ -606,18 +583,15 @@ void koto_playlist_page_setup_track_item(
 	(void) factory;
 	KotoPlaylistPage * self = user_data;
 
-
 	if (!KOTO_IS_PLAYLIST_PAGE(self)) {
 		return;
 	}
 
 	GtkWidget * item_content = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0); // Have a horizontal box for our content
 
-
 	gtk_widget_add_css_class(item_content, "track-list-columned-item");
 
 	GtkWidget * track_number = gtk_label_new(NULL); // Our track number
-
 
 	gtk_label_set_xalign(GTK_LABEL(track_number), 0);
 	gtk_widget_add_css_class(track_number, "track-column-number");
@@ -629,7 +603,6 @@ void koto_playlist_page_setup_track_item(
 
 	GtkWidget * track_name = gtk_label_new(NULL); // Our track name
 
-
 	gtk_label_set_xalign(GTK_LABEL(track_name), 0);
 	gtk_widget_add_css_class(track_name, "track-column-name");
 	gtk_widget_set_halign(track_name, GTK_ALIGN_START);
@@ -639,7 +612,6 @@ void koto_playlist_page_setup_track_item(
 	gtk_size_group_add_widget(self->track_name_size_group, track_name);
 
 	GtkWidget * track_album = gtk_label_new(NULL); // Our track album
-
 
 	gtk_label_set_xalign(GTK_LABEL(track_album), 0);
 	gtk_widget_add_css_class(track_album, "track-column-album");
@@ -651,7 +623,6 @@ void koto_playlist_page_setup_track_item(
 	gtk_size_group_add_widget(self->track_album_size_group, track_album);
 
 	GtkWidget * track_artist = gtk_label_new(NULL); // Our track artist
-
 
 	gtk_label_set_xalign(GTK_LABEL(track_artist), 0);
 	gtk_widget_add_css_class(track_artist, "track-column-artist");
@@ -676,7 +647,6 @@ void koto_playlist_page_update_header(KotoPlaylistPage * self) {
 
 	gboolean ephemeral = TRUE;
 
-
 	g_object_get(
 		self->playlist,
 		"ephemeral",
@@ -689,18 +659,15 @@ void koto_playlist_page_update_header(KotoPlaylistPage * self) {
 	gtk_label_set_text(GTK_LABEL(self->name_label), koto_playlist_get_name(self->playlist)); // Set the name label to our playlist name
 	guint track_count = koto_playlist_get_length(self->playlist); // Get the number of tracks
 
-
 	gtk_label_set_text(GTK_LABEL(self->tracks_count_label), g_strdup_printf(track_count != 1 ? "%u tracks" : "%u track", track_count)); // Set the text to "N tracks" where N is the number
 
 	gchar * artwork = koto_playlist_get_artwork(self->playlist);
-
 
 	if (koto_utils_is_string_valid(artwork)) { // Have artwork
 		koto_cover_art_button_set_art_path(self->playlist_image, artwork); // Update our artwork
 	}
 
 	KotoPreferredModelType current_model = koto_playlist_get_current_model(self->playlist); // Get the current model
-
 
 	if (current_model == KOTO_PREFERRED_MODEL_TYPE_OLDEST_FIRST) {
 		koto_button_show_image(self->track_num_button, TRUE); // Immediately use pan-up-symbolic

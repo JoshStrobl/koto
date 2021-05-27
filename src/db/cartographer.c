@@ -40,6 +40,7 @@ struct _KotoCartographer {
 
 	GHashTable * albums;
 	GHashTable * artists;
+	GHashTable * artists_name_to_uuid;
 	GHashTable * playlists;
 	GHashTable * tracks;
 };
@@ -87,7 +88,6 @@ KotoCartographer * koto_maps = NULL;
 
 static void koto_cartographer_class_init(KotoCartographerClass * c) {
 	GObjectClass * gobject_class;
-
 
 	gobject_class = G_OBJECT_CLASS(c);
 
@@ -199,6 +199,7 @@ static void koto_cartographer_class_init(KotoCartographerClass * c) {
 static void koto_cartographer_init(KotoCartographer * self) {
 	self->albums = g_hash_table_new(g_str_hash, g_str_equal);
 	self->artists = g_hash_table_new(g_str_hash, g_str_equal);
+	self->artists_name_to_uuid = g_hash_table_new(g_str_hash, g_str_equal);
 	self->playlists = g_hash_table_new(g_str_hash, g_str_equal);
 	self->tracks = g_hash_table_new(g_str_hash, g_str_equal);
 }
@@ -208,7 +209,6 @@ void koto_cartographer_add_album(
 	KotoAlbum * album
 ) {
 	gchar * album_uuid = NULL;
-
 
 	g_object_get(album, "uuid", &album_uuid, NULL);
 
@@ -230,14 +230,19 @@ void koto_cartographer_add_artist(
 	KotoCartographer * self,
 	KotoArtist * artist
 ) {
-	gchar * artist_uuid = NULL;
+	if (!KOTO_IS_ARTIST(artist)) { // Not an artist
+		return;
+	}
 
+	gchar * artist_uuid = NULL;
 
 	g_object_get(artist, "uuid", &artist_uuid, NULL);
 
 	if ((artist_uuid == NULL) || koto_cartographer_has_artist_by_uuid(self, artist_uuid)) { // Have the artist or invalid UUID
 		return;
 	}
+
+	g_hash_table_replace(self->artists_name_to_uuid, koto_artist_get_name(artist), koto_artist_get_uuid(artist)); // Add the UUID as a value with the key being the name of the artist
 
 	g_hash_table_replace(self->artists, artist_uuid, artist);
 
@@ -288,7 +293,6 @@ void koto_cartographer_add_track(
 ) {
 	gchar * track_uuid = NULL;
 
-
 	g_object_get(track, "uuid", &track_uuid, NULL);
 
 	if ((track_uuid == NULL) || koto_cartographer_has_track_by_uuid(self, track_uuid)) { // Have the track or invalid UUID
@@ -307,15 +311,34 @@ void koto_cartographer_add_track(
 
 KotoAlbum * koto_cartographer_get_album_by_uuid(
 	KotoCartographer * self,
-	gchar* album_uuid
+	gchar * album_uuid
 ) {
 	return g_hash_table_lookup(self->albums, album_uuid);
 }
 
+GHashTable * koto_cartographer_get_artists(KotoCartographer * self) {
+	return self->artists;
+}
+
+KotoArtist * koto_cartographer_get_artist_by_name(
+	KotoCartographer * self,
+	gchar * artist_name
+) {
+	if (!koto_utils_is_string_valid(artist_name)) { // Not a valid name
+		return NULL;
+	}
+
+	return koto_cartographer_get_artist_by_uuid(self, g_hash_table_lookup(self->artists_name_to_uuid, artist_name));
+}
+
 KotoArtist * koto_cartographer_get_artist_by_uuid(
 	KotoCartographer * self,
-	gchar* artist_uuid
+	gchar * artist_uuid
 ) {
+	if (!koto_utils_is_string_valid(artist_uuid)) {
+		return NULL;
+	}
+
 	return g_hash_table_lookup(self->artists, artist_uuid);
 }
 
@@ -325,14 +348,14 @@ GHashTable * koto_cartographer_get_playlists(KotoCartographer * self) {
 
 KotoPlaylist * koto_cartographer_get_playlist_by_uuid(
 	KotoCartographer * self,
-	gchar* playlist_uuid
+	gchar * playlist_uuid
 ) {
 	return g_hash_table_lookup(self->playlists, playlist_uuid);
 }
 
 KotoTrack * koto_cartographer_get_track_by_uuid(
 	KotoCartographer * self,
-	gchar* track_uuid
+	gchar * track_uuid
 ) {
 	return g_hash_table_lookup(self->tracks, track_uuid);
 }
@@ -343,14 +366,13 @@ gboolean koto_cartographer_has_album(
 ) {
 	gchar * album_uuid = NULL;
 
-
 	g_object_get(album, "uuid", &album_uuid, NULL);
 	return koto_cartographer_has_album_by_uuid(self, album_uuid);
 }
 
 gboolean koto_cartographer_has_album_by_uuid(
 	KotoCartographer * self,
-	gchar* album_uuid
+	gchar * album_uuid
 ) {
 	if (album_uuid == NULL) {
 		return FALSE;
@@ -365,14 +387,13 @@ gboolean koto_cartographer_has_artist(
 ) {
 	gchar * artist_uuid = NULL;
 
-
 	g_object_get(artist, "uuid", &artist_uuid, NULL);
 	return koto_cartographer_has_artist_by_uuid(self, artist_uuid);
 }
 
 gboolean koto_cartographer_has_artist_by_uuid(
 	KotoCartographer * self,
-	gchar* artist_uuid
+	gchar * artist_uuid
 ) {
 	if (artist_uuid == NULL) {
 		return FALSE;
@@ -387,14 +408,13 @@ gboolean koto_cartographer_has_playlist(
 ) {
 	gchar * playlist_uuid = NULL;
 
-
 	g_object_get(playlist, "uuid", &playlist_uuid, NULL);
 	return koto_cartographer_has_playlist_by_uuid(self, playlist_uuid);
 }
 
 gboolean koto_cartographer_has_playlist_by_uuid(
 	KotoCartographer * self,
-	gchar* playlist_uuid
+	gchar * playlist_uuid
 ) {
 	if (playlist_uuid == NULL) {
 		return FALSE;
@@ -409,14 +429,13 @@ gboolean koto_cartographer_has_track(
 ) {
 	gchar * track_uuid = NULL;
 
-
 	g_object_get(track, "uuid", &track_uuid, NULL);
 	return koto_cartographer_has_album_by_uuid(self, track_uuid);
 }
 
 gboolean koto_cartographer_has_track_by_uuid(
 	KotoCartographer * self,
-	gchar* track_uuid
+	gchar * track_uuid
 ) {
 	if (track_uuid == NULL) {
 		return FALSE;
@@ -431,14 +450,13 @@ void koto_cartographer_remove_album(
 ) {
 	gchar * album_uuid = NULL;
 
-
 	g_object_get(album, "uuid", &album_uuid, NULL);
 	koto_cartographer_remove_album_by_uuid(self, album_uuid);
 }
 
 void koto_cartographer_remove_album_by_uuid(
 	KotoCartographer * self,
-	gchar* album_uuid
+	gchar * album_uuid
 ) {
 	if (album_uuid != NULL) {
 		g_hash_table_remove(self->albums, album_uuid);
@@ -456,27 +474,33 @@ void koto_cartographer_remove_artist(
 	KotoCartographer * self,
 	KotoArtist * artist
 ) {
-	gchar * artist_uuid = NULL;
+	if (!KOTO_IS_ARTIST(artist)) { // Not an artist
+		return;
+	}
 
+	gchar * artist_uuid = NULL;
 
 	g_object_get(artist, "uuid", &artist_uuid, NULL);
 	koto_cartographer_remove_artist_by_uuid(self, artist_uuid);
+	g_hash_table_remove(self->artists_name_to_uuid, koto_artist_get_name(artist)); // Add the UUID as a value with the key being the name of the artist
 }
 
 void koto_cartographer_remove_artist_by_uuid(
 	KotoCartographer * self,
-	gchar* artist_uuid
+	gchar * artist_uuid
 ) {
-	if (artist_uuid == NULL) {
-		g_hash_table_remove(self->artists, artist_uuid);
-
-		g_signal_emit(
-			self,
-			cartographer_signals[SIGNAL_ARTIST_REMOVED],
-			0,
-			artist_uuid
-		);
+	if (!koto_utils_is_string_valid(artist_uuid)) { // Artist UUID not valid
+		return;
 	}
+
+	g_hash_table_remove(self->artists, artist_uuid);
+
+	g_signal_emit(
+		self,
+		cartographer_signals[SIGNAL_ARTIST_REMOVED],
+		0,
+		artist_uuid
+	);
 }
 
 void koto_cartographer_remove_playlist(
@@ -485,14 +509,13 @@ void koto_cartographer_remove_playlist(
 ) {
 	gchar * playlist_uuid = NULL;
 
-
 	g_object_get(playlist, "uuid", &playlist_uuid, NULL);
 	koto_cartographer_remove_playlist_by_uuid(self, playlist_uuid);
 }
 
 void koto_cartographer_remove_playlist_by_uuid(
 	KotoCartographer * self,
-	gchar* playlist_uuid
+	gchar * playlist_uuid
 ) {
 	if (!koto_utils_is_string_valid(playlist_uuid)) { // Not a valid playlist UUID string
 		return;
@@ -520,14 +543,13 @@ void koto_cartographer_remove_track(
 ) {
 	gchar * track_uuid = NULL;
 
-
 	g_object_get(track, "uuid", &track_uuid, NULL);
 	koto_cartographer_remove_track_by_uuid(self, track_uuid);
 }
 
 void koto_cartographer_remove_track_by_uuid(
 	KotoCartographer * self,
-	gchar* track_uuid
+	gchar * track_uuid
 ) {
 	if (track_uuid != NULL) {
 		g_hash_table_remove(self->tracks, track_uuid);

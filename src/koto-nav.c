@@ -90,7 +90,6 @@ static void koto_nav_init(KotoNav * self) {
 
 	KotoButton * h_button = koto_button_new_with_icon("Home", "user-home-symbolic", NULL, KOTO_BUTTON_PIXBUF_SIZE_SMALL);
 
-
 	if (h_button != NULL) {
 		self->home_button = h_button;
 		gtk_box_append(GTK_BOX(self->content), GTK_WIDGET(self->home_button));
@@ -105,12 +104,10 @@ static void koto_nav_init(KotoNav * self) {
 void koto_nav_create_audiobooks_section(KotoNav * self) {
 	KotoExpander * a_expander = koto_expander_new("ephy-bookmarks-symbolic", "Audiobooks");
 
-
 	self->audiobook_expander = a_expander;
 	gtk_box_append(GTK_BOX(self->content), GTK_WIDGET(self->audiobook_expander));
 
 	GtkWidget * new_content = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
-
 
 	koto_expander_set_content(a_expander, new_content);
 
@@ -126,12 +123,10 @@ void koto_nav_create_audiobooks_section(KotoNav * self) {
 void koto_nav_create_music_section(KotoNav * self) {
 	KotoExpander * m_expander = koto_expander_new("emblem-music-symbolic", "Music");
 
-
 	self->music_expander = m_expander;
 	gtk_box_append(GTK_BOX(self->content), GTK_WIDGET(self->music_expander));
 
 	GtkWidget * new_content = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
-
 
 	self->music_local = koto_button_new_plain("Local Library");
 	self->music_radio = koto_button_new_plain("Radio");
@@ -147,13 +142,11 @@ void koto_nav_create_playlist_section(KotoNav * self) {
 	KotoButton * playlist_add_button = koto_button_new_with_icon("", "list-add-symbolic", NULL, KOTO_BUTTON_PIXBUF_SIZE_SMALL);
 	KotoExpander * pl_expander = koto_expander_new_with_button("playlist-symbolic", "Playlists", playlist_add_button);
 
-
 	self->playlists_expander = pl_expander;
 	gtk_box_append(GTK_BOX(self->content), GTK_WIDGET(self->playlists_expander));
 
 	// TODO: Turn into ListBox to sort playlists
 	GtkWidget * playlist_list = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
-
 
 	koto_expander_set_content(self->playlists_expander, playlist_list);
 	koto_button_add_click_handler(playlist_add_button, KOTO_BUTTON_CLICK_TYPE_PRIMARY, G_CALLBACK(koto_nav_handle_playlist_add_click), NULL);
@@ -165,12 +158,10 @@ void koto_nav_create_playlist_section(KotoNav * self) {
 void koto_nav_create_podcasts_section(KotoNav * self) {
 	KotoExpander * p_expander = koto_expander_new("microphone-sensitivity-high-symbolic", "Podcasts");
 
-
 	self->podcast_expander = p_expander;
 	gtk_box_append(GTK_BOX(self->content), GTK_WIDGET(self->podcast_expander));
 
 	GtkWidget * new_content = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
-
 
 	self->podcasts_local = koto_button_new_plain("Library");
 	self->podcasts_discover = koto_button_new_plain("Find New Podcasts");
@@ -224,7 +215,6 @@ void koto_nav_handle_playlist_button_click(
 	(void) y;
 	gchar * playlist_uuid = user_data;
 
-
 	koto_window_go_to_page(main_window, playlist_uuid); // Go to the playlist page
 }
 
@@ -240,13 +230,11 @@ void koto_nav_handle_playlist_added(
 
 	KotoNav * self = user_data;
 
-
 	if (!KOTO_IS_NAV(self)) {
 		return;
 	}
 
 	gchar * playlist_uuid = koto_playlist_get_uuid(playlist); // Get the UUID for a playlist
-
 
 	if (g_hash_table_contains(self->playlist_buttons, playlist_uuid)) { // Already added button
 		g_free(playlist_uuid);
@@ -256,7 +244,6 @@ void koto_nav_handle_playlist_added(
 	gchar * playlist_name = koto_playlist_get_name(playlist);
 	gchar * playlist_art_path = koto_playlist_get_artwork(playlist); // Get any file path for it
 	KotoButton * playlist_button = NULL;
-
 
 	if (koto_utils_is_string_valid(playlist_art_path)) { // Have a file associated
 		playlist_button = koto_button_new_with_file(playlist_name, playlist_art_path, KOTO_BUTTON_PIXBUF_SIZE_NORMAL);
@@ -290,7 +277,6 @@ void koto_nav_handle_playlist_modified(
 
 	KotoNav * self = user_data;
 
-
 	if (!KOTO_IS_NAV(self)) {
 		return;
 	}
@@ -299,20 +285,17 @@ void koto_nav_handle_playlist_modified(
 
 	KotoButton * playlist_button = g_hash_table_lookup(self->playlist_buttons, playlist_uuid);
 
-
 	if (!KOTO_IS_BUTTON(playlist_button)) {
 		return;
 	}
 
 	gchar * artwork = koto_playlist_get_artwork(playlist); // Get the artwork
 
-
 	if (koto_utils_is_string_valid(artwork)) { // Have valid artwork
 		koto_button_set_file_path(playlist_button, artwork); // Update the artwork path
 	}
 
 	gchar * name = koto_playlist_get_name(playlist); // Get the name
-
 
 	if (koto_utils_is_string_valid(name)) { // Have valid name
 		koto_button_set_text(playlist_button, name); // Update the button text
@@ -333,13 +316,11 @@ void koto_nav_handle_playlist_removed(
 
 	KotoButton * playlist_btn = g_hash_table_lookup(self->playlist_buttons, playlist_uuid); // Get the playlist button
 
-
 	if (!KOTO_IS_BUTTON(playlist_btn)) { // Not a playlist button
 		return;
 	}
 
 	GtkBox * playlist_expander_content = GTK_BOX(koto_expander_get_content(self->playlists_expander));
-
 
 	gtk_box_remove(playlist_expander_content, GTK_WIDGET(playlist_btn)); // Remove the button
 	g_hash_table_remove(self->playlist_buttons, playlist_uuid); // Remove from the playlist buttons hash table

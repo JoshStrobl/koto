@@ -53,7 +53,7 @@ struct _KotoWindow {
 	GtkCssProvider * provider;
 
 	GtkWidget * overlay;
-	GtkWidget        * header_bar;
+	GtkWidget * header_bar;
 	GtkWidget * menu_button;
 	GtkWidget * search_entry;
 
@@ -240,7 +240,6 @@ void koto_window_handle_playlist_added(
 	gchar * playlist_uuid = koto_playlist_get_uuid(playlist);
 	KotoPlaylistPage * playlist_page = koto_playlist_page_new(playlist_uuid); // Create our new Playlist Page
 
-
 	koto_window_add_page(self, playlist_uuid, koto_playlist_page_get_main(playlist_page)); // Get the GtkScrolledWindow "main" content of the playlist page and add that as a page to our stack by the playlist UUID
 }
 
@@ -253,7 +252,6 @@ void koto_window_remove_page(
 	gchar * page_name
 ) {
 	GtkWidget * page = gtk_stack_get_child_by_name(GTK_STACK(self->pages), page_name);
-
 
 	if (GTK_IS_WIDGET(page)) {
 		gtk_stack_remove(GTK_STACK(self->pages), page);
@@ -290,7 +288,6 @@ void create_new_headerbar(KotoWindow * self) {
 void load_library(KotoWindow * self) {
 	KotoLibrary * lib = koto_library_new(g_get_user_special_dir(G_USER_DIRECTORY_MUSIC));
 
-
 	if (lib != NULL) {
 		self->library = lib;
 		music_local_page = koto_page_music_local_new();
@@ -299,7 +296,7 @@ void load_library(KotoWindow * self) {
 		koto_window_add_page(self, "music.local", GTK_WIDGET(music_local_page));
 		koto_window_go_to_page(self, "music.local");
 		gtk_widget_show(self->pages); // Do not remove this. Will cause sporadic hiding of the local page content otherwise.
-		koto_page_music_local_set_library(music_local_page, self->library);
+		koto_page_music_local_build_ui(music_local_page);
 	}
 
 	g_thread_exit(0);
@@ -308,13 +305,11 @@ void load_library(KotoWindow * self) {
 void set_optimal_default_window_size(KotoWindow * self) {
 	GdkDisplay * default_display = gdk_display_get_default();
 
-
 	if (!GDK_IS_X11_DISPLAY(default_display)) { // Not an X11 display
 		return;
 	}
 
 	GdkMonitor * default_monitor = gdk_x11_display_get_primary_monitor(GDK_X11_DISPLAY(default_display)); // Get primary monitor for the X11
-
 
 	if (!GDK_IS_X11_MONITOR(default_monitor)) { // Not an X11 Monitor
 		return;
@@ -323,7 +318,6 @@ void set_optimal_default_window_size(KotoWindow * self) {
 	GdkRectangle workarea = {
 		0
 	};
-
 
 	gdk_monitor_get_geometry(default_monitor, &workarea);
 

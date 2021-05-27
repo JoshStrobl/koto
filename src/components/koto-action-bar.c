@@ -72,11 +72,10 @@ struct _KotoActionBarClass {
 
 G_DEFINE_TYPE(KotoActionBar, koto_action_bar, G_TYPE_OBJECT);
 
-KotoActionBar* action_bar;
+KotoActionBar * action_bar;
 
 static void koto_action_bar_class_init(KotoActionBarClass * c) {
 	GObjectClass * gobject_class = G_OBJECT_CLASS(c);
-
 
 	actionbar_signals[SIGNAL_CLOSED] = g_signal_new(
 		"closed",
@@ -185,7 +184,6 @@ void koto_action_bar_handle_go_to_artist_button_clicked(
 	(void) button;
 	KotoActionBar * self = data;
 
-
 	if (!KOTO_IS_ACTION_BAR(self)) {
 		return;
 	}
@@ -196,13 +194,11 @@ void koto_action_bar_handle_go_to_artist_button_clicked(
 
 	KotoTrack * selected_track = g_list_nth_data(self->current_list, 0); // Get the first item
 
-
 	if (!KOTO_IS_TRACK(selected_track)) { // Not a track
 		return;
 	}
 
 	gchar * artist_uuid = NULL;
-
 
 	g_object_get(
 		selected_track,
@@ -221,7 +217,6 @@ void koto_action_bar_handle_playlists_button_clicked(
 ) {
 	(void) button;
 	KotoActionBar * self = data;
-
 
 	if (!KOTO_IS_ACTION_BAR(self)) {
 		return;
@@ -279,7 +274,6 @@ void koto_action_bar_handle_remove_from_playlist_button_clicked(
 	(void) button;
 	KotoActionBar * self = data;
 
-
 	if (!KOTO_IS_ACTION_BAR(self)) {
 		return;
 	}
@@ -294,13 +288,11 @@ void koto_action_bar_handle_remove_from_playlist_button_clicked(
 
 	KotoPlaylist * playlist = koto_cartographer_get_playlist_by_uuid(koto_maps, self->current_playlist_uuid);
 
-
 	if (!KOTO_IS_PLAYLIST(playlist)) { // Not a playlist
 		goto doclose;
 	}
 
 	GList * cur_list;
-
 
 	for (cur_list = self->current_list; cur_list != NULL; cur_list = cur_list->next) { // For each KotoTrack
 		KotoTrack * track = cur_list->data;
@@ -370,7 +362,6 @@ void koto_action_bar_set_tracks_in_playlist_selection(
 	self->current_list = g_list_copy(tracks);
 
 	gboolean single_selected = g_list_length(tracks) == 1;
-
 
 	koto_action_bar_toggle_go_to_artist_visibility(self, single_selected);
 	koto_action_bar_toggle_play_button_visibility(self, single_selected);

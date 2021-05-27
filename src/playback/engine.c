@@ -275,7 +275,6 @@ void koto_playback_engine_apply_configuration_state(
 void koto_playback_engine_backwards(KotoPlaybackEngine * self) {
 	KotoPlaylist * playlist = koto_current_playlist_get_playlist(current_playlist); // Get the current playlist
 
-
 	if (!KOTO_IS_PLAYLIST(playlist)) { // If we do not have a playlist currently
 		return;
 	}
@@ -338,7 +337,6 @@ KotoTrack * koto_playback_engine_get_current_track(KotoPlaybackEngine * self) {
 gint64 koto_playback_engine_get_duration(KotoPlaybackEngine * self) {
 	gint64 duration = 0;
 
-
 	if (gst_element_query(self->player, self->duration_query)) { // Able to query our duration
 		gst_query_parse_duration(self->duration_query, NULL, &duration); // Get the duration
 		duration = duration / GST_SECOND; // Divide by NS to get seconds
@@ -350,7 +348,6 @@ gint64 koto_playback_engine_get_duration(KotoPlaybackEngine * self) {
 gdouble koto_playback_engine_get_progress(KotoPlaybackEngine * self) {
 	gdouble progress = 0.0;
 	gint64 gstprog = 0;
-
 
 	if (gst_element_query(self->playbin, self->position_query)) { // Able to get our position
 		gst_query_parse_position(self->position_query, NULL, &gstprog); // Get the progress
@@ -388,7 +385,6 @@ gboolean koto_playback_engine_monitor_changed(
 ) {
 	(void) bus;
 	KotoPlaybackEngine * self = user_data;
-
 
 	switch (GST_MESSAGE_TYPE(msg)) {
 		case GST_MESSAGE_ASYNC_DONE:
@@ -575,7 +571,6 @@ void koto_playback_engine_stop(KotoPlaybackEngine * self) {
 	gst_element_set_state(self->player, GST_STATE_NULL);
 	GstPad * pad = gst_element_get_static_pad(self->player, "sink"); // Get the static pad of the audio element
 
-
 	if (!GST_IS_PAD(pad)) {
 		return;
 	}
@@ -594,7 +589,6 @@ void koto_playback_engine_toggle(KotoPlaybackEngine * self) {
 
 gboolean koto_playback_engine_tick_duration(gpointer user_data) {
 	KotoPlaybackEngine * self = user_data;
-
 
 	if (self->is_playing) { // Is playing
 		g_signal_emit(self, playback_engine_signals[SIGNAL_TICK_DURATION], 0); // Emit our 1s track tick

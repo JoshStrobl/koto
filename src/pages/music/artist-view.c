@@ -69,7 +69,6 @@ static void koto_artist_view_set_property(
 static void koto_artist_view_class_init(KotoArtistViewClass * c) {
 	GObjectClass * gobject_class;
 
-
 	gobject_class = G_OBJECT_CLASS(c);
 	gobject_class->constructed = koto_artist_view_constructed;
 	gobject_class->set_property = koto_artist_view_set_property;
@@ -94,7 +93,6 @@ static void koto_artist_view_get_property(
 ) {
 	KotoArtistView * self = KOTO_ARTIST_VIEW(obj);
 
-
 	switch (prop_id) {
 		case PROP_ARTIST:
 			g_value_set_object(val, self->artist);
@@ -113,7 +111,6 @@ static void koto_artist_view_set_property(
 ) {
 	KotoArtistView * self = KOTO_ARTIST_VIEW(obj);
 
-
 	switch (prop_id) {
 		case PROP_ARTIST:
 			koto_artist_view_add_artist(self, (KotoArtist*) g_value_get_object(val));
@@ -131,7 +128,6 @@ static void koto_artist_view_init(KotoArtistView * self) {
 
 static void koto_artist_view_constructed(GObject * obj) {
 	KotoArtistView * self = KOTO_ARTIST_VIEW(obj);
-
 
 	self->albums_to_component = g_hash_table_new(g_str_hash, g_str_equal);
 	self->scrolled_window = gtk_scrolled_window_new(); // Create our scrolled window
@@ -174,13 +170,11 @@ void koto_artist_view_add_album(
 
 	GtkWidget * art_image = koto_utils_create_image_from_filepath(album_art, "audio-x-generic-symbolic", 220, 220);
 
-
 	gtk_widget_set_halign(art_image, GTK_ALIGN_START); // Align to start
 	gtk_flow_box_insert(GTK_FLOW_BOX(self->favorites_list), art_image, -1); // Append the album art
 
-	KotoAlbumView* album_view = koto_album_view_new(album); // Create our new album view
-	GtkWidget* album_view_main = koto_album_view_get_main(album_view);
-
+	KotoAlbumView * album_view = koto_album_view_new(album); // Create our new album view
+	GtkWidget * album_view_main = koto_album_view_get_main(album_view);
 
 	gtk_flow_box_insert(GTK_FLOW_BOX(self->album_list), album_view_main, -1); // Append the album view to the album list
 }
@@ -202,7 +196,6 @@ void koto_artist_view_add_artist(
 	GList * albums = koto_artist_get_albums(self->artist); // Get the albums
 
 	GList * a;
-
 
 	for (a = albums; a != NULL; a = a->next) {
 		KotoAlbum * album = koto_cartographer_get_album_by_uuid(koto_maps, (gchar*) a->data);

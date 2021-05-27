@@ -73,7 +73,6 @@ static void koto_expander_set_property(
 static void koto_expander_class_init(KotoExpanderClass * c) {
 	GObjectClass * gobject_class = G_OBJECT_CLASS(c);
 
-
 	gobject_class->set_property = koto_expander_set_property;
 	gobject_class->get_property = koto_expander_get_property;
 
@@ -120,7 +119,6 @@ static void koto_expander_get_property(
 ) {
 	KotoExpander * self = KOTO_EXPANDER(obj);
 
-
 	switch (prop_id) {
 		case PROP_HEADER_ICON_NAME:
 			g_value_set_string(val, self->icon_name);
@@ -147,7 +145,6 @@ static void koto_expander_set_property(
 	GParamSpec * spec
 ) {
 	KotoExpander * self = KOTO_EXPANDER(obj);
-
 
 	if (!GTK_IS_WIDGET(self->header_button)) { // Header Button is not a widget
 		KotoButton * new_button = koto_button_new_with_icon(NULL, "emblem-favorite-symbolic", NULL, KOTO_BUTTON_PIXBUF_SIZE_SMALL);
@@ -183,14 +180,12 @@ static void koto_expander_set_property(
 static void koto_expander_init(KotoExpander * self) {
 	GtkStyleContext * style = gtk_widget_get_style_context(GTK_WIDGET(self));
 
-
 	gtk_style_context_add_class(style, "expander");
 	gtk_widget_set_hexpand((GTK_WIDGET(self)), TRUE);
 
 	self->header = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 10);
 
 	GtkStyleContext * header_style = gtk_widget_get_style_context(self->header);
-
 
 	gtk_style_context_add_class(header_style, "expander-header");
 
@@ -265,12 +260,10 @@ void koto_expander_toggle_content(
 	(void) n_press;
 	(void) x;
 	(void) y;
-	KotoExpander* self = data;
-
+	KotoExpander * self = data;
 
 	koto_button_flip(KOTO_BUTTON(self->header_expand_button));
-	GtkRevealer* rev = GTK_REVEALER(self->revealer);
-
+	GtkRevealer * rev = GTK_REVEALER(self->revealer);
 
 	gtk_revealer_set_reveal_child(rev, !gtk_revealer_get_reveal_child(rev)); // Invert our values
 }

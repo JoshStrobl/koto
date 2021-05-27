@@ -91,7 +91,6 @@ void handle_media_keys_signal(
 	gchar * application_name = NULL;
 	gchar * key = NULL;
 
-
 	g_variant_get(parameters, "(ss)", &application_name, &key);
 
 	if (g_strcmp0(application_name, koto_rev_dns) != 0) { // Not for Koto
@@ -140,7 +139,6 @@ void release_media_keys() {
 
 	GVariant * params = g_variant_new_string(g_strdup(koto_rev_dns));
 
-
 	g_dbus_proxy_call(
 		media_keys_proxy,
 		"ReleaseMediaPlayerKeys",
@@ -159,7 +157,6 @@ void setup_mediakeys_interface() {
 
 	GDBusConnection * bus;
 	GError * error = NULL;
-
 
 	bus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, &error);
 
@@ -195,7 +192,6 @@ void setup_mediakeys_interface() {
 	);
 
 	GtkEventController * focus_controller = gtk_event_controller_focus_new(); // Create a new focus controller
-
 
 	g_signal_connect(focus_controller, "enter", G_CALLBACK(handle_window_enter), NULL);
 	g_signal_connect(focus_controller, "leave", G_CALLBACK(handle_window_leave), NULL);

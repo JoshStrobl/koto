@@ -15,7 +15,6 @@
  * limitations under the License.
  */
 
-
 #include <glib-2.0/glib.h>
 #include <gstreamer-1.0/gst/gst.h>
 #include "../koto-utils.h"
@@ -31,7 +30,6 @@ gboolean koto_playback_engine_gst_caps_iter(
 	(void) features;
 	(void) user_data;
 	gchar * caps_name = (gchar*) gst_structure_get_name(structure); // Get the name, typically a mimetype
-
 
 	if (g_str_has_prefix(caps_name, "unknown")) { // Is unknown
 		return TRUE;
@@ -55,7 +53,6 @@ void koto_playback_engine_gst_pad_iter(
 	(void) user_data;
 	GstStaticPadTemplate * templ = list_data;
 
-
 	if (templ->direction == GST_PAD_SINK) { // Is a sink pad
 		GstCaps * capabilities = gst_static_pad_template_get_caps(templ); // Get the capabilities
 		gst_caps_foreach(capabilities, koto_playback_engine_gst_caps_iter, NULL); // Iterate over and add to mimes
@@ -69,7 +66,6 @@ void koto_playback_engine_get_supported_mimetypes() {
 	GList * elements = gst_element_factory_list_get_elements(GST_ELEMENT_FACTORY_TYPE_DEPAYLOADER | GST_ELEMENT_FACTORY_TYPE_DEMUXER | GST_ELEMENT_FACTORY_TYPE_PARSER | GST_ELEMENT_FACTORY_TYPE_DECODER | GST_ELEMENT_FACTORY_TYPE_MEDIA_AUDIO, GST_RANK_NONE);
 
 	GList * ele;
-
 
 	for (ele = elements; ele != NULL; ele = ele->next) { // For each of the elements
 		// GList of GstStaticPadTemplate

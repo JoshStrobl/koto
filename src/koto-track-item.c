@@ -63,7 +63,6 @@ static void koto_track_item_set_property(
 static void koto_track_item_class_init(KotoTrackItemClass * c) {
 	GObjectClass * gobject_class;
 
-
 	gobject_class = G_OBJECT_CLASS(c);
 	gobject_class->set_property = koto_track_item_set_property;
 	gobject_class->get_property = koto_track_item_get_property;
@@ -87,7 +86,6 @@ static void koto_track_item_get_property(
 ) {
 	KotoTrackItem * self = KOTO_TRACK_ITEM(obj);
 
-
 	switch (prop_id) {
 		case PROP_TRACK:
 			g_value_set_object(val, self->track);
@@ -105,7 +103,6 @@ static void koto_track_item_set_property(
 	GParamSpec * spec
 ) {
 	KotoTrackItem * self = KOTO_TRACK_ITEM(obj);
-
 
 	switch (prop_id) {
 		case PROP_TRACK:
@@ -142,7 +139,6 @@ void koto_track_item_set_track(
 
 	self->track = track;
 	gchar * track_name;
-
 
 	g_object_get(self->track, "parsed-name", &track_name, NULL);
 	gtk_label_set_text(GTK_LABEL(self->track_label), track_name); // Update the text

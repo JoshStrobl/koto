@@ -69,7 +69,6 @@ static void koto_album_view_set_property(
 static void koto_album_view_class_init(KotoAlbumViewClass * c) {
 	GObjectClass * gobject_class;
 
-
 	gobject_class = G_OBJECT_CLASS(c);
 	gobject_class->set_property = koto_album_view_set_property;
 	gobject_class->get_property = koto_album_view_get_property;
@@ -125,7 +124,6 @@ static void koto_album_view_get_property(
 	GParamSpec * spec
 ) {
 	KotoAlbumView * self = KOTO_ALBUM_VIEW(obj);
-
 
 	switch (prop_id) {
 		case PROP_ALBUM:
@@ -189,7 +187,7 @@ void koto_album_view_set_album(
 	for (guint i = 0; i < g_list_length(tracks); i++) {
 		KotoTrack * track = koto_cartographer_get_track_by_uuid(koto_maps, (gchar*) g_list_nth_data(tracks, i)); // Get the track by its UUID
 
-		if (track == NULL) { // Track doesn't exist
+		if (!KOTO_IS_TRACK(track)) { // Track doesn't exist
 			continue;
 		}
 
@@ -229,7 +227,6 @@ int koto_album_view_sort_discs(
 	guint disc1_num;
 	guint disc2_num;
 
-
 	g_object_get(disc1_item, "disc", &disc1_num, NULL);
 	g_object_get(disc2_item, "disc", &disc2_num, NULL);
 
@@ -253,7 +250,7 @@ void koto_album_view_toggle_album_playback(
 	(void) n_press;
 	(void) x;
 	(void) y;
-	KotoAlbumView* self = data;
+	KotoAlbumView * self = data;
 
 	koto_album_set_as_current_playlist(self->album); // Set as the current playlist
 }

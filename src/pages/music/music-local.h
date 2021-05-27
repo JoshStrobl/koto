@@ -50,10 +50,7 @@ void koto_page_music_local_go_to_artist_by_uuid(
 	gchar * artist_uuid
 );
 
-void koto_page_music_local_set_library(
-	KotoPageMusicLocal * self,
-	KotoLibrary * lib
-);
+void koto_page_music_local_build_ui(KotoPageMusicLocal * self);
 
 int koto_page_music_local_sort_artists(
 	GtkListBoxRow * artist1,

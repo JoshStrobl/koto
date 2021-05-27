@@ -164,7 +164,6 @@ GVariant * handle_get_property(
 	(void) user_data;
 	GVariant * ret;
 
-
 	ret = NULL;
 
 	if (g_strcmp0(property_name, "CanQuit") == 0) { // If property is CanQuit
@@ -298,7 +297,6 @@ gboolean handle_set_property(
 void koto_update_mpris_playback_state(GstState state) {
 	GVariantBuilder * builder = g_variant_builder_new(G_VARIANT_TYPE_ARRAY);
 
-
 	if (state == GST_STATE_PLAYING) {
 		g_variant_builder_add(builder, "{sv}", "PlaybackStatus", g_variant_new_string("Playing"));
 	} else if (state == GST_STATE_PAUSED) {
@@ -325,7 +323,6 @@ void koto_update_mpris_info_for_track(KotoTrack * track) {
 
 	GVariant * metadata = koto_track_get_metadata_vardict(track); // Get the GVariantBuilder variable dict for the metadata
 
-
 	koto_update_mpris_info_for_track_with_metadata(track, metadata);
 }
 
@@ -338,7 +335,6 @@ void koto_update_mpris_info_for_track_with_metadata(
 	}
 
 	GVariantBuilder * builder = g_variant_builder_new(G_VARIANT_TYPE_ARRAY);
-
 
 	g_variant_builder_add(builder, "{sv}", "Metadata", metadata);
 

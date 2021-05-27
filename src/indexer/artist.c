@@ -64,7 +64,6 @@ static void koto_artist_set_property(
 static void koto_artist_class_init(KotoArtistClass * c) {
 	GObjectClass * gobject_class;
 
-
 	gobject_class = G_OBJECT_CLASS(c);
 	gobject_class->set_property = koto_artist_set_property;
 	gobject_class->get_property = koto_artist_get_property;
@@ -114,7 +113,6 @@ void koto_artist_commit(KotoArtist * self) {
 	gchar * commit_opt_errmsg = NULL;
 	int rc = sqlite3_exec(koto_db, commit_op, 0, 0, &commit_opt_errmsg);
 
-
 	if (rc != SQLITE_OK) {
 		g_warning("Failed to write our artist to the database: %s", commit_opt_errmsg);
 	}
@@ -135,7 +133,6 @@ static void koto_artist_get_property(
 	GParamSpec * spec
 ) {
 	KotoArtist * self = KOTO_ARTIST(obj);
-
 
 	switch (prop_id) {
 		case PROP_UUID:
@@ -160,7 +157,6 @@ static void koto_artist_set_property(
 	GParamSpec * spec
 ) {
 	KotoArtist * self = KOTO_ARTIST(obj);
-
 
 	switch (prop_id) {
 		case PROP_UUID:
@@ -193,7 +189,6 @@ void koto_artist_add_album(
 
 	gchar * uuid = g_strdup(album_uuid); // Duplicate our UUID
 
-
 	if (g_list_index(self->albums, uuid) == -1) {
 		self->albums = g_list_append(self->albums, uuid); // Push to end of list
 	}
@@ -215,6 +210,10 @@ gchar * koto_artist_get_name(KotoArtist * self) {
 	return g_strdup(koto_utils_is_string_valid(self->artist_name) ? self->artist_name : ""); // Return artist name if set
 }
 
+gchar * koto_artist_get_uuid(KotoArtist * self) {
+	return self->uuid;
+}
+
 void koto_artist_remove_album(
 	KotoArtist * self,
 	KotoAlbum * album
@@ -228,7 +227,6 @@ void koto_artist_remove_album(
 	}
 
 	gchar * album_uuid;
-
 
 	g_object_get(album, "uuid", &album_uuid, NULL);
 	self->albums = g_list_remove(self->albums, album_uuid);
@@ -275,7 +273,7 @@ void koto_artist_set_artist_name(
 }
 
 KotoArtist * koto_artist_new(gchar * path) {
-	KotoArtist* artist = g_object_new(
+	KotoArtist * artist = g_object_new(
 		KOTO_TYPE_ARTIST,
 		"uuid",
 		g_uuid_string_random(),
@@ -285,7 +283,6 @@ KotoArtist * koto_artist_new(gchar * path) {
 		g_path_get_basename(path),
 		NULL
 	);
-
 
 	koto_artist_commit(artist); // Commit the artist immediately to the database
 	return artist;

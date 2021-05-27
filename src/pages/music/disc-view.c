@@ -65,7 +65,6 @@ static void koto_disc_view_set_property(
 static void koto_disc_view_class_init(KotoDiscViewClass * c) {
 	GObjectClass * gobject_class;
 
-
 	gobject_class = G_OBJECT_CLASS(c);
 	gobject_class->set_property = koto_disc_view_set_property;
 	gobject_class->get_property = koto_disc_view_get_property;
@@ -99,7 +98,6 @@ static void koto_disc_view_get_property(
 ) {
 	KotoDiscView * self = KOTO_DISC_VIEW(obj);
 
-
 	switch (prop_id) {
 		case PROP_DISC:
 			g_value_set_uint(val, GPOINTER_TO_UINT(self->disc_number));
@@ -120,7 +118,6 @@ static void koto_disc_view_set_property(
 	GParamSpec * spec
 ) {
 	KotoDiscView * self = KOTO_DISC_VIEW(obj);
-
 
 	switch (prop_id) {
 		case PROP_DISC:
@@ -143,7 +140,6 @@ static void koto_disc_view_init(KotoDiscView * self) {
 	gtk_widget_set_size_request(self->header, 16, -1);
 
 	GtkWidget * ico = gtk_image_new_from_icon_name("drive-optical-symbolic");
-
 
 	gtk_box_prepend(GTK_BOX(self->header), ico);
 
@@ -175,7 +171,6 @@ void koto_disc_view_list_tracks(
 
 	guint * disc_number;
 
-
 	g_object_get(track, "cd", &disc_number, NULL); // get the disc number
 
 	if (GPOINTER_TO_UINT(self->disc_number) != GPOINTER_TO_UINT(disc_number)) { // Track does not belong to this CD
@@ -183,7 +178,6 @@ void koto_disc_view_list_tracks(
 	}
 
 	KotoTrackItem * track_item = koto_track_item_new(track); // Create our new track item
-
 
 	gtk_list_box_append(GTK_LIST_BOX(self->list), GTK_WIDGET(track_item)); // Add to our tracks list box
 }
@@ -196,13 +190,11 @@ void koto_disc_view_handle_selected_rows_changed(
 
 	gchar * album_uuid = koto_album_get_album_uuid(self->album); // Get the UUID
 
-
 	if (!koto_utils_is_string_valid(album_uuid)) { // Not set
 		return;
 	}
 
 	GList * selected_rows = gtk_list_box_get_selected_rows(box); // Get the selected rows
-
 
 	if (g_list_length(selected_rows) == 0) { // No rows selected
 		koto_action_bar_toggle_reveal(action_bar, FALSE); // Close the action bar
@@ -211,7 +203,6 @@ void koto_disc_view_handle_selected_rows_changed(
 
 	GList * selected_tracks = NULL; // Create our list of KotoTracks
 	GList * cur_selected_rows;
-
 
 	for (cur_selected_rows = selected_rows; cur_selected_rows != NULL; cur_selected_rows = cur_selected_rows->next) { // Iterate over the rows
 		KotoTrackItem * track_item = (KotoTrackItem*) gtk_list_box_row_get_child(cur_selected_rows->data);
@@ -252,7 +243,6 @@ void koto_disc_view_set_disc_number(
 	self->disc_number = GUINT_TO_POINTER(disc_number);
 
 	gchar * disc_label = g_strdup_printf("Disc %u", disc_number);
-
 
 	gtk_label_set_text(GTK_LABEL(self->label), disc_label); // Set the label
 

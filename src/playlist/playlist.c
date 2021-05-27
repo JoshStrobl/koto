@@ -107,7 +107,6 @@ static void koto_playlist_set_property(
 static void koto_playlist_class_init(KotoPlaylistClass * c) {
 	GObjectClass * gobject_class;
 
-
 	gobject_class = G_OBJECT_CLASS(c);
 	gobject_class->set_property = koto_playlist_set_property;
 	gobject_class->get_property = koto_playlist_get_property;
@@ -213,7 +212,6 @@ static void koto_playlist_get_property(
 ) {
 	KotoPlaylist * self = KOTO_PLAYLIST(obj);
 
-
 	switch (prop_id) {
 		case PROP_UUID:
 			g_value_set_string(val, self->uuid);
@@ -243,7 +241,6 @@ static void koto_playlist_set_property(
 	GParamSpec * spec
 ) {
 	KotoPlaylist * self = KOTO_PLAYLIST(obj);
-
 
 	switch (prop_id) {
 		case PROP_UUID:
@@ -378,7 +375,6 @@ void koto_playlist_commit(KotoPlaylist * self) {
 	gchar * commit_op_errmsg = NULL;
 	int rc = sqlite3_exec(koto_db, commit_op, 0, 0, &commit_op_errmsg);
 
-
 	if (rc != SQLITE_OK) {
 		g_warning("Failed to save playlist: %s", commit_op_errmsg);
 	} else { // Successfully saved our playlist
@@ -394,7 +390,6 @@ void koto_playlist_commit_tracks(
 	gpointer user_data
 ) {
 	KotoTrack * track = koto_cartographer_get_track_by_uuid(koto_maps, data); // Get the track
-
 
 	if (track == NULL) { // Not a track
 		KotoPlaylist * self = user_data;
@@ -457,7 +452,6 @@ gint koto_playlist_get_position_of_track(
 	gint position = -1;
 	guint found_pos = 0;
 
-
 	if (g_list_store_find(self->store, track, &found_pos)) { // Found the item
 		position = (gint) found_pos; // Cast our found position from guint to gint
 	}
@@ -473,7 +467,7 @@ gchar * koto_playlist_get_random_track(KotoPlaylist * self) {
 		track_uuid = g_list_nth_data(self->sorted_tracks->head, 0); // Get the first
 		g_queue_clear(self->played_tracks); // Clear our played tracks
 	} else { // Have not played all tracks
-		GRand* rando_calrissian = g_rand_new(); // Create a new RNG
+		GRand * rando_calrissian = g_rand_new(); // Create a new RNG
 		guint attempt = 0;
 
 		while (track_uuid == NULL) { // Haven't selected a track yet
@@ -556,13 +550,11 @@ gchar * koto_playlist_go_to_previous(KotoPlaylist * self) {
 
 	KotoTrack * track = koto_cartographer_get_track_by_uuid(koto_maps, self->current_uuid);
 
-
 	if (!KOTO_IS_TRACK(track)) {
 		return NULL;
 	}
 
 	gint pos_of_song = koto_playlist_get_position_of_track(self, track); // Get the position of the current track based on the current model
-
 
 	if (pos_of_song == 0) {
 		return NULL;
@@ -597,7 +589,6 @@ gint koto_playlist_model_sort_by_uuid(
 	KotoTrack * first_track = koto_cartographer_get_track_by_uuid(koto_maps, (gchar*) first_item);
 	KotoTrack * second_track = koto_cartographer_get_track_by_uuid(koto_maps, (gchar*) second_item);
 
-
 	return koto_playlist_model_sort_by_track(first_track, second_track, data_list);
 }
 
@@ -609,10 +600,9 @@ gint koto_playlist_model_sort_by_track(
 	KotoTrack * first_track = (KotoTrack*) first_item;
 	KotoTrack * second_track = (KotoTrack*) second_item;
 
-	GList* ptr_list = data_list;
+	GList * ptr_list = data_list;
 	KotoPlaylist * self = g_list_nth_data(ptr_list, 0); // First item in the GPtrArray is a pointer to our playlist
 	KotoPreferredModelType model = GPOINTER_TO_UINT(g_list_nth_data(ptr_list, 1)); // Second item in the GPtrArray is a pointer to our KotoPreferredModelType
-
 
 	if (
 		(model == KOTO_PREFERRED_MODEL_TYPE_DEFAULT) || // Newest first model
@@ -761,13 +751,11 @@ void koto_playlist_remove_track_by_uuid(
 
 	KotoTrack * track = koto_cartographer_get_track_by_uuid(koto_maps, uuid); // Get the track
 
-
 	if (!KOTO_IS_TRACK(track)) { // Is not a track
 		return;
 	}
 
 	guint position = 0;
-
 
 	if (g_list_store_find(self->store, track, &position)) { // Got the position
 		g_list_store_remove(self->store, position); // Remove from the store
@@ -793,7 +781,6 @@ void koto_playlist_set_artwork(
 
 	magic_t cookie = magic_open(MAGIC_MIME); // Create our magic cookie so we can validate if what we are setting is an image
 
-
 	if (cookie == NULL) { // Failed to allocate
 		return;
 	}
@@ -803,7 +790,6 @@ void koto_playlist_set_artwork(
 	}
 
 	const gchar * mime_type = magic_file(cookie, path); // Get the mimetype for this file
-
 
 	if ((mime_type == NULL) || !g_str_has_prefix(mime_type, "image/")) { // Failed to get our mimetype or not an image
 		goto free_cookie;
@@ -890,7 +876,6 @@ void koto_playlist_tracks_queue_push_to_store(
 ) {
 	gchar * track_uuid = (gchar*) data;
 	KotoTrack * track = koto_cartographer_get_track_by_uuid(koto_maps, track_uuid);
-
 
 	if (!KOTO_IS_TRACK(track)) { // Not a track
 		return;

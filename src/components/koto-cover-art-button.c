@@ -107,7 +107,6 @@ static void koto_cover_art_button_init(KotoCoverArtButton * self) {
 
 	GtkWidget * controls = gtk_center_box_new(); // Create a center box for the controls
 
-
 	self->play_pause_button = koto_button_new_with_icon("", "media-playback-start-symbolic", "media-playback-pause-symbolic", KOTO_BUTTON_PIXBUF_SIZE_NORMAL);
 	gtk_center_box_set_center_widget(GTK_CENTER_BOX(controls), GTK_WIDGET(self->play_pause_button));
 
@@ -116,7 +115,6 @@ static void koto_cover_art_button_init(KotoCoverArtButton * self) {
 	gtk_overlay_add_overlay(GTK_OVERLAY(self->main), self->revealer); // Add our revealer as the overlay
 
 	GtkEventController * motion_controller = gtk_event_controller_motion_new(); // Create our new motion event controller to track mouse leave and enter
-
 
 	g_signal_connect(motion_controller, "enter", G_CALLBACK(koto_cover_art_button_show_overlay_controls), self);
 	g_signal_connect(motion_controller, "leave", G_CALLBACK(koto_cover_art_button_hide_overlay_controls), self);
@@ -146,7 +144,6 @@ static void koto_cover_art_button_set_property(
 ) {
 	KotoCoverArtButton * self = KOTO_COVER_ART_BUTTON(obj);
 
-
 	switch (prop_id) {
 		case PROP_ART_PATH:
 			koto_cover_art_button_set_art_path(self, (gchar*) g_value_get_string(val)); // Get the value and call our set_art_path with it
@@ -168,8 +165,7 @@ void koto_cover_art_button_hide_overlay_controls(
 	gpointer data
 ) {
 	(void) controller;
-	KotoCoverArtButton* self = data;
-
+	KotoCoverArtButton * self = data;
 
 	gtk_revealer_set_reveal_child(GTK_REVEALER(self->revealer), FALSE);
 }
@@ -243,8 +239,7 @@ void koto_cover_art_button_show_overlay_controls(
 	gpointer data
 ) {
 	(void) controller;
-	KotoCoverArtButton* self = data;
-
+	KotoCoverArtButton * self = data;
 
 	gtk_revealer_set_reveal_child(GTK_REVEALER(self->revealer), TRUE);
 }

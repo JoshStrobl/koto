@@ -21,7 +21,7 @@
 extern GtkWindow * main_window;
 
 GtkFileChooserNative * koto_utils_create_image_file_chooser(gchar * file_chooser_label) {
-	GtkFileChooserNative* chooser = gtk_file_chooser_native_new(
+	GtkFileChooserNative * chooser = gtk_file_chooser_native_new(
 		file_chooser_label,
 		main_window,
 		GTK_FILE_CHOOSER_ACTION_OPEN,
@@ -30,7 +30,6 @@ GtkFileChooserNative * koto_utils_create_image_file_chooser(gchar * file_chooser
 	);
 
 	GtkFileFilter * image_filter = gtk_file_filter_new(); // Create our file filter
-
 
 	gtk_file_filter_add_mime_type(image_filter, "image/*"); // Only allow for images
 	gtk_file_chooser_set_filter(GTK_FILE_CHOOSER(chooser), image_filter); // Only allow picking images
@@ -45,8 +44,7 @@ GtkWidget * koto_utils_create_image_from_filepath(
 	guint width,
 	guint height
 ) {
-	GtkWidget* image = NULL;
-
+	GtkWidget * image = NULL;
 
 	if ((filepath != NULL) && (strcmp(filepath, "") != 0)) { // If we have a filepath
 		if (g_file_test(filepath, G_FILE_TEST_EXISTS)) { // File exists
@@ -73,10 +71,8 @@ gchar * koto_utils_get_filename_without_extension(gchar * filename) {
 	gchar * trimmed_file_name = g_strdup(filename);
 	gchar ** split = g_strsplit(filename, ".", -1); // Split every time we see .
 
-
 	g_free(trimmed_file_name);
 	guint len_of_extension_split = g_strv_length(split);
-
 
 	if (len_of_extension_split == 2) { // Only have two elements
 		trimmed_file_name = g_strdup(split[0]); // Get the first element
@@ -98,7 +94,6 @@ gchar * koto_utils_get_filename_without_extension(gchar * filename) {
 	}
 
 	gchar * stripped_file_name = g_strstrip(g_strdup(trimmed_file_name)); // Strip leading and trailing whitespace
-
 
 	g_free(trimmed_file_name);
 	return stripped_file_name;
@@ -123,7 +118,6 @@ gchar * koto_utils_replace_string_all(
 	gchar * cleaned_string = "";
 	gchar ** split = g_strsplit(str, find, -1); // Split on find
 
-
 	for (guint i = 0; i < g_strv_length(split); i++) { // For each split
 		cleaned_string = g_strjoin(repl, cleaned_string, split[i], NULL); // Join the strings with our replace string
 	}
@@ -135,7 +129,6 @@ gchar * koto_utils_replace_string_all(
 gchar * koto_utils_unquote_string(gchar * s) {
 	gchar * new_s = NULL;
 
-
 	if (g_str_has_prefix(s, "'") && g_str_has_suffix(s, "'")) { // Begins and ends with '
 		new_s = g_utf8_substring(s, 1, g_utf8_strlen(s, -1) - 1); // Start at 1 and end at n-1
 	} else {
@@ -143,7 +136,6 @@ gchar * koto_utils_unquote_string(gchar * s) {
 	}
 
 	gchar ** split_on_double_single = g_strsplit(new_s, "''", -1); // Split on instances of ''
-
 
 	new_s = g_strjoinv("'", split_on_double_single); // Rejoin as '
 	g_strfreev(split_on_double_single); // Free our array

@@ -19,6 +19,12 @@
 #include <glib-2.0/glib-object.h>
 #include <magic.h>
 
+typedef enum {
+	KOTO_LIBRARY_TYPE_AUDIOBOOK = 1,
+	KOTO_LIBRARY_TYPE_MUSIC = 2,
+	KOTO_LIBRARY_TYPE_PODCAST = 3
+} KotoLibraryType;
+
 G_BEGIN_DECLS
 
 /**
@@ -46,23 +52,6 @@ G_DECLARE_FINAL_TYPE(KotoTrack, koto_track, KOTO, TRACK, GObject);
  **/
 
 KotoLibrary * koto_library_new(const gchar * path);
-
-void koto_library_add_artist(
-	KotoLibrary * self,
-	KotoArtist * artist
-);
-
-KotoArtist * koto_library_get_artist(
-	KotoLibrary * self,
-	gchar* artist_name
-);
-
-GHashTable * koto_library_get_artists(KotoLibrary * self);
-
-void koto_library_remove_artist(
-	KotoLibrary * self,
-	KotoArtist * artist
-);
 
 void koto_library_set_path(
 	KotoLibrary * self,
@@ -114,11 +103,6 @@ void index_folder(
 	guint depth
 );
 
-void output_track(
-	gpointer data,
-	gpointer user_data
-);
-
 /**
  * Artist Functions
  **/
@@ -143,6 +127,8 @@ GList * koto_artist_get_albums(KotoArtist * self);
 
 gchar * koto_artist_get_name(KotoArtist * self);
 
+gchar * koto_artist_get_uuid(KotoArtist * self);
+
 void koto_artist_remove_album(
 	KotoArtist * self,
 	KotoAlbum * album
@@ -161,12 +147,6 @@ void koto_artist_set_artist_name(
 void koto_artist_update_path(
 	KotoArtist * self,
 	gchar * new_path
-);
-
-void output_artists(
-	gpointer artist_key,
-	gpointer artist_ptr,
-	gpointer data
 );
 
 /**

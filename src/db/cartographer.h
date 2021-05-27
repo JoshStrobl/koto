@@ -67,24 +67,31 @@ void koto_cartographer_emit_playlist_added(
 
 KotoAlbum * koto_cartographer_get_album_by_uuid(
 	KotoCartographer * self,
-	gchar* album_uuid
+	gchar * album_uuid
+);
+
+GHashTable * koto_cartographer_get_artists(KotoCartographer * self);
+
+KotoArtist * koto_cartographer_get_artist_by_name(
+	KotoCartographer * self,
+	gchar * artist_name
 );
 
 KotoArtist * koto_cartographer_get_artist_by_uuid(
 	KotoCartographer * self,
-	gchar* artist_uuid
+	gchar * artist_uuid
 );
 
 KotoPlaylist * koto_cartographer_get_playlist_by_uuid(
 	KotoCartographer * self,
-	gchar* playlist_uuid
+	gchar * playlist_uuid
 );
 
 GHashTable * koto_cartographer_get_playlists(KotoCartographer * self);
 
 KotoTrack * koto_cartographer_get_track_by_uuid(
 	KotoCartographer * self,
-	gchar* track_uuid
+	gchar * track_uuid
 );
 
 gboolean koto_cartographer_has_album(
@@ -94,7 +101,7 @@ gboolean koto_cartographer_has_album(
 
 gboolean koto_cartographer_has_album_by_uuid(
 	KotoCartographer * self,
-	gchar* album_uuid
+	gchar * album_uuid
 );
 
 gboolean koto_cartographer_has_artist(
@@ -104,7 +111,7 @@ gboolean koto_cartographer_has_artist(
 
 gboolean koto_cartographer_has_artist_by_uuid(
 	KotoCartographer * self,
-	gchar* artist_uuid
+	gchar * artist_uuid
 );
 
 gboolean koto_cartographer_has_playlist(
@@ -114,7 +121,7 @@ gboolean koto_cartographer_has_playlist(
 
 gboolean koto_cartographer_has_playlist_by_uuid(
 	KotoCartographer * self,
-	gchar* playlist_uuid
+	gchar * playlist_uuid
 );
 
 gboolean koto_cartographer_has_track(
@@ -124,7 +131,7 @@ gboolean koto_cartographer_has_track(
 
 gboolean koto_cartographer_has_track_by_uuid(
 	KotoCartographer * self,
-	gchar* track_uuid
+	gchar * track_uuid
 );
 
 void koto_cartographer_remove_album(
@@ -134,7 +141,7 @@ void koto_cartographer_remove_album(
 
 void koto_cartographer_remove_album_by_uuid(
 	KotoCartographer * self,
-	gchar* album_uuid
+	gchar * album_uuid
 );
 
 void koto_cartographer_remove_artist(
@@ -144,7 +151,7 @@ void koto_cartographer_remove_artist(
 
 void koto_cartographer_remove_artist_by_uuid(
 	KotoCartographer * self,
-	gchar* artist_uuid
+	gchar * artist_uuid
 );
 
 void koto_cartographer_remove_playlist(
@@ -154,7 +161,7 @@ void koto_cartographer_remove_playlist(
 
 void koto_cartographer_remove_playlist_by_uuid(
 	KotoCartographer * self,
-	gchar* playlist_uuid
+	gchar * playlist_uuid
 );
 
 void koto_cartographer_remove_track(
@@ -164,7 +171,7 @@ void koto_cartographer_remove_track(
 
 void koto_cartographer_remove_track_by_uuid(
 	KotoCartographer * self,
-	gchar* track_uuid
+	gchar * track_uuid
 );
 
 G_END_DECLS

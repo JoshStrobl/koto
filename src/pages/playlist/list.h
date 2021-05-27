@@ -32,7 +32,7 @@ G_DECLARE_FINAL_TYPE(KotoPlaylistPage, koto_playlist_page, KOTO, PLAYLIST_PAGE, 
 KotoPlaylistPage * koto_playlist_page_new(gchar * playlist_uuid);
 
 void koto_playlist_page_add_track(
-	KotoPlaylistPage* self,
+	KotoPlaylistPage * self,
 	const gchar * track_uuid
 );
 

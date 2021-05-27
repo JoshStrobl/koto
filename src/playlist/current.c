@@ -54,7 +54,6 @@ static void koto_current_playlist_set_property(
 static void koto_current_playlist_class_init(KotoCurrentPlaylistClass * c) {
 	GObjectClass * gobject_class;
 
-
 	gobject_class = G_OBJECT_CLASS(c);
 	gobject_class->set_property = koto_current_playlist_set_property;
 	gobject_class->get_property = koto_current_playlist_get_property;
@@ -82,7 +81,6 @@ void koto_current_playlist_get_property(
 ) {
 	KotoCurrentPlaylist * self = KOTO_CURRENT_PLAYLIST(obj);
 
-
 	switch (prop_id) {
 		case PROP_CURRENT_PLAYLIST:
 			g_value_set_object(val, self->current_playlist);
@@ -100,7 +98,6 @@ void koto_current_playlist_set_property(
 	GParamSpec * spec
 ) {
 	KotoCurrentPlaylist * self = KOTO_CURRENT_PLAYLIST(obj);
-
 
 	switch (prop_id) {
 		case PROP_CURRENT_PLAYLIST:

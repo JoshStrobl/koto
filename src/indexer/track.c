@@ -80,7 +80,6 @@ static void koto_track_set_property(
 static void koto_track_class_init(KotoTrackClass * c) {
 	GObjectClass * gobject_class;
 
-
 	gobject_class = G_OBJECT_CLASS(c);
 	gobject_class->set_property = koto_track_set_property;
 	gobject_class->get_property = koto_track_get_property;
@@ -186,7 +185,6 @@ static void koto_track_get_property(
 ) {
 	KotoTrack * self = KOTO_TRACK(obj);
 
-
 	switch (prop_id) {
 		case PROP_ARTIST_UUID:
 			g_value_set_string(val, self->artist_uuid);
@@ -229,7 +227,6 @@ static void koto_track_set_property(
 ) {
 	KotoTrack * self = KOTO_TRACK(obj);
 
-
 	switch (prop_id) {
 		case PROP_ARTIST_UUID:
 			self->artist_uuid = g_strdup(g_value_get_string(val));
@@ -270,7 +267,6 @@ static void koto_track_set_property(
 	}
 }
 
-
 void koto_track_commit(KotoTrack * self) {
 	if ((self->artist_uuid == NULL) || (strcmp(self->artist_uuid, "") == 0)) { // No valid required artist UUID
 		return;
@@ -297,7 +293,6 @@ void koto_track_commit(KotoTrack * self) {
 	gchar * commit_op_errmsg = NULL;
 	int rc = sqlite3_exec(koto_db, commit_op, 0, 0, &commit_op_errmsg);
 
-
 	if (rc != SQLITE_OK) {
 		g_warning("Failed to write our file to the database: %s", commit_op_errmsg);
 	}
@@ -319,7 +314,6 @@ GVariant * koto_track_get_metadata_vardict(KotoTrack * self) {
 
 	KotoArtist * artist = koto_cartographer_get_artist_by_uuid(koto_maps, self->artist_uuid);
 	KotoAlbum * album = koto_cartographer_get_album_by_uuid(koto_maps, self->album_uuid);
-
 
 	g_object_get(album, "art-path", &album_art_path, "name", &album_name, NULL);
 
@@ -352,7 +346,6 @@ GVariant * koto_track_get_metadata_vardict(KotoTrack * self) {
 
 	GVariant * metadata_ret = g_variant_builder_end(builder);
 
-
 	return metadata_ret;
 }
 
@@ -368,7 +361,6 @@ void koto_track_parse_name(KotoTrack * self) {
 	gchar * copied_file_name = g_strdelimit(g_strdup(self->file_name), "_", ' '); // Replace _ with whitespace for starters
 
 	KotoArtist * artist = NULL;
-
 
 	artist = koto_cartographer_get_artist_by_uuid(koto_maps, self->artist_uuid);
 
@@ -389,11 +381,9 @@ void koto_track_parse_name(KotoTrack * self) {
 
 	gchar * file_without_ext = koto_utils_get_filename_without_extension(copied_file_name);
 
-
 	g_free(copied_file_name);
 
 	gchar ** split = g_regex_split_simple("^([\\d]+)", file_without_ext, G_REGEX_JAVASCRIPT_COMPAT, 0);
-
 
 	if (g_strv_length(split) > 1) { // Has positional info at the beginning of the file
 		gchar * num = split[1];
@@ -443,7 +433,6 @@ void koto_track_remove_from_playlist(
 	gchar * commit_op_errmsg = NULL;
 	int rc = sqlite3_exec(koto_db, commit_op, 0, 0, &commit_op_errmsg);
 
-
 	if (rc != SQLITE_OK) {
 		g_warning("Failed to remove track from playlist: %s", commit_op_errmsg);
 	}
@@ -471,7 +460,6 @@ void koto_track_save_to_playlist(
 
 	gchar * commit_op_errmsg = NULL;
 	int rc = sqlite3_exec(koto_db, commit_op, 0, 0, &commit_op_errmsg);
-
 
 	if (rc != SQLITE_OK) {
 		g_warning("Failed to save track to playlist: %s", commit_op_errmsg);
@@ -552,7 +540,6 @@ void koto_track_set_position(
 void koto_track_update_metadata(KotoTrack * self) {
 	TagLib_File * t_file = taglib_file_new(self->path); // Get a taglib file for this file
 
-
 	if ((t_file != NULL) && taglib_file_is_valid(t_file)) { // If we got the taglib file and it is valid
 		self->acquired_metadata_from_id3 = TRUE;
 		TagLib_Tag * tag = taglib_file_tag(t_file); // Get our tag
@@ -596,7 +583,6 @@ KotoTrack * koto_track_new(
 	gchar * artist_uuid;
 	gchar * album_uuid;
 
-
 	g_object_get(album, "artist-uuid", &artist_uuid, "uuid", &album_uuid, NULL); // Get the artist and album uuids from our Album
 
 	KotoTrack * track = g_object_new(
@@ -615,7 +601,6 @@ KotoTrack * koto_track_new(
 		cd,
 		NULL
 	);
-
 
 	koto_track_commit(track); // Immediately commit to the database
 	return track;
