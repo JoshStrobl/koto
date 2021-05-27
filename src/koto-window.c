@@ -158,7 +158,11 @@ void koto_window_add_page(
 	gtk_stack_add_named(GTK_STACK(self->pages), page, page_name);
 }
 
-void koto_window_manage_style(KotoConfig * c, guint prop_id, KotoWindow * self) {
+void koto_window_manage_style(
+	KotoConfig * c,
+	guint prop_id,
+	KotoWindow * self
+) {
 	(void) prop_id;
 
 	if (!KOTO_IS_WINDOW(self)) { // Not a Koto Window
@@ -181,7 +185,7 @@ void koto_window_manage_style(KotoConfig * c, guint prop_id, KotoWindow * self) 
 	}
 
 	GtkStyleContext * context = gtk_widget_get_style_context(GTK_WIDGET(self));
-	
+
 	if (!overriding_theme) { // If we are not overriding the theme
 		if (!gtk_style_context_has_class(context, "koto-theme-dark")) { // Don't have our css class for a theme
 			gtk_style_context_add_provider_for_display(gdk_display_get_default(), GTK_STYLE_PROVIDER(self->provider), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
@@ -192,12 +196,12 @@ void koto_window_manage_style(KotoConfig * c, guint prop_id, KotoWindow * self) 
 		themes = g_list_append(themes, "gruvbox");
 		themes = g_list_append(themes, "light");
 
-		GList *themes_head;
+		GList * themes_head;
 
 		for (themes_head = themes; themes_head != NULL; themes_head = themes_head->next) { // For each theme
-			gchar * theme_class_name = g_strdup_printf("koto-theme-%s", (gchar *) themes->data); // Get the theme
+			gchar * theme_class_name = g_strdup_printf("koto-theme-%s", (gchar*) themes->data); // Get the theme
 
-			if (g_strcmp0((gchar *) themes->data, desired_theme) == 0) { // If we are using this theme
+			if (g_strcmp0((gchar*) themes->data, desired_theme) == 0) { // If we are using this theme
 				gtk_widget_add_css_class(GTK_WIDGET(self), theme_class_name); // Add the CSS class
 			} else {
 				gtk_widget_remove_css_class(GTK_WIDGET(self), theme_class_name); // Remove the CSS class

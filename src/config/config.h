@@ -30,9 +30,21 @@ G_BEGIN_DECLS
 G_DECLARE_FINAL_TYPE(KotoConfig, koto_config, KOTO, CONFIG, GObject)
 
 KotoConfig* koto_config_new();
-void koto_config_load(KotoConfig * self, gchar *path);
-void koto_config_monitor_handle_changed(GFileMonitor * monitor, GFile * file, GFile *other_file, GFileMonitorEvent ev, gpointer user_data);
+void koto_config_load(
+	KotoConfig * self,
+	gchar * path
+);
+
+void koto_config_monitor_handle_changed(
+	GFileMonitor * monitor,
+	GFile * file,
+	GFile * other_file,
+	GFileMonitorEvent ev,
+	gpointer user_data
+);
+
 void koto_config_refresh(KotoConfig * self);
+
 void koto_config_save(KotoConfig * self);
 
 G_END_DECLS

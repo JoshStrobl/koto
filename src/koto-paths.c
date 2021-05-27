@@ -30,10 +30,10 @@ gchar * koto_path_to_db;
 
 void koto_paths_setup() {
 	koto_rev_dns = "com.github.joshstrobl.koto";
-	const gchar *user_cache_dir = g_get_user_data_dir();
+	const gchar * user_cache_dir = g_get_user_data_dir();
 	const gchar * user_config_dir = g_get_user_config_dir();
 
-	koto_path_cache = g_build_path(G_DIR_SEPARATOR_S, user_cache_dir, koto_rev_dns,NULL);
+	koto_path_cache = g_build_path(G_DIR_SEPARATOR_S, user_cache_dir, koto_rev_dns, NULL);
 	koto_path_config = g_build_path(G_DIR_SEPARATOR_S, user_config_dir, koto_rev_dns, NULL);
 	koto_path_to_conf = g_build_filename(koto_path_config, "config.toml", NULL);
 	koto_path_to_db = g_build_filename( koto_path_cache, "db", NULL);

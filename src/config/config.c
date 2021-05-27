@@ -73,7 +73,7 @@ G_DEFINE_TYPE(KotoConfig, koto_config, G_TYPE_OBJECT);
 
 KotoConfig * config;
 
-static void koto_config_constructed(GObject *obj);
+static void koto_config_constructed(GObject * obj);
 
 static void koto_config_get_property(
 	GObject * obj,
@@ -89,7 +89,7 @@ static void koto_config_set_property(
 	GParamSpec * spec
 );
 
-static void koto_config_class_init(KotoConfigClass *c) {
+static void koto_config_class_init(KotoConfigClass * c) {
 	GObjectClass * gobject_class;
 	gobject_class = G_OBJECT_CLASS(c);
 	gobject_class->constructed = koto_config_constructed;
@@ -145,7 +145,7 @@ static void koto_config_init(KotoConfig * self) {
 	self->finalized = FALSE;
 }
 
-static void koto_config_constructed(GObject *obj) {
+static void koto_config_constructed(GObject * obj) {
 	KotoConfig * self = KOTO_CONFIG(obj);
 	self->finalized = TRUE;
 }
@@ -190,7 +190,7 @@ static void koto_config_set_property(
 
 	switch (prop_id) {
 		case PROP_PLAYBACK_CONTINUE_ON_PLAYLIST:
-			self->playback_continue_on_playlist =  g_value_get_boolean(val);
+			self->playback_continue_on_playlist = g_value_get_boolean(val);
 			break;
 		case PROP_PLAYBACK_LAST_USED_VOLUME:
 			self->playback_last_used_volume = g_value_get_double(val);
@@ -202,7 +202,7 @@ static void koto_config_set_property(
 			self->ui_theme_desired = g_strdup(g_value_get_string(val));
 			break;
 		case PROP_UI_THEME_OVERRIDE:
-			self->ui_theme_override =  g_value_get_boolean(val);
+			self->ui_theme_override = g_value_get_boolean(val);
 			break;
 		default:
 			G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, prop_id, spec);
@@ -216,8 +216,11 @@ static void koto_config_set_property(
 
 /**
  * Load our TOML file from the specified path into our KotoConfig
-**/
-void koto_config_load(KotoConfig * self, gchar *path) {
+ **/
+void koto_config_load(
+	KotoConfig * self,
+	gchar * path
+) {
 	if (!koto_utils_is_string_valid(path)) { // Path is not valid
 		return;
 	}
@@ -248,7 +251,8 @@ void koto_config_load(KotoConfig * self, gchar *path) {
 
 	GError * file_info_query_err;
 
-	GFileInfo * file_info = g_file_query_info( // Get the size of our TOML file
+	GFileInfo * file_info = g_file_query_info(
+		// Get the size of our TOML file
 		self->config_file,
 		G_FILE_ATTRIBUTE_STANDARD_SIZE,
 		G_FILE_QUERY_INFO_NONE,
@@ -313,7 +317,7 @@ void koto_config_load(KotoConfig * self, gchar *path) {
 
 	if (playback_section) { // Have playback section
 		toml_datum_t continue_on_playlist = toml_bool_in(playback_section, "continue-on-playlist");
-		toml_datum_t last_used_volume  = toml_double_in(playback_section, "last-used-volume");
+		toml_datum_t last_used_volume = toml_double_in(playback_section, "last-used-volume");
 		toml_datum_t maintain_shuffle = toml_bool_in(playback_section, "maintain-shuffle");
 
 		if (continue_on_playlist.ok && (self->playback_continue_on_playlist != continue_on_playlist.u.b)) { // If we have a continue-on-playlist set and they are different
@@ -344,7 +348,7 @@ void koto_config_load(KotoConfig * self, gchar *path) {
 		toml_datum_t override_app = toml_bool_in(ui_section, "theme-override");
 
 		if (override_app.ok && (override_app.u.b != self->ui_theme_override)) { // Changed if we are overriding theme
-			g_object_set(self, "ui-theme-override",	override_app.u.b, NULL);
+			g_object_set(self, "ui-theme-override", override_app.u.b, NULL);
 		}
 	}
 
@@ -367,7 +371,13 @@ monitor:
 	}
 }
 
-void koto_config_monitor_handle_changed(GFileMonitor * monitor, GFile * file, GFile *other_file, GFileMonitorEvent ev, gpointer user_data) {
+void koto_config_monitor_handle_changed(
+	GFileMonitor * monitor,
+	GFile * file,
+	GFile * other_file,
+	GFileMonitorEvent ev,
+	gpointer user_data
+) {
 	(void) monitor;
 	(void) file;
 	(void) other_file;
@@ -383,15 +393,15 @@ void koto_config_monitor_handle_changed(GFileMonitor * monitor, GFile * file, GF
 
 /**
  * Refresh will handle any FS notify change on our Koto config file and call load
-**/
+ **/
 void koto_config_refresh(KotoConfig * self) {
 	koto_config_load(self, self->path);
 }
 
 /**
  * Save will write our config back out
-**/
-void koto_config_save(KotoConfig *self) {
+ **/
+void koto_config_save(KotoConfig * self) {
 	GStrvBuilder * root_builder = g_strv_builder_new(); // Create a new strv builder
 
 	GParamSpec ** props_list = g_object_class_list_properties(G_OBJECT_GET_CLASS(self), NULL); // Get the propreties associated with our settings
@@ -408,7 +418,7 @@ void koto_config_save(KotoConfig *self) {
 
 	int i;
 	for (i = 0; i < N_PROPS; i++) { // For each property
-		GParamSpec *spec = props_list[i]; // Get the prop
+		GParamSpec * spec = props_list[i]; // Get the prop
 
 		if (!G_IS_PARAM_SPEC(spec)) { // Not a spec
 			continue; // Skip
@@ -429,7 +439,7 @@ void koto_config_save(KotoConfig *self) {
 		}
 
 		GList * keys;
-	
+
 		if (g_hash_table_contains(sections_to_prop_keys, respective_prop)) { // Already has list
 			keys = g_hash_table_lookup(sections_to_prop_keys, respective_prop); // Get the list
 		} else { // Don't have list
@@ -447,7 +457,7 @@ void koto_config_save(KotoConfig *self) {
 
 	while (g_hash_table_iter_next(&iter, &section_name, &section_props)) {
 		GStrvBuilder * section_builder = g_strv_builder_new(); // Make our string builder
-		g_strv_builder_add(section_builder, g_strdup_printf("[%s]", (gchar *) section_name)); // Add section as [section]
+		g_strv_builder_add(section_builder, g_strdup_printf("[%s]", (gchar*) section_name)); // Add section as [section]
 
 		GList * current_section_keyname;
 		for (current_section_keyname = section_props; current_section_keyname != NULL; current_section_keyname = current_section_keyname->next) { // Iterate over property names
@@ -460,7 +470,7 @@ void koto_config_save(KotoConfig *self) {
 			}
 
 			gchar * key_name = g_strdup(current_section_keyname->data);
-			gchar * key_name_replaced = koto_utils_replace_string_all(key_name, g_strdup_printf("%s-", (gchar *) section_name), ""); // Remove SECTIONNAME-
+			gchar * key_name_replaced = koto_utils_replace_string_all(key_name, g_strdup_printf("%s-", (gchar*) section_name), ""); // Remove SECTIONNAME-
 
 			const gchar * line = g_strdup_printf("\t%s = %s", key_name_replaced, prop_val);
 
@@ -501,5 +511,5 @@ void koto_config_save(KotoConfig *self) {
 }
 
 KotoConfig * koto_config_new() {
-	return g_object_new (KOTO_TYPE_CONFIG, NULL);
+	return g_object_new(KOTO_TYPE_CONFIG, NULL);
 }

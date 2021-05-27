@@ -29,7 +29,7 @@
 
 extern KotoAddRemoveTrackPopover * koto_add_remove_track_popup;
 extern KotoCartographer * koto_maps;
-extern KotoConfig *config;
+extern KotoConfig * config;
 extern KotoCurrentPlaylist * current_playlist;
 extern KotoPlaybackEngine * playback_engine;
 

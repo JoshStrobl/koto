@@ -65,7 +65,6 @@ static void koto_library_set_property(
 static void koto_library_class_init(KotoLibraryClass * c) {
 	GObjectClass * gobject_class;
 
-
 	gobject_class = G_OBJECT_CLASS(c);
 	gobject_class->set_property = koto_library_set_property;
 	gobject_class->get_property = koto_library_get_property;
@@ -99,7 +98,6 @@ void koto_library_add_artist(
 	gchar * artist_name;
 	gchar * artist_uuid;
 
-
 	g_object_get(artist, "name", &artist_name, "uuid", &artist_uuid, NULL);
 
 	if (g_hash_table_contains(self->music_artists, artist_name)) { // Already have the artist
@@ -121,7 +119,6 @@ KotoArtist * koto_library_get_artist(
 	koto_library_get_artists(self); // Call to generate if needed
 
 	gchar * artist_uuid = g_hash_table_lookup(self->music_artists, artist_name); // Get the UUID from our music artists
-
 
 	if (artist_uuid != NULL) {
 		KotoArtist * artist = koto_cartographer_get_artist_by_uuid(koto_maps, artist_uuid); // Return any artist from cartographer

@@ -52,7 +52,11 @@ void koto_playback_engine_apply_configuration_state(
 
 void koto_playback_engine_backwards(KotoPlaybackEngine * self);
 
-void koto_playback_engine_current_playlist_changed(KotoCurrentPlaylist * current_pl, guint prop_id, KotoPlaybackEngine *self);
+void koto_playback_engine_current_playlist_changed(
+	KotoCurrentPlaylist * current_pl,
+	guint prop_id,
+	KotoPlaybackEngine * self
+);
 
 void koto_playback_engine_forwards(KotoPlaybackEngine * self);
 

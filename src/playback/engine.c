@@ -287,7 +287,11 @@ void koto_playback_engine_backwards(KotoPlaybackEngine * self) {
 	koto_playback_engine_set_track_by_uuid(self, koto_playlist_go_to_previous(playlist), FALSE);
 }
 
-void koto_playback_engine_current_playlist_changed(KotoCurrentPlaylist * current_pl, guint prop_id, KotoPlaybackEngine *self) {
+void koto_playback_engine_current_playlist_changed(
+	KotoCurrentPlaylist * current_pl,
+	guint prop_id,
+	KotoPlaybackEngine * self
+) {
 	(void) current_pl;
 	(void) prop_id;
 

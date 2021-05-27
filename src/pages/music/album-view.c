@@ -35,7 +35,7 @@ struct _KotoAlbumView {
 	GtkWidget * album_tracks_box;
 	GtkWidget * discs;
 
-	KotoCoverArtButton *album_cover;
+	KotoCoverArtButton * album_cover;
 
 	GtkWidget * album_label;
 	GHashTable * cd_to_track_listbox;
