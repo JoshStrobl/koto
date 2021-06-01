@@ -10,6 +10,7 @@ koto_sources = [
 	'config/config.c',
 	'db/cartographer.c',
 	'db/db.c',
+	'db/loaders.c',
 	'indexer/album.c',
 	'indexer/artist.c',
 	'indexer/file-indexer.c',

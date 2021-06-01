@@ -58,43 +58,6 @@ void koto_library_set_path(
 	gchar * path
 );
 
-int process_artists(
-	void * data,
-	int num_columns,
-	char ** fields,
-	char ** column_names
-);
-
-int process_albums(
-	void * data,
-	int num_columns,
-	char ** fields,
-	char ** column_names
-);
-
-int process_playlists(
-	void * data,
-	int num_columns,
-	char ** fields,
-	char ** column_names
-);
-
-int process_playlists_tracks(
-	void * data,
-	int num_columns,
-	char ** fields,
-	char ** column_names
-);
-
-int process_tracks(
-	void * data,
-	int num_columns,
-	char ** fields,
-	char ** column_names
-);
-
-void read_from_db(KotoLibrary * self);
-
 void start_indexing(KotoLibrary * self);
 
 void index_folder(
