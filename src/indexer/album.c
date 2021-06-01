@@ -442,7 +442,15 @@ GList * koto_album_get_tracks(KotoAlbum * self) {
 		return NULL;
 	}
 
-	return self->tracks; // Return
+	return self->tracks; // Return the tracks
+}
+
+gchar * koto_album_get_uuid(KotoAlbum *self) {
+	if (!KOTO_IS_ALBUM(self)) { // Not an album
+		return NULL;
+	}
+
+	return self->uuid; // Return the UUID
 }
 
 void koto_album_set_album_art(

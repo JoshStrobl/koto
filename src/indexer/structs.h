@@ -186,6 +186,8 @@ gchar * koto_album_get_album_uuid(KotoAlbum * self);
 
 GList * koto_album_get_tracks(KotoAlbum * self);
 
+gchar * koto_album_get_uuid(KotoAlbum *self);
+
 void koto_album_remove_file(
 	KotoAlbum * self,
 	KotoTrack * track

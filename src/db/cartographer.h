@@ -34,6 +34,8 @@ typedef struct _KotoCartographerClass KotoCartographerClass;
 GLIB_AVAILABLE_IN_ALL
 GType koto_cartographer_get_type(void) G_GNUC_CONST;
 
+#define KOTO_IS_CARTOGRAPHER(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), KOTO_TYPE_CARTOGRAPHER))
+
 /**
  * Cartographer Functions
  **/
@@ -48,6 +50,11 @@ void koto_cartographer_add_album(
 void koto_cartographer_add_artist(
 	KotoCartographer * self,
 	KotoArtist * artist
+);
+
+void koto_cartographer_add_library(
+	KotoCartographer * self,
+	KotoLibrary * library
 );
 
 void koto_cartographer_add_playlist(
@@ -82,6 +89,16 @@ KotoArtist * koto_cartographer_get_artist_by_uuid(
 	gchar * artist_uuid
 );
 
+KotoLibrary * koto_cartographer_get_library_by_uuid(
+	KotoCartographer *self,
+	gchar * library_uuid
+);
+
+GList * koto_cartographer_get_libraries_for_storage_uuid(
+	KotoCartographer *self,
+	gchar * storage_uuid
+);
+
 KotoPlaylist * koto_cartographer_get_playlist_by_uuid(
 	KotoCartographer * self,
 	gchar * playlist_uuid
@@ -112,6 +129,16 @@ gboolean koto_cartographer_has_artist(
 gboolean koto_cartographer_has_artist_by_uuid(
 	KotoCartographer * self,
 	gchar * artist_uuid
+);
+
+gboolean koto_cartographer_has_library(
+	KotoCartographer * self,
+	KotoLibrary *library
+);
+
+gboolean koto_cartographer_has_library_by_uuid(
+	KotoCartographer * self,
+	gchar * library_uuid
 );
 
 gboolean koto_cartographer_has_playlist(
@@ -152,6 +179,11 @@ void koto_cartographer_remove_artist(
 void koto_cartographer_remove_artist_by_uuid(
 	KotoCartographer * self,
 	gchar * artist_uuid
+);
+
+void koto_cartographer_remove_library(
+	KotoCartographer * self,
+	KotoLibrary * library
 );
 
 void koto_cartographer_remove_playlist(
