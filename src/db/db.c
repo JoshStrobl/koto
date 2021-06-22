@@ -38,38 +38,48 @@ void close_db() {
 }
 
 int create_db_tables() {
-	char * tables_creation_queries = "CREATE TABLE IF NOT EXISTS artists(id string UNIQUE PRIMARY KEY, path string, type int, name string, art_path string);"
-									 "CREATE TABLE IF NOT EXISTS albums(id string UNIQUE PRIMARY KEY, path string, artist_id string, name string, art_path string, FOREIGN KEY(artist_id) REFERENCES artists(id) ON DELETE CASCADE);"
-									 "CREATE TABLE IF NOT EXISTS tracks(id string UNIQUE PRIMARY KEY, path string, type int, artist_id string, album_id string, file_name string, name string, disc int, position int, FOREIGN KEY(artist_id) REFERENCES artists(id) ON DELETE CASCADE);"
-									 "CREATE TABLE IF NOT EXISTS playlist_meta(id string UNIQUE PRIMARY KEY, name string, art_path string, preferred_model int);"
-									 "CREATE TABLE IF NOT EXISTS playlist_tracks(position INTEGER PRIMARY KEY AUTOINCREMENT, playlist_id string, track_id string, current int, FOREIGN KEY(playlist_id) REFERENCES playlist_meta(id), FOREIGN KEY(track_id) REFERENCES tracks(id) ON DELETE CASCADE);";
+	gchar * tables_creation_queries = "CREATE TABLE IF NOT EXISTS artists(id string UNIQUE PRIMARY KEY, name string, art_path string);"
+									  "CREATE TABLE IF NOT EXISTS albums(id string UNIQUE PRIMARY KEY, artist_id string, name string, art_path string, FOREIGN KEY(artist_id) REFERENCES artists(id) ON DELETE CASCADE);"
+									  "CREATE TABLE IF NOT EXISTS tracks(id string UNIQUE PRIMARY KEY, artist_id string, album_id string, name string, disc int, position int, FOREIGN KEY(artist_id) REFERENCES artists(id) ON DELETE CASCADE);"
+									  "CREATE TABLE IF NOT EXISTS libraries_albums(id string, album_id string, path string, PRIMARY KEY (id, album_id) FOREIGN KEY(album_id) REFERENCES albums(id) ON DELETE CASCADE);"
+									  "CREATE TABLE IF NOT EXISTS libraries_artists(id string, artist_id string, path string, PRIMARY KEY(id, artist_id) FOREIGN KEY(artist_id) REFERENCES artists(id) ON DELETE CASCADE);"
+									  "CREATE TABLE IF NOT EXISTS libraries_tracks(id string, track_id string, path string, PRIMARY KEY(id, track_id) FOREIGN KEY(track_id) REFERENCES tracks(id) ON DELETE CASCADE);"
+									  "CREATE TABLE IF NOT EXISTS playlist_meta(id string UNIQUE PRIMARY KEY, name string, art_path string, preferred_model int);"
+									  "CREATE TABLE IF NOT EXISTS playlist_tracks(position INTEGER PRIMARY KEY AUTOINCREMENT, playlist_id string, track_id string, current int, FOREIGN KEY(playlist_id) REFERENCES playlist_meta(id), FOREIGN KEY(track_id) REFERENCES tracks(id) ON DELETE CASCADE);";
 
-	gchar * create_tables_errmsg = NULL;
-	int rc = sqlite3_exec(koto_db, tables_creation_queries, 0, 0, &create_tables_errmsg);
-
-	if (rc != SQLITE_OK) {
-		g_critical("Failed to create required tables: %s", create_tables_errmsg);
-	}
-
-	return (rc == SQLITE_OK) ? KOTO_DB_SUCCESS : KOTO_DB_FAIL;
+	return (new_transaction(tables_creation_queries, "Failed to create required tables", TRUE) == SQLITE_OK) ? KOTO_DB_SUCCESS : KOTO_DB_FAIL;
 }
 
 int enable_foreign_keys() {
-	gchar * enable_foreign_keys_err = NULL;
-	int rc = sqlite3_exec(koto_db, "PRAGMA foreign_keys = ON;", 0, 0, &enable_foreign_keys_err);
+	gchar * commit_op = g_strdup("PRAGMA foreign_keys = ON;");
+	const gchar * transaction_err_msg = "Failed to enable foreign key support. Ensure your sqlite3 is compiled with neither SQLITE_OMIT_FOREIGN_KEY or SQLITE_OMIT_TRIGGER defined";
 
-	if (rc != SQLITE_OK) {
-		g_critical("Failed to enable foreign key support. Ensure your sqlite3 is compiled with neither SQLITE_OMIT_FOREIGN_KEY or SQLITE_OMIT_TRIGGER defined: %s", enable_foreign_keys_err);
-	}
-
-	g_free(enable_foreign_keys_err);
-	return (rc == SQLITE_OK) ? KOTO_DB_SUCCESS : KOTO_DB_FAIL;
+	return (new_transaction(commit_op, transaction_err_msg, FALSE) == SQLITE_OK) ? KOTO_DB_SUCCESS : KOTO_DB_FAIL;
 }
 
 int have_existing_db() {
 	struct stat db_stat;
 	int success = stat(koto_path_to_db, &db_stat);
 	return ((success == 0) && S_ISREG(db_stat.st_mode)) ? 0 : 1;
+}
+
+int new_transaction(
+	gchar * operation,
+	const gchar * transaction_err_msg,
+	gboolean fatal
+) {
+	gchar * commit_op_errmsg = NULL;
+	int rc = sqlite3_exec(koto_db, operation, 0, 0, &commit_op_errmsg);
+
+	if (rc != SQLITE_OK) {
+		(fatal) ? g_critical("%s: %s", transaction_err_msg, commit_op_errmsg) : g_warning("%s: %s", transaction_err_msg, commit_op_errmsg);
+	}
+
+	if (commit_op_errmsg == NULL) {
+		g_free(commit_op_errmsg);
+	}
+
+	return rc;
 }
 
 int open_db() {

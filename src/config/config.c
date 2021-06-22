@@ -20,6 +20,7 @@
 #include <errno.h>
 #include <toml.h>
 
+#include "../db/cartographer.h"
 #include "../playback/engine.h"
 #include "../koto-paths.h"
 #include "../koto-utils.h"
@@ -28,6 +29,7 @@
 
 extern int errno;
 extern const gchar * koto_config_template;
+extern KotoCartographer * koto_maps;
 extern KotoPlaybackEngine * playback_engine;
 
 enum {
@@ -46,12 +48,20 @@ static GParamSpec * config_props[N_PROPS] = {
 
 struct _KotoConfig {
 	GObject parent_instance;
+	toml_table_t * toml_ref;
 
 	GFile * config_file;
 	GFileMonitor * config_file_monitor;
 
 	gchar * path;
 	gboolean finalized;
+
+	/* Library Attributes */
+
+	// These are useful for when we need to determine separately if we need to index initial builtin folders that did not exist previously (during load)
+	gboolean has_type_audiobook;
+	gboolean has_type_music;
+	gboolean has_type_podcast;
 
 	/* Playback Settings */
 
@@ -143,6 +153,9 @@ static void koto_config_class_init(KotoConfigClass * c) {
 
 static void koto_config_init(KotoConfig * self) {
 	self->finalized = FALSE;
+	self->has_type_audiobook = FALSE;
+	self->has_type_music = FALSE;
+	self->has_type_podcast = FALSE;
 }
 
 static void koto_config_constructed(GObject * obj) {
@@ -212,6 +225,25 @@ static void koto_config_set_property(
 	if (self->finalized) { // Loaded the config
 		g_object_notify_by_pspec(obj, config_props[prop_id]); // Notify that a change happened
 	}
+}
+
+toml_table_t * koto_config_get_library(
+	KotoConfig * self,
+	gchar * library_uuid
+) {
+	toml_array_t * libraries = toml_array_in(self->toml_ref, "library"); // Get the array of tables
+	for (int i = 0; i < toml_array_nelem(libraries); i++) { // For each library
+		toml_table_t * library = toml_table_at(libraries, i); // Get this library
+		toml_datum_t uuid_datum = toml_string_in(library, "uuid"); // Get the datum for the uuid
+
+		gchar * lib_uuid = (uuid_datum.ok) ? (gchar*) uuid_datum.u.s : NULL;
+
+		if (koto_utils_is_string_valid(lib_uuid) && (g_strcmp0(library_uuid, lib_uuid) == 0)) { // Is a valid string and the libraries match
+			return library;
+		}
+	}
+
+	return NULL;
 }
 
 /**
@@ -288,25 +320,29 @@ void koto_config_load(
 		return;
 	}
 
+	self->toml_ref = conf;
+
 	/** Supplemental Libraries (Excludes Built-in) */
 
-	toml_table_t * libraries_section = toml_table_in(conf, "libraries");
+	toml_array_t * libraries = toml_array_in(conf, "library"); // Get all of our libraries
+	if (libraries) { // If we have libraries already
+		for (int i = 0; i < toml_array_nelem(libraries); i++) { // Iterate over each library
+			toml_table_t * lib = toml_table_at(libraries, i); // Get the library datum
+			KotoLibrary * koto_lib = koto_library_new_from_toml_table(lib); // Get the library based on the TOML data for this specific type
 
-	if (libraries_section) { // Have supplemental libraries
-		toml_array_t * library_uuids = toml_array_in(libraries_section, "uuids");
+			if (!KOTO_IS_LIBRARY(koto_lib)) { // Something wrong with it, not a library
+				continue;
+			}
 
-		if (library_uuids && (toml_array_nelem(library_uuids) != 0)) { // Have UUIDs
-			for (int i = 0; i < toml_array_nelem(library_uuids); i++) { // Iterate over each UUID
-				toml_datum_t uuid = toml_string_at(library_uuids, i); // Get the UUID
+			koto_cartographer_add_library(koto_maps, koto_lib); // Add library to Cartographer
+			KotoLibraryType lib_type = koto_library_get_lib_type(koto_lib); // Get the type
 
-				if (!uuid.ok) { // Not a UUID string
-					continue; // Skip this entry in the array
-				}
-
-				g_message("UUID: %s", uuid.u.s);
-				// TODO: Implement Koto library creation
-				free(uuid.u.s);
-				toml_free(conf);
+			if (lib_type == KOTO_LIBRARY_TYPE_AUDIOBOOK) { // Is an audiobook lib
+				self->has_type_audiobook = TRUE;
+			} else if (lib_type == KOTO_LIBRARY_TYPE_MUSIC) { // Is a music lib
+				self->has_type_music = TRUE;
+			} else if (lib_type == KOTO_LIBRARY_TYPE_PODCAST) { // Is a podcast lib
+				self->has_type_podcast = TRUE;
 			}
 		}
 	}
@@ -371,6 +407,51 @@ monitor:
 	}
 }
 
+void koto_config_load_libs(KotoConfig * self) {
+	gchar * home_dir = g_strdup(g_get_home_dir()); // Get the home directory
+
+	if (!self->has_type_audiobook) { // If we do not have a KotoLibrary for Audiobooks
+		gchar * audiobooks_path = g_build_path(G_DIR_SEPARATOR_S, home_dir, "Audiobooks", NULL);
+		koto_utils_mkdir(audiobooks_path); // Create the directory just in case
+		KotoLibrary * lib = koto_library_new(KOTO_LIBRARY_TYPE_AUDIOBOOK, NULL, audiobooks_path); // Audiobooks relative to home directory
+
+		if (KOTO_IS_LIBRARY(lib)) { // Created built-in audiobooks lib successfully
+			koto_cartographer_add_library(koto_maps, lib);
+			koto_config_save(config);
+			koto_library_index(lib); // Index this library
+		}
+
+		g_free(audiobooks_path);
+	}
+
+	if (!self->has_type_music) { // If we do not have a KotoLibrary for Music
+		KotoLibrary * lib = koto_library_new(KOTO_LIBRARY_TYPE_MUSIC, NULL, g_get_user_special_dir(G_USER_DIRECTORY_MUSIC)); // Create a library using the user's MUSIC directory defined
+
+		if (KOTO_IS_LIBRARY(lib)) { // Created built-in music lib successfully
+			koto_cartographer_add_library(koto_maps, lib);
+			koto_config_save(config);
+			koto_library_index(lib); // Index this library
+		}
+	}
+
+	if (!self->has_type_podcast) { // If we do not have a KotoLibrary for Podcasts
+		gchar * podcasts_path = g_build_path(G_DIR_SEPARATOR_S, home_dir, "Podcasts", NULL);
+		koto_utils_mkdir(podcasts_path); // Create the directory just in case
+		KotoLibrary * lib = koto_library_new(KOTO_LIBRARY_TYPE_PODCAST, NULL, podcasts_path); // Podcasts relative to home dir
+
+		if (KOTO_IS_LIBRARY(lib)) { // Created built-in podcasts lib successfully
+			koto_cartographer_add_library(koto_maps, lib);
+			koto_config_save(config);
+			koto_library_index(lib); // Index this library
+		}
+
+		g_free(podcasts_path);
+	}
+
+	g_free(home_dir);
+	g_thread_exit(0);
+}
+
 void koto_config_monitor_handle_changed(
 	GFileMonitor * monitor,
 	GFile * file,
@@ -403,6 +484,18 @@ void koto_config_refresh(KotoConfig * self) {
  **/
 void koto_config_save(KotoConfig * self) {
 	GStrvBuilder * root_builder = g_strv_builder_new(); // Create a new strv builder
+
+	/* Iterate over our libraries */
+
+	GList * libs = koto_cartographer_get_libraries(koto_maps); // Get our libraries
+	GList * current_libs;
+
+	for (current_libs = libs; current_libs != NULL; current_libs = current_libs->next) { // Iterate over our libraries
+		KotoLibrary * lib = current_libs->data;
+		gchar * lib_config = koto_library_to_config_string(lib); // Get the config string
+		g_strv_builder_add(root_builder, lib_config); // Add the config to our string builder
+		g_free(lib_config);
+	}
 
 	GParamSpec ** props_list = g_object_class_list_properties(G_OBJECT_GET_CLASS(self), NULL); // Get the propreties associated with our settings
 

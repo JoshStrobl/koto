@@ -200,6 +200,7 @@ static void koto_playback_engine_class_init(KotoPlaybackEngineClass * c) {
 
 static void koto_playback_engine_init(KotoPlaybackEngine * self) {
 	self->current_track = NULL;
+	current_playlist = koto_current_playlist_new(); // Ensure our global current playlist is set
 
 	self->player = gst_pipeline_new("player");
 	self->playbin = gst_element_factory_make("playbin", NULL);
@@ -480,7 +481,7 @@ void koto_playback_engine_set_track_by_uuid(
 	gchar * track_uuid,
 	gboolean playing_specific_track
 ) {
-	if (track_uuid == NULL) {
+	if (!koto_utils_is_string_valid(track_uuid)) { // If this is not a valid track uuid string
 		return;
 	}
 
@@ -492,9 +493,7 @@ void koto_playback_engine_set_track_by_uuid(
 
 	self->current_track = track;
 
-	gchar * track_file_path = NULL;
-
-	g_object_get(track, "path", &track_file_path, NULL); // Get the path to the track
+	gchar * track_file_path = koto_track_get_path(self->current_track); // Get the most optimal path for the track given the libraries it is in
 
 	koto_playback_engine_stop(self); // Stop current track
 

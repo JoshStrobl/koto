@@ -18,6 +18,7 @@
 #include <gtk-4.0/gtk/gtk.h>
 #include "../../components/koto-action-bar.h"
 #include "../../db/cartographer.h"
+#include "../../indexer/track-helpers.h"
 #include "../../indexer/structs.h"
 #include "../../koto-track-item.h"
 #include "../../koto-utils.h"
@@ -33,7 +34,9 @@ struct _KotoDiscView {
 	GtkWidget * label;
 	GtkWidget * list;
 
-	guint * disc_number;
+	GHashTable * tracks_to_items;
+
+	guint disc_number;
 };
 
 G_DEFINE_TYPE(KotoDiscView, koto_disc_view, GTK_TYPE_BOX);
@@ -48,6 +51,7 @@ enum {
 static GParamSpec * props[N_PROPERTIES] = {
 	NULL,
 };
+
 static void koto_disc_view_get_property(
 	GObject * obj,
 	guint prop_id,
@@ -133,6 +137,8 @@ static void koto_disc_view_set_property(
 }
 
 static void koto_disc_view_init(KotoDiscView * self) {
+	self->tracks_to_items = g_hash_table_new(g_str_hash, g_str_equal);
+
 	gtk_widget_add_css_class(GTK_WIDGET(self), "disc-view");
 	gtk_widget_set_can_focus(GTK_WIDGET(self), FALSE);
 	self->header = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
@@ -153,6 +159,7 @@ static void koto_disc_view_init(KotoDiscView * self) {
 	self->list = gtk_list_box_new(); // Create our list of our tracks
 	gtk_list_box_set_activate_on_single_click(GTK_LIST_BOX(self->list), FALSE);
 	gtk_list_box_set_selection_mode(GTK_LIST_BOX(self->list), GTK_SELECTION_MULTIPLE);
+	gtk_list_box_set_sort_func(GTK_LIST_BOX(self->list), koto_disc_view_sort_list_box_rows, self, NULL);
 	gtk_widget_add_css_class(self->list, "track-list");
 	gtk_widget_set_can_focus(self->list, FALSE);
 	gtk_widget_set_focusable(self->list, FALSE);
@@ -162,24 +169,37 @@ static void koto_disc_view_init(KotoDiscView * self) {
 	g_signal_connect(self->list, "selected-rows-changed", G_CALLBACK(koto_disc_view_handle_selected_rows_changed), self);
 }
 
-void koto_disc_view_list_tracks(
-	gpointer data,
-	gpointer selfptr
+void koto_disc_view_add_track(
+	KotoDiscView * self,
+	KotoTrack * track
 ) {
-	KotoDiscView * self = (KotoDiscView*) selfptr;
-	KotoTrack * track = koto_cartographer_get_track_by_uuid(koto_maps, (gchar*) data); // Get the track by its UUID
+	if (!KOTO_IS_DISC_VIEW(self)) { // If this is not a disc view
+		return;
+	}
 
-	guint * disc_number;
+	if (!KOTO_IS_TRACK(track)) { // If this is not a track
+		return;
+	}
 
-	g_object_get(track, "cd", &disc_number, NULL); // get the disc number
+	if (self->disc_number != koto_track_get_disc_number(track)) { // Not the same disc
+		return;
+	}
 
-	if (GPOINTER_TO_UINT(self->disc_number) != GPOINTER_TO_UINT(disc_number)) { // Track does not belong to this CD
+	gchar * track_uuid = koto_track_get_uuid(track); // Get the track UUID
+
+	if (g_hash_table_contains(self->tracks_to_items, track_uuid)) { // Already have added this track
 		return;
 	}
 
 	KotoTrackItem * track_item = koto_track_item_new(track); // Create our new track item
 
+	if (!KOTO_IS_TRACK_ITEM(track_item)) { // Failed to create a track item for this track
+		g_warning("Failed to build track item for track with UUID %s", track_uuid);
+		return;
+	}
+
 	gtk_list_box_append(GTK_LIST_BOX(self->list), GTK_WIDGET(track_item)); // Add to our tracks list box
+	g_hash_table_replace(self->tracks_to_items, track_uuid, track_item); // Add to our hash table so we know we have added this
 }
 
 void koto_disc_view_handle_selected_rows_changed(
@@ -215,6 +235,28 @@ void koto_disc_view_handle_selected_rows_changed(
 	koto_action_bar_toggle_reveal(action_bar, TRUE); // Show the action bar
 }
 
+void koto_disc_view_remove_track(
+	KotoDiscView * self,
+	gchar * track_uuid
+) {
+	if (!KOTO_IS_DISC_VIEW(self)) { // If this is not a disc view
+		return;
+	}
+
+	if (!koto_utils_is_string_valid(track_uuid)) { // If our UUID is not a valid
+		return;
+	}
+
+	KotoTrackItem * track_item = g_hash_table_lookup(self->tracks_to_items, track_uuid); // Get the track item
+
+	if (!KOTO_IS_TRACK_ITEM(track_item)) { // Track item not valid
+		return;
+	}
+
+	gtk_list_box_remove(GTK_LIST_BOX(self->list), GTK_WIDGET(track_item)); // Remove the item from the listbox
+	g_hash_table_remove(self->tracks_to_items, track_uuid); // Remove the track from the hashtable
+}
+
 void koto_disc_view_set_album(
 	KotoDiscView * self,
 	KotoAlbum * album
@@ -228,8 +270,6 @@ void koto_disc_view_set_album(
 	}
 
 	self->album = album;
-
-	g_list_foreach(koto_album_get_tracks(self->album), koto_disc_view_list_tracks, self);
 }
 
 void koto_disc_view_set_disc_number(
@@ -240,7 +280,7 @@ void koto_disc_view_set_disc_number(
 		return;
 	}
 
-	self->disc_number = GUINT_TO_POINTER(disc_number);
+	self->disc_number = disc_number;
 
 	gchar * disc_label = g_strdup_printf("Disc %u", disc_number);
 
@@ -256,9 +296,19 @@ void koto_disc_view_set_disc_label_visible(
 	(visible) ? gtk_widget_show(self->header) : gtk_widget_hide(self->header);
 }
 
+gint koto_disc_view_sort_list_box_rows(
+	GtkListBoxRow * row1,
+	GtkListBoxRow * row2,
+	gpointer user_data
+) {
+	KotoTrackItem * track1_item = KOTO_TRACK_ITEM(gtk_list_box_row_get_child(row1));
+	KotoTrackItem * track2_item = KOTO_TRACK_ITEM(gtk_list_box_row_get_child(row2));
+	return koto_track_helpers_sort_track_items(track1_item, track2_item, user_data);
+}
+
 KotoDiscView * koto_disc_view_new(
 	KotoAlbum * album,
-	guint * disc_number
+	guint disc_number
 ) {
 	return g_object_new(
 		KOTO_TYPE_DISC_VIEW,

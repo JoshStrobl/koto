@@ -36,6 +36,8 @@ gchar * koto_utils_get_filename_without_extension(gchar * filename);
 
 gboolean koto_utils_is_string_valid(gchar * str);
 
+void koto_utils_mkdir(gchar * path);
+
 void koto_utils_push_queue_element_to_store(
 	gpointer data,
 	gpointer user_data

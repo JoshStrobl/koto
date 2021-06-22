@@ -16,13 +16,6 @@
 	& > stack {
 		& > .artist-view {
 			& > viewport > .artist-view-content {
-				& > .album-strip {
-					margin-bottom: $itempadding;
-					& > flowboxchild {
-						margin-right: $itempadding;
-					}
-				}
-
 				& > .album-list {
 					& > flowboxchild > .album-view {
 						& > overlay {

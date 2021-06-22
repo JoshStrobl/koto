@@ -5,6 +5,18 @@
 		"__node_handle": "c",
 		"gtk.h": "c",
 		"gtktreeview.h": "c",
-		"cartographer.h": "c"
+		"cartographer.h": "c",
+		"structs.h": "c",
+		"gst.h": "c",
+		"player.h": "c",
+		"config.h": "c",
+		"toml.h": "c",
+		"chrono": "c",
+		"sqlite3.h": "c",
+		"unistd.h": "c",
+		"ui.h": "c",
+		"koto-utils.h": "c",
+		"random": "c",
+		"add-remove-track-popover.h": "c"
 	}
 }

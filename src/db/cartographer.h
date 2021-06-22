@@ -90,12 +90,19 @@ KotoArtist * koto_cartographer_get_artist_by_uuid(
 );
 
 KotoLibrary * koto_cartographer_get_library_by_uuid(
-	KotoCartographer *self,
+	KotoCartographer * self,
 	gchar * library_uuid
 );
 
+KotoLibrary * koto_cartographer_get_library_containing_path(
+	KotoCartographer * self,
+	gchar * path
+);
+
+GList * koto_cartographer_get_libraries(KotoCartographer * self);
+
 GList * koto_cartographer_get_libraries_for_storage_uuid(
-	KotoCartographer *self,
+	KotoCartographer * self,
 	gchar * storage_uuid
 );
 
@@ -109,6 +116,11 @@ GHashTable * koto_cartographer_get_playlists(KotoCartographer * self);
 KotoTrack * koto_cartographer_get_track_by_uuid(
 	KotoCartographer * self,
 	gchar * track_uuid
+);
+
+KotoTrack * koto_cartographer_get_track_by_uniqueish_key(
+	KotoCartographer * self,
+	gchar * key
 );
 
 gboolean koto_cartographer_has_album(
@@ -133,7 +145,7 @@ gboolean koto_cartographer_has_artist_by_uuid(
 
 gboolean koto_cartographer_has_library(
 	KotoCartographer * self,
-	KotoLibrary *library
+	KotoLibrary * library
 );
 
 gboolean koto_cartographer_has_library_by_uuid(

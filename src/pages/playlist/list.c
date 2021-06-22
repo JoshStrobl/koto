@@ -269,7 +269,7 @@ void koto_playlist_page_bind_track_item(
 	KotoAlbum * album = koto_cartographer_get_album_by_uuid(koto_maps, album_uuid);
 
 	if (KOTO_IS_ALBUM(album)) {
-		gtk_label_set_label(GTK_LABEL(track_album_label), koto_album_get_album_name(album)); // Get the name of the album and set it to the label
+		gtk_label_set_label(GTK_LABEL(track_album_label), koto_album_get_name(album)); // Get the name of the album and set it to the label
 	}
 
 	KotoArtist * artist = koto_cartographer_get_artist_by_uuid(koto_maps, artist_uuid);

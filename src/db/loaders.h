@@ -22,6 +22,13 @@ int process_artists(
 	char ** column_names
 );
 
+int process_artist_paths(
+	void * data,
+	int num_columns,
+	char ** fields,
+	char ** column_names
+);
+
 int process_albums(
 	void * data,
 	int num_columns,
@@ -44,6 +51,13 @@ int process_playlists_tracks(
 );
 
 int process_tracks(
+	void * data,
+	int num_columns,
+	char ** fields,
+	char ** column_names
+);
+
+int process_track_paths(
 	void * data,
 	int num_columns,
 	char ** fields,

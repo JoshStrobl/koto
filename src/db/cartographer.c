@@ -46,6 +46,7 @@ struct _KotoCartographer {
 	GHashTable * libraries;
 	GHashTable * playlists;
 	GHashTable * tracks;
+	GHashTable * tracks_by_uniqueish_key;
 };
 
 struct _KotoCartographerClass {
@@ -150,7 +151,8 @@ static void koto_cartographer_class_init(KotoCartographerClass * c) {
 		NULL,
 		NULL,
 		G_TYPE_NONE,
-		1,
+		2,
+		G_TYPE_CHAR,
 		G_TYPE_CHAR
 	);
 
@@ -240,6 +242,7 @@ static void koto_cartographer_init(KotoCartographer * self) {
 	self->libraries = g_hash_table_new(g_str_hash, g_str_equal);
 	self->playlists = g_hash_table_new(g_str_hash, g_str_equal);
 	self->tracks = g_hash_table_new(g_str_hash, g_str_equal);
+	self->tracks_by_uniqueish_key = g_hash_table_new(g_str_hash, g_str_equal);
 }
 
 void koto_cartographer_add_album(
@@ -256,7 +259,7 @@ void koto_cartographer_add_album(
 
 	gchar * album_uuid = koto_album_get_uuid(album); // Get the album UUID
 
-	if (!koto_utils_is_string_valid(album_uuid)|| koto_cartographer_has_album_by_uuid(self, album_uuid)) { // Have the album or invalid UUID
+	if (!koto_utils_is_string_valid(album_uuid) || koto_cartographer_has_album_by_uuid(self, album_uuid)) { // Have the album or invalid UUID
 		return;
 	}
 
@@ -288,8 +291,7 @@ void koto_cartographer_add_artist(
 		return;
 	}
 
-	g_hash_table_replace(self->artists_name_to_uuid, koto_artist_get_name(artist), koto_artist_get_uuid(artist)); // Add the UUID as a value with the key being the name of the artist
-
+	g_hash_table_replace(self->artists_name_to_uuid, koto_artist_get_name(artist), artist_uuid); // Add the UUID as a value with the key being the name of the artist
 	g_hash_table_replace(self->artists, artist_uuid, artist);
 
 	g_signal_emit(
@@ -312,15 +314,15 @@ void koto_cartographer_add_library(
 		return;
 	}
 
-	gchar * library_uuid = NULL;
-	g_object_get(library, "uuid", &library_uuid, NULL);
+	gchar * library_uuid = koto_library_get_uuid(library);
 
-	if (!koto_utils_is_string_valid(library_uuid)|| koto_cartographer_has_library_by_uuid(self, library_uuid)) { // Have the library or invalid UUID
+	if (!koto_utils_is_string_valid(library_uuid) || koto_cartographer_has_library_by_uuid(self, library_uuid)) { // Have the library or invalid UUID
 		return;
 	}
 
 	g_hash_table_replace(self->libraries, library_uuid, library); // Add the library
-	g_signal_emit( // Emit our library added signal
+	g_signal_emit(
+		// Emit our library added signal
 		self,
 		cartographer_signals[SIGNAL_LIBRARY_ADDED],
 		0,
@@ -445,7 +447,7 @@ KotoArtist * koto_cartographer_get_artist_by_uuid(
 }
 
 KotoLibrary * koto_cartographer_get_library_by_uuid(
-	KotoCartographer *self,
+	KotoCartographer * self,
 	gchar * library_uuid
 ) {
 	if (!KOTO_IS_CARTOGRAPHER(self)) {
@@ -459,8 +461,40 @@ KotoLibrary * koto_cartographer_get_library_by_uuid(
 	return g_hash_table_lookup(self->libraries, library_uuid);
 }
 
+KotoLibrary * koto_cartographer_get_library_containing_path(
+	KotoCartographer * self,
+	gchar * relative_path
+) {
+	if (!KOTO_IS_CARTOGRAPHER(self)) {
+		return NULL;
+	}
+
+	if (!koto_utils_is_string_valid(relative_path)) { // Not a valid string
+		return NULL;
+	}
+
+	GList * libs = koto_cartographer_get_libraries(self); // Get all the libraries, sorted based on priority
+	GList * current;
+
+	for (current = libs; current != NULL; current = current->next) { // For each library
+		KotoLibrary * lib = (KotoLibrary*) current->data;
+		gchar * lib_path = koto_library_get_path(lib); // Get the path for the library
+
+		GFile * track_file = g_file_new_build_filename(lib_path, relative_path, NULL); // Build a path from storage to file
+
+		if (g_file_query_exists(track_file, NULL)) { // If this library contains this file
+			g_object_unref(track_file);
+			return lib;
+		}
+
+		g_object_unref(track_file);
+	}
+
+	return NULL;
+}
+
 GList * koto_cartographer_get_libraries_for_storage_uuid(
-	KotoCartographer *self,
+	KotoCartographer * self,
 	gchar * storage_uuid
 ) {
 	if (!KOTO_IS_CARTOGRAPHER(self)) {
@@ -474,6 +508,12 @@ GList * koto_cartographer_get_libraries_for_storage_uuid(
 	}
 
 	// TODO: Implement koto_cartographer_get_libraries_for_storage_uuid
+	return libraries;
+}
+
+GList * koto_cartographer_get_libraries(KotoCartographer * self) {
+	GList * libraries = g_hash_table_get_values(self->libraries);
+	// TODO: Implement priority mechanism
 	return libraries;
 }
 
@@ -505,6 +545,21 @@ KotoTrack * koto_cartographer_get_track_by_uuid(
 	}
 
 	return g_hash_table_lookup(self->tracks, track_uuid);
+}
+
+KotoTrack * koto_cartographer_get_track_by_uniqueish_key(
+	KotoCartographer * self,
+	gchar * key
+) {
+	if (!KOTO_IS_CARTOGRAPHER(self)) {
+		return NULL;
+	}
+
+	if (!koto_utils_is_string_valid(key)) {
+		return NULL;
+	}
+
+	return g_hash_table_lookup(self->tracks_by_uniqueish_key, key);
 }
 
 gboolean koto_cartographer_has_album(
@@ -572,7 +627,7 @@ gboolean koto_cartographer_has_artist_by_uuid(
 
 gboolean koto_cartographer_has_library(
 	KotoCartographer * self,
-	KotoLibrary *library
+	KotoLibrary * library
 ) {
 	if (!KOTO_IS_CARTOGRAPHER(self)) {
 		return FALSE;
@@ -714,8 +769,19 @@ void koto_cartographer_remove_artist(
 		return;
 	}
 
-	koto_cartographer_remove_artist_by_uuid(self, koto_artist_get_uuid(artist));
-	g_hash_table_remove(self->artists_name_to_uuid, koto_artist_get_name(artist)); // Add the UUID as a value with the key being the name of the artist
+	gchar * artist_uuid = koto_artist_get_uuid(artist);
+	gchar * artist_name = koto_artist_get_name(artist);
+
+	g_hash_table_remove(self->artists_name_to_uuid, artist_name); // Add the UUID as a value with the key being the name of the artist
+	g_hash_table_remove(self->artists, artist_uuid);
+
+	g_signal_emit(
+		self,
+		cartographer_signals[SIGNAL_ARTIST_REMOVED],
+		0,
+		artist_uuid,
+		artist_name
+	);
 }
 
 void koto_cartographer_remove_artist_by_uuid(
@@ -734,13 +800,23 @@ void koto_cartographer_remove_artist_by_uuid(
 		return;
 	}
 
+	KotoArtist * artist = koto_cartographer_get_artist_by_uuid(self, artist_uuid);
+
+	if (!KOTO_IS_ARTIST(artist)) {
+		return;
+	}
+
+	gchar * artist_name = koto_artist_get_name(artist);
+
+	g_hash_table_remove(self->artists_name_to_uuid, artist_name); // Add the UUID as a value with the key being the name of the artist
 	g_hash_table_remove(self->artists, artist_uuid);
 
 	g_signal_emit(
 		self,
 		cartographer_signals[SIGNAL_ARTIST_REMOVED],
 		0,
-		artist_uuid
+		artist_uuid,
+		artist_name
 	);
 }
 
@@ -792,7 +868,7 @@ void koto_cartographer_remove_track(
 		return;
 	}
 
-	if (!KOTO_IS_TRACK(track)) {  // Not a track
+	if (!KOTO_IS_TRACK(track)) { // Not a track
 		return;
 	}
 
@@ -815,14 +891,14 @@ void koto_cartographer_remove_track_by_uuid(
 		return;
 	}
 
-		g_hash_table_remove(self->tracks, track_uuid);
+	g_hash_table_remove(self->tracks, track_uuid);
 
-		g_signal_emit(
-			self,
-			cartographer_signals[SIGNAL_TRACK_REMOVED],
-			0,
-			track_uuid
-		);
+	g_signal_emit(
+		self,
+		cartographer_signals[SIGNAL_TRACK_REMOVED],
+		0,
+		track_uuid
+	);
 }
 
 KotoCartographer * koto_cartographer_new() {

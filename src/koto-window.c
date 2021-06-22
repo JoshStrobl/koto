@@ -23,7 +23,6 @@
 #include "pages/playlist/list.h"
 #include "playback/engine.h"
 #include "playlist/add-remove-track-popover.h"
-#include "playlist/current.h"
 #include "playlist/create-modify-dialog.h"
 #include "config/config.h"
 #include "koto-dialog-container.h"
@@ -37,16 +36,13 @@ extern KotoAddRemoveTrackPopover * koto_add_remove_track_popup;
 extern KotoCartographer * koto_maps;
 extern KotoCreateModifyPlaylistDialog * playlist_create_modify_dialog;
 extern KotoConfig * config;
-extern KotoCurrentPlaylist * current_playlist;
 extern KotoPageMusicLocal * music_local_page;
-extern KotoPlaybackEngine * playback_engine;
 
 extern gchar * koto_rev_dns;
 
 struct _KotoWindow {
 	GtkApplicationWindow parent_instance;
 	KotoLibrary * library;
-	KotoCurrentPlaylist * current_playlist;
 
 	KotoDialogContainer * dialogs;
 
@@ -72,9 +68,6 @@ static void koto_window_class_init (KotoWindowClass * klass) {
 }
 
 static void koto_window_init (KotoWindow * self) {
-	current_playlist = koto_current_playlist_new();
-	playback_engine = koto_playback_engine_new();
-
 	koto_window_manage_style(config, 0, self); // Immediately apply the theme
 	g_signal_connect(config, "notify::ui-theme-desired", G_CALLBACK(koto_window_manage_style), self); // Handle changes to desired theme
 	g_signal_connect(config, "notify::ui-theme-override", G_CALLBACK(koto_window_manage_style), self); // Handle changes to theme overriding
@@ -145,7 +138,12 @@ static void koto_window_init (KotoWindow * self) {
 
 	gtk_widget_queue_draw(self->content_layout);
 
-	g_thread_new("load-library", (void*) load_library, self);
+	music_local_page = koto_page_music_local_new();
+
+	// TODO: Remove and do some fancy state loading
+	koto_window_add_page(self, "music.local", GTK_WIDGET(music_local_page));
+	koto_window_go_to_page(self, "music.local");
+	gtk_widget_show(self->pages); // Do not remove this. Will cause sporadic hiding of the local page content otherwise.
 }
 
 void koto_window_add_page(
@@ -153,6 +151,18 @@ void koto_window_add_page(
 	gchar * page_name,
 	GtkWidget * page
 ) {
+	if (!KOTO_IS_WINDOW(self)) {
+		return;
+	}
+
+	if (!GTK_IS_STACK(self->pages)) {
+		return;
+	}
+
+	if (!GTK_IS_WIDGET(page)) {
+		return;
+	}
+
 	gtk_stack_add_named(GTK_STACK(self->pages), page, page_name);
 }
 
@@ -283,23 +293,6 @@ void create_new_headerbar(KotoWindow * self) {
 	gtk_header_bar_set_title_widget(GTK_HEADER_BAR(self->header_bar), self->search_entry);
 
 	gtk_window_set_titlebar(GTK_WINDOW(self), self->header_bar);
-}
-
-void load_library(KotoWindow * self) {
-	KotoLibrary * lib = koto_library_new(g_get_user_special_dir(G_USER_DIRECTORY_MUSIC));
-
-	if (lib != NULL) {
-		self->library = lib;
-		music_local_page = koto_page_music_local_new();
-
-		// TODO: Remove and do some fancy state loading
-		koto_window_add_page(self, "music.local", GTK_WIDGET(music_local_page));
-		koto_window_go_to_page(self, "music.local");
-		gtk_widget_show(self->pages); // Do not remove this. Will cause sporadic hiding of the local page content otherwise.
-		koto_page_music_local_build_ui(music_local_page);
-	}
-
-	g_thread_exit(0);
 }
 
 void set_optimal_default_window_size(KotoWindow * self) {

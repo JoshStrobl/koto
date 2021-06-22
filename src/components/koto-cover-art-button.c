@@ -27,7 +27,7 @@ struct _KotoCoverArtButton {
 	GtkWidget * art;
 	GtkWidget * main;
 	GtkWidget * revealer;
-	KotoButton * play_pause_button;
+	KotoButton * play_button;
 
 	guint height;
 	guint width;
@@ -107,8 +107,8 @@ static void koto_cover_art_button_init(KotoCoverArtButton * self) {
 
 	GtkWidget * controls = gtk_center_box_new(); // Create a center box for the controls
 
-	self->play_pause_button = koto_button_new_with_icon("", "media-playback-start-symbolic", "media-playback-pause-symbolic", KOTO_BUTTON_PIXBUF_SIZE_NORMAL);
-	gtk_center_box_set_center_widget(GTK_CENTER_BOX(controls), GTK_WIDGET(self->play_pause_button));
+	self->play_button = koto_button_new_with_icon("", "media-playback-start-symbolic", NULL, KOTO_BUTTON_PIXBUF_SIZE_NORMAL);
+	gtk_center_box_set_center_widget(GTK_CENTER_BOX(controls), GTK_WIDGET(self->play_button));
 
 	gtk_revealer_set_child(GTK_REVEALER(self->revealer), controls);
 	koto_cover_art_button_hide_overlay_controls(NULL, self); // Hide by default
@@ -175,7 +175,7 @@ KotoButton * koto_cover_art_button_get_button(KotoCoverArtButton * self) {
 		return NULL;
 	}
 
-	return self->play_pause_button;
+	return self->play_button;
 }
 
 GtkWidget * koto_cover_art_button_get_main(KotoCoverArtButton * self) {

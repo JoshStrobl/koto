@@ -1,4 +1,4 @@
-/* config.h
+/* track-helpers.h
  *
  * Copyright 2021 Joshua Strobl
  *
@@ -15,38 +15,29 @@
  * limitations under the License.
  */
 
-#pragma once
 #include <glib-2.0/glib.h>
-#include <glib-2.0/gio/gio.h>
 
-G_BEGIN_DECLS
-
-/**
- * Type Definition
- **/
-
-#define KOTO_TYPE_CONFIG (koto_config_get_type())
-
-G_DECLARE_FINAL_TYPE(KotoConfig, koto_config, KOTO, CONFIG, GObject)
-
-KotoConfig* koto_config_new();
-void koto_config_load(
-	KotoConfig * self,
-	gchar * path
+gchar * koto_track_helpers_get_name_for_file(
+	const gchar * path,
+	gchar * optional_artist_name
 );
 
-void koto_config_load_libs(KotoConfig * self);
+guint64 koto_track_helpers_get_position_based_on_file_name(const gchar * file_name);
 
-void koto_config_monitor_handle_changed(
-	GFileMonitor * monitor,
-	GFile * file,
-	GFile * other_file,
-	GFileMonitorEvent ev,
+gint koto_track_helpers_sort_track_items(
+	gconstpointer track1_item,
+	gconstpointer track2_item,
 	gpointer user_data
 );
 
-void koto_config_refresh(KotoConfig * self);
+gint koto_track_helpers_sort_tracks(
+	gconstpointer track1,
+	gconstpointer track2,
+	gpointer user_data
+);
 
-void koto_config_save(KotoConfig * self);
-
-G_END_DECLS
+gint koto_track_helpers_sort_tracks_by_uuid(
+	gconstpointer track1_uuid,
+	gconstpointer track2_uuid,
+	gpointer user_data
+);

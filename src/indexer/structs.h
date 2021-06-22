@@ -18,11 +18,13 @@
 #pragma once
 #include <glib-2.0/glib-object.h>
 #include <magic.h>
+#include <toml.h>
 
 typedef enum {
 	KOTO_LIBRARY_TYPE_AUDIOBOOK = 1,
 	KOTO_LIBRARY_TYPE_MUSIC = 2,
-	KOTO_LIBRARY_TYPE_PODCAST = 3
+	KOTO_LIBRARY_TYPE_PODCAST = 3,
+	KOTO_LIBRARY_TYPE_UNKNOWN = 4
 } KotoLibraryType;
 
 G_BEGIN_DECLS
@@ -32,15 +34,33 @@ G_BEGIN_DECLS
  **/
 
 #define KOTO_TYPE_LIBRARY koto_library_get_type()
-G_DECLARE_FINAL_TYPE(KotoLibrary, koto_library, KOTO, LIBRARY, GObject);
+#define KOTO_LIBRARY(obj) (G_TYPE_CHECK_INSTANCE_CAST((obj), KOTO_TYPE_LIBRARY, KotoLibrary))
+typedef struct _KotoLibrary KotoLibrary;
+typedef struct _KotoLibraryClass KotoLibraryClass;
+
+GLIB_AVAILABLE_IN_ALL
+GType koto_library_get_type(void) G_GNUC_CONST;
+
 #define KOTO_IS_LIBRARY(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), KOTO_TYPE_LIBRARY))
 
 #define KOTO_TYPE_ARTIST koto_artist_get_type()
-G_DECLARE_FINAL_TYPE(KotoArtist, koto_artist, KOTO, ARTIST, GObject);
+#define KOTO_ARTIST(obj) (G_TYPE_CHECK_INSTANCE_CAST((obj), KOTO_TYPE_ARTIST, KotoArtist))
+typedef struct _KotoArtist KotoArtist;
+typedef struct _KotoArtistClass KotoArtistClass;
+
+GLIB_AVAILABLE_IN_ALL
+GType koto_artist_get_type(void) G_GNUC_CONST;
+
 #define KOTO_IS_ARTIST(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), KOTO_TYPE_ARTIST))
 
 #define KOTO_TYPE_ALBUM koto_album_get_type()
-G_DECLARE_FINAL_TYPE(KotoAlbum, koto_album, KOTO, ALBUM, GObject);
+#define KOTO_ALBUM(obj) (G_TYPE_CHECK_INSTANCE_CAST((obj), KOTO_TYPE_ALBUM, KotoAlbum))
+typedef struct _KotoAlbum KotoAlbum;
+typedef struct _KotoAlbumClass KotoAlbumClass;
+
+GLIB_AVAILABLE_IN_ALL
+GType koto_album_get_type(void) G_GNUC_CONST;
+
 #define KOTO_IS_ALBUM(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), KOTO_TYPE_ALBUM))
 
 #define KOTO_TYPE_TRACK koto_track_get_type()
@@ -51,14 +71,53 @@ G_DECLARE_FINAL_TYPE(KotoTrack, koto_track, KOTO, TRACK, GObject);
  * Library Functions
  **/
 
-KotoLibrary * koto_library_new(const gchar * path);
+KotoLibrary * koto_library_new(
+	KotoLibraryType type,
+	const gchar * storage_uuid,
+	const gchar * path
+);
+
+KotoLibrary * koto_library_new_from_toml_table(toml_table_t * lib_datum);
+
+gchar * koto_library_get_path(KotoLibrary * self);
+
+gchar * koto_library_get_relative_path_to_file(
+	KotoLibrary * self,
+	gchar * full_path
+);
+
+gchar * koto_library_get_storage_uuid(KotoLibrary * self);
+
+KotoLibraryType koto_library_get_lib_type(KotoLibrary * self);
+
+gchar * koto_library_get_uuid(KotoLibrary * self);
+
+void koto_library_index(KotoLibrary * self);
+
+gboolean koto_library_is_available(KotoLibrary * self);
+
+gchar * koto_library_get_storage_uuid(KotoLibrary * self);
+
+void koto_library_set_name(
+	KotoLibrary * self,
+	gchar * library_name
+);
 
 void koto_library_set_path(
 	KotoLibrary * self,
 	gchar * path
 );
 
-void start_indexing(KotoLibrary * self);
+void koto_library_set_storage_uuid(
+	KotoLibrary * self,
+	gchar * uuid
+);
+
+gchar * koto_library_to_config_string(KotoLibrary * self);
+
+KotoLibraryType koto_library_type_from_string(gchar * t);
+
+gchar * koto_library_type_to_string(KotoLibraryType t);
 
 void index_folder(
 	KotoLibrary * self,
@@ -66,40 +125,54 @@ void index_folder(
 	guint depth
 );
 
+void index_file(
+	KotoLibrary * lib,
+	const gchar * path
+);
+
 /**
  * Artist Functions
  **/
 
-KotoArtist * koto_artist_new(gchar * path);
+KotoArtist * koto_artist_new(gchar * artist_name);
 
 KotoArtist * koto_artist_new_with_uuid(const gchar * uuid);
 
 void koto_artist_add_album(
 	KotoArtist * self,
-	gchar * album_uuid
+	KotoAlbum * album
+);
+
+void koto_artist_add_track(
+	KotoArtist * self,
+	KotoTrack * track
 );
 
 void koto_artist_commit(KotoArtist * self);
 
-guint koto_artist_find_album_with_name(
-	gconstpointer * album_data,
-	gconstpointer * album_name_data
-);
-
 GList * koto_artist_get_albums(KotoArtist * self);
+
+KotoAlbum * koto_artist_get_album_by_name(
+	KotoArtist * self,
+	gchar * album_name
+);
 
 gchar * koto_artist_get_name(KotoArtist * self);
 
+GList * koto_artist_get_tracks(KotoArtist * self);
+
 gchar * koto_artist_get_uuid(KotoArtist * self);
+
+KotoLibraryType koto_artist_get_lib_type(KotoArtist * self);
 
 void koto_artist_remove_album(
 	KotoArtist * self,
 	KotoAlbum * album
 );
 
-void koto_artist_remove_album_by_name(
+void koto_artist_remove_track(
 	KotoArtist * self,
-	gchar * album_name
+	KotoTrack * track
 );
 
 void koto_artist_set_artist_name(
@@ -107,19 +180,18 @@ void koto_artist_set_artist_name(
 	gchar * artist_name
 );
 
-void koto_artist_update_path(
+void koto_artist_set_path(
 	KotoArtist * self,
-	gchar * new_path
+	KotoLibrary * lib,
+	const gchar * fixed_path,
+	gboolean should_commit
 );
 
 /**
  * Album Functions
  **/
 
-KotoAlbum * koto_album_new(
-	KotoArtist * artist,
-	const gchar * path
-);
+KotoAlbum * koto_album_new(gchar * artist_uuid);
 
 KotoAlbum * koto_album_new_with_uuid(
 	KotoArtist * artist,
@@ -135,23 +207,19 @@ void koto_album_commit(KotoAlbum * self);
 
 void koto_album_find_album_art(KotoAlbum * self);
 
-void koto_album_find_tracks(
-	KotoAlbum * self,
-	magic_t magic_cookie,
-	const gchar * path
-);
+gchar * koto_album_get_art(KotoAlbum * self);
 
-gchar * koto_album_get_album_art(KotoAlbum * self);
-
-gchar * koto_album_get_album_name(KotoAlbum * self);
+gchar * koto_album_get_name(KotoAlbum * self);
 
 gchar * koto_album_get_album_uuid(KotoAlbum * self);
 
+gchar * koto_album_get_path(KotoAlbum * self);
+
 GList * koto_album_get_tracks(KotoAlbum * self);
 
-gchar * koto_album_get_uuid(KotoAlbum *self);
+gchar * koto_album_get_uuid(KotoAlbum * self);
 
-void koto_album_remove_file(
+void koto_album_remove_track(
 	KotoAlbum * self,
 	KotoTrack * track
 );
@@ -173,15 +241,11 @@ void koto_album_set_artist_uuid(
 
 void koto_album_set_as_current_playlist(KotoAlbum * self);
 
-void koto_album_update_path(
-	KotoAlbum * self,
-	gchar * path
-);
 
-gint koto_album_sort_tracks(
-	gconstpointer track1_uuid,
-	gconstpointer track2_uuid,
-	gpointer user_data
+void koto_album_set_path(
+	KotoAlbum * self,
+	KotoLibrary * lib,
+	const gchar * fixed_path
 );
 
 /**
@@ -189,20 +253,29 @@ gint koto_album_sort_tracks(
  **/
 
 KotoTrack * koto_track_new(
-	KotoAlbum * album,
-	const gchar * path,
-	guint * cd
+	const gchar * artist_uuid,
+	const gchar * album_uuid,
+	const gchar * parsed_name,
+	guint cd
 );
 
 KotoTrack * koto_track_new_with_uuid(const gchar * uuid);
 
 void koto_track_commit(KotoTrack * self);
 
+guint koto_track_get_disc_number(KotoTrack * self);
+
 GVariant * koto_track_get_metadata_vardict(KotoTrack * self);
 
-gchar * koto_track_get_uuid(KotoTrack * self);
+gchar * koto_track_get_path(KotoTrack * self);
 
-void koto_track_parse_name(KotoTrack * self);
+gchar * koto_track_get_name(KotoTrack * self);
+
+guint koto_track_get_position(KotoTrack * self);
+
+gchar * koto_track_get_uniqueish_key(KotoTrack * self);
+
+gchar * koto_track_get_uuid(KotoTrack * self);
 
 void koto_track_remove_from_playlist(
 	KotoTrack * self,
@@ -230,16 +303,17 @@ void koto_track_set_parsed_name(
 	gchar * new_parsed_name
 );
 
+void koto_track_set_path(
+	KotoTrack * self,
+	KotoLibrary * lib,
+	gchar * fixed_path
+);
+
 void koto_track_set_position(
 	KotoTrack * self,
 	guint pos
 );
 
 void koto_track_update_metadata(KotoTrack * self);
-
-void koto_track_update_path(
-	KotoTrack * self,
-	const gchar * new_path
-);
 
 G_END_DECLS

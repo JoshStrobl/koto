@@ -17,28 +17,17 @@
 
 #include <glib-2.0/glib.h>
 #include <sqlite3.h>
-#include "structs.h"
 #include "../db/db.h"
+#include "../db/cartographer.h"
 #include "../koto-utils.h"
+#include "structs.h"
+#include "track-helpers.h"
 
-extern sqlite3 * koto_db;
-
-struct _KotoArtist {
-	GObject parent_instance;
-	gchar * uuid;
-	gchar * path;
-
-	gboolean has_artist_art;
-	gchar * artist_name;
-	GList * albums;
-};
-
-G_DEFINE_TYPE(KotoArtist, koto_artist, G_TYPE_OBJECT);
+extern KotoCartographer * koto_maps;
 
 enum {
 	PROP_0,
 	PROP_UUID,
-	PROP_PATH,
 	PROP_ARTIST_NAME,
 	N_PROPERTIES
 };
@@ -46,6 +35,53 @@ enum {
 static GParamSpec * props[N_PROPERTIES] = {
 	NULL,
 };
+
+enum  {
+	SIGNAL_ALBUM_ADDED,
+	SIGNAL_ALBUM_REMOVED,
+	SIGNAL_TRACK_ADDED,
+	SIGNAL_TRACK_REMOVED,
+	N_SIGNALS
+};
+
+static guint artist_signals[N_SIGNALS] = {
+	0
+};
+
+struct _KotoArtist {
+	GObject parent_instance;
+	gchar * uuid;
+
+	gboolean has_artist_art;
+	gchar * artist_name;
+	GList * albums;
+	GList * tracks;
+	GHashTable * paths;
+	KotoLibraryType type;
+};
+
+struct _KotoArtistClass {
+	GObjectClass parent_class;
+
+	void (* album_added) (
+		KotoArtist * artist,
+		KotoAlbum * album
+	);
+	void (* album_removed) (
+		KotoArtist * artist,
+		KotoAlbum * album
+	);
+	void (* track_added) (
+		KotoArtist * artist,
+		KotoTrack * track
+	);
+	void (* track_removed) (
+		KotoArtist * artist,
+		KotoTrack * track
+	);
+};
+
+G_DEFINE_TYPE(KotoArtist, koto_artist, G_TYPE_OBJECT);
 
 static void koto_artist_get_property(
 	GObject * obj,
@@ -68,18 +104,62 @@ static void koto_artist_class_init(KotoArtistClass * c) {
 	gobject_class->set_property = koto_artist_set_property;
 	gobject_class->get_property = koto_artist_get_property;
 
+	artist_signals[SIGNAL_ALBUM_ADDED] = g_signal_new(
+		"album-added",
+		G_TYPE_FROM_CLASS(gobject_class),
+		G_SIGNAL_RUN_FIRST | G_SIGNAL_ACTION,
+		G_STRUCT_OFFSET(KotoArtistClass, album_added),
+		NULL,
+		NULL,
+		NULL,
+		G_TYPE_NONE,
+		1,
+		KOTO_TYPE_ALBUM
+	);
+
+	artist_signals[SIGNAL_ALBUM_REMOVED] = g_signal_new(
+		"album-removed",
+		G_TYPE_FROM_CLASS(gobject_class),
+		G_SIGNAL_RUN_FIRST | G_SIGNAL_ACTION,
+		G_STRUCT_OFFSET(KotoArtistClass, album_removed),
+		NULL,
+		NULL,
+		NULL,
+		G_TYPE_NONE,
+		1,
+		KOTO_TYPE_ALBUM
+	);
+
+	artist_signals[SIGNAL_TRACK_ADDED] = g_signal_new(
+		"track-added",
+		G_TYPE_FROM_CLASS(gobject_class),
+		G_SIGNAL_RUN_FIRST | G_SIGNAL_ACTION,
+		G_STRUCT_OFFSET(KotoArtistClass, track_added),
+		NULL,
+		NULL,
+		NULL,
+		G_TYPE_NONE,
+		1,
+		KOTO_TYPE_TRACK
+	);
+
+	artist_signals[SIGNAL_TRACK_REMOVED] = g_signal_new(
+		"track-removed",
+		G_TYPE_FROM_CLASS(gobject_class),
+		G_SIGNAL_RUN_FIRST | G_SIGNAL_ACTION,
+		G_STRUCT_OFFSET(KotoArtistClass, track_removed),
+		NULL,
+		NULL,
+		NULL,
+		G_TYPE_NONE,
+		1,
+		KOTO_TYPE_TRACK
+	);
+
 	props[PROP_UUID] = g_param_spec_string(
 		"uuid",
 		"UUID to Artist in database",
 		"UUID to Artist in database",
-		NULL,
-		G_PARAM_CONSTRUCT | G_PARAM_EXPLICIT_NOTIFY | G_PARAM_READWRITE
-	);
-
-	props[PROP_PATH] = g_param_spec_string(
-		"path",
-		"Path",
-		"Path to Artist",
 		NULL,
 		G_PARAM_CONSTRUCT | G_PARAM_EXPLICIT_NOTIFY | G_PARAM_READWRITE
 	);
@@ -102,28 +182,41 @@ void koto_artist_commit(KotoArtist * self) {
 
 	// TODO: Support multiple types instead of just local music artist
 	gchar * commit_op = g_strdup_printf(
-		"INSERT INTO artists(id,path,type,name,art_path)"
-		"VALUES ('%s', quote(\"%s\"), 0, quote(\"%s\"), NULL)"
-		"ON CONFLICT(id) DO UPDATE SET path=excluded.path, type=excluded.type, name=excluded.name, art_path=excluded.art_path;",
+		"INSERT INTO artists(id , name, art_path)"
+		"VALUES ('%s', quote(\"%s\"), NULL)"
+		"ON CONFLICT(id) DO UPDATE SET name=excluded.name, art_path=excluded.art_path;",
 		self->uuid,
-		self->path,
 		self->artist_name
 	);
 
-	gchar * commit_opt_errmsg = NULL;
-	int rc = sqlite3_exec(koto_db, commit_op, 0, 0, &commit_opt_errmsg);
+	new_transaction(commit_op, "Failed to write our artist to the database", FALSE);
 
-	if (rc != SQLITE_OK) {
-		g_warning("Failed to write our artist to the database: %s", commit_opt_errmsg);
+	GHashTableIter paths_iter;
+	g_hash_table_iter_init(&paths_iter, self->paths); // Create an iterator for our paths
+	gpointer lib_uuid_ptr, artist_rel_path_ptr;
+	while (g_hash_table_iter_next(&paths_iter, &lib_uuid_ptr, &artist_rel_path_ptr)) {
+		gchar * lib_uuid = lib_uuid_ptr;
+		gchar * artist_rel_path = artist_rel_path_ptr;
+
+		gchar * commit_op = g_strdup_printf(
+			"INSERT INTO libraries_artists(id, artist_id, path)"
+			"VALUES ('%s', '%s', quote(\"%s\"))"
+			"ON CONFLICT(id, artist_id) DO UPDATE SET path=excluded.path;",
+			lib_uuid,
+			self->uuid,
+			artist_rel_path
+		);
+
+		new_transaction(commit_op, "Failed to add this path for the artist", FALSE);
 	}
-
-	g_free(commit_op);
-	g_free(commit_opt_errmsg);
 }
 
 static void koto_artist_init(KotoArtist * self) {
-	self->has_artist_art = FALSE;
 	self->albums = NULL; // Create a new GList
+	self->has_artist_art = FALSE;
+	self->paths = g_hash_table_new(g_str_hash, g_str_equal);
+	self->tracks = NULL;
+	self->type = KOTO_LIBRARY_TYPE_UNKNOWN;
 }
 
 static void koto_artist_get_property(
@@ -137,9 +230,6 @@ static void koto_artist_get_property(
 	switch (prop_id) {
 		case PROP_UUID:
 			g_value_set_string(val, self->uuid);
-			break;
-		case PROP_PATH:
-			g_value_set_string(val, self->path);
 			break;
 		case PROP_ARTIST_NAME:
 			g_value_set_string(val, self->artist_name);
@@ -163,9 +253,6 @@ static void koto_artist_set_property(
 			self->uuid = g_strdup(g_value_get_string(val));
 			g_object_notify_by_pspec(G_OBJECT(self), props[PROP_UUID]);
 			break;
-		case PROP_PATH:
-			koto_artist_update_path(self, (gchar*) g_value_get_string(val));
-			break;
 		case PROP_ARTIST_NAME:
 			koto_artist_set_artist_name(self, (gchar*) g_value_get_string(val));
 			break;
@@ -177,21 +264,59 @@ static void koto_artist_set_property(
 
 void koto_artist_add_album(
 	KotoArtist * self,
-	gchar * album_uuid
+	KotoAlbum * album
 ) {
 	if (!KOTO_IS_ARTIST(self)) { // Not an artist
 		return;
 	}
 
-	if (!koto_utils_is_string_valid(album_uuid)) { // No album UUID really defined
+	if (!KOTO_IS_ALBUM(album)) { // Album provided is not an album
 		return;
 	}
 
-	gchar * uuid = g_strdup(album_uuid); // Duplicate our UUID
+	gchar * album_uuid = koto_album_get_uuid(album);
 
-	if (g_list_index(self->albums, uuid) == -1) {
-		self->albums = g_list_append(self->albums, uuid); // Push to end of list
+	if (g_list_index(self->albums, album_uuid) != -1) { // If we have already added the album
+		return;
 	}
+
+	self->albums = g_list_append(self->albums, album_uuid); // Push to our album's UUID to the end of the list
+
+	g_signal_emit(
+		self,
+		artist_signals[SIGNAL_ALBUM_ADDED],
+		0,
+		album
+	);
+}
+
+void koto_artist_add_track(
+	KotoArtist * self,
+	KotoTrack * track
+) {
+	if (!KOTO_IS_ARTIST(self)) { // Not an artist
+		return;
+	}
+
+	if (!KOTO_IS_TRACK(track)) { // Not a track
+		return;
+	}
+
+	gchar * track_uuid = koto_track_get_uuid(track);
+
+	if (g_list_index(self->tracks, track_uuid) != -1) { // If we have already added the track
+		return;
+	}
+
+	koto_cartographer_add_track(koto_maps, track); // Add the track to cartographer if necessary
+	self->tracks = g_list_insert_sorted_with_data(self->tracks, track_uuid, koto_track_helpers_sort_tracks_by_uuid, NULL);
+
+	g_signal_emit(
+		self,
+		artist_signals[SIGNAL_TRACK_ADDED],
+		0,
+		track
+	);
 }
 
 GList * koto_artist_get_albums(KotoArtist * self) {
@@ -202,6 +327,33 @@ GList * koto_artist_get_albums(KotoArtist * self) {
 	return g_list_copy(self->albums);
 }
 
+KotoAlbum * koto_artist_get_album_by_name(
+	KotoArtist * self,
+	gchar * album_name
+) {
+	if (!KOTO_IS_ARTIST(self)) { // Not an artist
+		return NULL;
+	}
+
+	KotoAlbum * album = NULL;
+
+	GList * cur_list_iter;
+	for (cur_list_iter = self->albums; cur_list_iter != NULL; cur_list_iter = cur_list_iter->next) { // Iterate through our albums by their UUIDs
+		KotoAlbum * album_for_uuid = koto_cartographer_get_album_by_uuid(koto_maps, cur_list_iter->data); // Get the album
+
+		if (!KOTO_IS_ALBUM(album_for_uuid)) { // Not an album
+			continue;
+		}
+
+		if (g_strcmp0(koto_album_get_name(album_for_uuid), album_name) == 0) { // These album names match
+			album = album_for_uuid;
+			break;
+		}
+	}
+
+	return album;
+}
+
 gchar * koto_artist_get_name(KotoArtist * self) {
 	if (!KOTO_IS_ARTIST(self)) { // Not an artist
 		return g_strdup("");
@@ -210,8 +362,16 @@ gchar * koto_artist_get_name(KotoArtist * self) {
 	return g_strdup(koto_utils_is_string_valid(self->artist_name) ? self->artist_name : ""); // Return artist name if set
 }
 
+GList * koto_artist_get_tracks(KotoArtist * self) {
+	return KOTO_IS_ARTIST(self) ? self->tracks : NULL;
+}
+
+KotoLibraryType koto_artist_get_lib_type(KotoArtist * self) {
+	return KOTO_IS_ARTIST(self) ? self->type : KOTO_LIBRARY_TYPE_UNKNOWN;
+}
+
 gchar * koto_artist_get_uuid(KotoArtist * self) {
-	return self->uuid;
+	return KOTO_IS_ARTIST(self) ? self->uuid : NULL;
 }
 
 void koto_artist_remove_album(
@@ -226,30 +386,36 @@ void koto_artist_remove_album(
 		return;
 	}
 
-	gchar * album_uuid;
+	self->albums = g_list_remove(self->albums, koto_album_get_uuid(album));
 
-	g_object_get(album, "uuid", &album_uuid, NULL);
-	self->albums = g_list_remove(self->albums, album_uuid);
+	g_signal_emit(
+		self,
+		artist_signals[SIGNAL_ALBUM_REMOVED],
+		0,
+		album
+	);
 }
 
-void koto_artist_update_path(
+void koto_artist_remove_track(
 	KotoArtist * self,
-	gchar * new_path
+	KotoTrack * track
 ) {
 	if (!KOTO_IS_ARTIST(self)) { // Not an artist
 		return;
 	}
 
-	if (!koto_utils_is_string_valid(new_path)) { // No path really
+	if (!KOTO_IS_TRACK(track)) { // Not a track
 		return;
 	}
 
-	if (koto_utils_is_string_valid(self->path)) { // Already have a path set
-		g_free(self->path); // Free
-	}
+	self->tracks = g_list_remove(self->tracks, koto_track_get_uuid(track));
 
-	self->path = g_strdup(new_path);
-	g_object_notify_by_pspec(G_OBJECT(self), props[PROP_PATH]);
+	g_signal_emit(
+		self,
+		artist_signals[SIGNAL_TRACK_ADDED],
+		0,
+		track
+	);
 }
 
 void koto_artist_set_artist_name(
@@ -272,19 +438,39 @@ void koto_artist_set_artist_name(
 	g_object_notify_by_pspec(G_OBJECT(self), props[PROP_ARTIST_NAME]);
 }
 
-KotoArtist * koto_artist_new(gchar * path) {
+void koto_artist_set_path(
+	KotoArtist * self,
+	KotoLibrary * lib,
+	const gchar * fixed_path,
+	gboolean should_commit
+) {
+	if (!KOTO_IS_ARTIST(self)) { // Not an artist
+		return;
+	}
+
+	gchar * path = g_strdup(fixed_path); // Duplicate our fixed_path
+	gchar * relative_path = koto_library_get_relative_path_to_file(lib, path); // Get the relative path to the file for the given library
+
+	gchar * library_uuid = koto_library_get_uuid(lib); // Get the library for this path
+	g_hash_table_replace(self->paths, library_uuid, relative_path); // Replace any existing value or add this one
+
+	if (should_commit) { // Should commit to the DB
+		koto_artist_commit(self); // Save the artist
+	}
+
+	self->type = koto_library_get_lib_type(lib); // Define our artist type as the type from the library
+}
+
+KotoArtist * koto_artist_new(gchar * artist_name) {
 	KotoArtist * artist = g_object_new(
 		KOTO_TYPE_ARTIST,
 		"uuid",
 		g_uuid_string_random(),
-		"path",
-		path,
 		"name",
-		g_path_get_basename(path),
+		artist_name,
 		NULL
 	);
 
-	koto_artist_commit(artist); // Commit the artist immediately to the database
 	return artist;
 }
 

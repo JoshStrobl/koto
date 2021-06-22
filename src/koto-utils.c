@@ -17,6 +17,9 @@
 
 #include <glib-2.0/glib.h>
 #include <gtk-4.0/gtk/gtk.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 extern GtkWindow * main_window;
 
@@ -68,8 +71,8 @@ gchar * koto_utils_gboolean_to_string(gboolean b) {
 }
 
 gchar * koto_utils_get_filename_without_extension(gchar * filename) {
-	gchar * trimmed_file_name = g_strdup(filename);
-	gchar ** split = g_strsplit(filename, ".", -1); // Split every time we see .
+	gchar * trimmed_file_name = g_strdup(g_path_get_basename(filename)); // Ensure the filename provided is the base name of any possible path and duplicate it
+	gchar ** split = g_strsplit(trimmed_file_name, ".", -1); // Split every time we see .
 
 	g_free(trimmed_file_name);
 	guint len_of_extension_split = g_strv_length(split);
@@ -101,6 +104,11 @@ gchar * koto_utils_get_filename_without_extension(gchar * filename) {
 
 gboolean koto_utils_is_string_valid(gchar * str) {
 	return ((str != NULL) && (g_strcmp0(str, "") != 0));
+}
+
+void koto_utils_mkdir(gchar * path) {
+	mkdir(path, 0755);
+	chown(path, getuid(), getgid());
 }
 
 void koto_utils_push_queue_element_to_store(

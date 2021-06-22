@@ -40,6 +40,19 @@ void koto_page_music_local_handle_artist_click(
 	gpointer data
 );
 
+void koto_page_music_local_handle_artist_added(
+	KotoCartographer * carto,
+	KotoArtist * artist,
+	gpointer user_data
+);
+
+void koto_page_music_local_handle_artist_removed(
+	KotoCartographer * carto,
+	gchar * artist_uuid,
+	gchar * artist_name,
+	gpointer user_data
+);
+
 void koto_page_music_local_go_to_artist_by_name(
 	KotoPageMusicLocal * self,
 	gchar * artist_name
@@ -49,8 +62,6 @@ void koto_page_music_local_go_to_artist_by_uuid(
 	KotoPageMusicLocal * self,
 	gchar * artist_uuid
 );
-
-void koto_page_music_local_build_ui(KotoPageMusicLocal * self);
 
 int koto_page_music_local_sort_artists(
 	GtkListBoxRow * artist1,

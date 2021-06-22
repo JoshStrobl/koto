@@ -20,6 +20,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include "koto-paths.h"
+#include "koto-utils.h"
 
 gchar * koto_rev_dns;
 gchar * koto_path_cache;
@@ -30,21 +31,16 @@ gchar * koto_path_to_db;
 
 void koto_paths_setup() {
 	koto_rev_dns = "com.github.joshstrobl.koto";
-	const gchar * user_cache_dir = g_get_user_data_dir();
-	const gchar * user_config_dir = g_get_user_config_dir();
+	gchar * user_cache_dir = g_strdup(g_get_user_data_dir());
+	gchar * user_config_dir = g_strdup(g_get_user_config_dir());
 
 	koto_path_cache = g_build_path(G_DIR_SEPARATOR_S, user_cache_dir, koto_rev_dns, NULL);
 	koto_path_config = g_build_path(G_DIR_SEPARATOR_S, user_config_dir, koto_rev_dns, NULL);
 	koto_path_to_conf = g_build_filename(koto_path_config, "config.toml", NULL);
 	koto_path_to_db = g_build_filename( koto_path_cache, "db", NULL);
 
-	mkdir(user_cache_dir, 0755);
-	mkdir(user_config_dir, 0755);
-	mkdir(koto_path_cache, 0755);
-	mkdir(koto_path_config, 0755);
-
-	chown(user_cache_dir, getuid(), getgid());
-	chown(user_config_dir, getuid(), getgid());
-	chown(koto_path_cache, getuid(), getgid());
-	chown(koto_path_config, getuid(), getgid());
+	koto_utils_mkdir(user_cache_dir);
+	koto_utils_mkdir(user_config_dir);
+	koto_utils_mkdir(koto_path_cache);
+	koto_utils_mkdir(koto_path_config);
 }

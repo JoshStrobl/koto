@@ -35,18 +35,22 @@ int process_artists(
 	(void) column_names; // Don't need any of the params
 
 	gchar * artist_uuid = g_strdup(koto_utils_unquote_string(fields[0])); // First column is UUID
-	gchar * artist_path = g_strdup(koto_utils_unquote_string(fields[1])); // Second column is path
-	gchar * artist_name = g_strdup(koto_utils_unquote_string(fields[3])); // Fourth column is artist name
+	gchar * artist_name = g_strdup(koto_utils_unquote_string(fields[1])); // Second column is artist name
 
 	KotoArtist * artist = koto_artist_new_with_uuid(artist_uuid); // Create our artist with the UUID
 
 	g_object_set(
 		artist,
-		"path",
-		artist_path,         // Set path
 		"name",
 		artist_name,          // Set name
 		NULL);
+
+	int artist_paths = sqlite3_exec(koto_db, g_strdup_printf("SELECT * FROM libraries_artists WHERE artist_id=\"%s\"", artist_uuid), process_artist_paths, artist, NULL); // Process all the paths for this given artist
+
+	if (artist_paths != SQLITE_OK) { // Failed to get our artists_paths
+		g_critical("Failed to read our paths for this artist: %s", sqlite3_errmsg(koto_db));
+		return 1;
+	}
 
 	koto_cartographer_add_artist(koto_maps, artist); // Add the artist to our global cartographer
 
@@ -57,9 +61,40 @@ int process_artists(
 		return 1;
 	}
 
+	int tracks_rc = sqlite3_exec(koto_db, g_strdup_printf("SELECT * FROM tracks WHERE artist_id=\"%s\"", artist_uuid), process_tracks, NULL, NULL); // Process our tracks by artist uuid
+
+	if (tracks_rc != SQLITE_OK) { // Failed to get our tracks
+		g_critical("Failed to read our tracks: %s", sqlite3_errmsg(koto_db));
+		return 1;
+	}
+
 	g_free(artist_uuid);
-	g_free(artist_path);
 	g_free(artist_name);
+
+	return 0;
+}
+
+int process_artist_paths(
+	void * data,
+	int num_columns,
+	char ** fields,
+	char ** column_names
+) {
+	(void) num_columns;
+	(void) column_names; // Don't need these
+
+	KotoArtist * artist = (KotoArtist*) data;
+
+	gchar * library_uuid = g_strdup(koto_utils_unquote_string(fields[0]));
+	gchar * relative_path = g_strdup(koto_utils_unquote_string(fields[2]));
+
+	KotoLibrary * lib = koto_cartographer_get_library_by_uuid(koto_maps, library_uuid); // Get the library for this artist
+
+	if (!KOTO_IS_LIBRARY(lib)) { // Failed to get the library for this UUID
+		return 0;
+	}
+
+	koto_artist_set_path(artist, lib, relative_path, FALSE); // Add the relative path from the db for this artist and lib to the Artist, do not commit
 
 	return 0;
 }
@@ -76,35 +111,25 @@ int process_albums(
 	KotoArtist * artist = (KotoArtist*) data;
 
 	gchar * album_uuid = g_strdup(koto_utils_unquote_string(fields[0]));
-	gchar * path = g_strdup(koto_utils_unquote_string(fields[1]));
-	gchar * artist_uuid = g_strdup(koto_utils_unquote_string(fields[2]));
-	gchar * album_name = g_strdup(koto_utils_unquote_string(fields[3]));
-	gchar * album_art = (fields[4] != NULL) ? g_strdup(koto_utils_unquote_string(fields[4])) : NULL;
+	gchar * artist_uuid = g_strdup(koto_utils_unquote_string(fields[1]));
+	gchar * album_name = g_strdup(koto_utils_unquote_string(fields[2]));
+	gchar * album_art = (fields[3] != NULL) ? g_strdup(koto_utils_unquote_string(fields[3])) : NULL;
 
 	KotoAlbum * album = koto_album_new_with_uuid(artist, album_uuid); // Create our album
 
 	g_object_set(
 		album,
-		"path",
-		path,         // Set the path
 		"name",
 		album_name,         // Set name
 		"art-path",
 		album_art,             // Set art path if any
-		NULL);
+		NULL
+	);
 
 	koto_cartographer_add_album(koto_maps, album); // Add the album to our global cartographer
-	koto_artist_add_album(artist, album_uuid); // Add the album
-
-	int tracks_rc = sqlite3_exec(koto_db, g_strdup_printf("SELECT * FROM tracks WHERE album_id=\"%s\"", album_uuid), process_tracks, album, NULL); // Process our tracks
-
-	if (tracks_rc != SQLITE_OK) { // Failed to get our tracks
-		g_critical("Failed to read our tracks: %s", sqlite3_errmsg(koto_db));
-		return 1;
-	}
+	koto_artist_add_album(artist, album); // Add the album
 
 	g_free(album_uuid);
-	g_free(path);
 	g_free(artist_uuid);
 	g_free(album_name);
 
@@ -188,34 +213,80 @@ int process_tracks(
 	char ** fields,
 	char ** column_names
 ) {
+	(void) data;
 	(void) num_columns;
 	(void) column_names; // Don't need these
 
-	KotoAlbum * album = (KotoAlbum*) data;
 	gchar * track_uuid = g_strdup(koto_utils_unquote_string(fields[0]));
-	gchar * path = g_strdup(koto_utils_unquote_string(fields[1]));
-	gchar * artist_uuid = g_strdup(koto_utils_unquote_string(fields[3]));
-	gchar * album_uuid = g_strdup(koto_utils_unquote_string(fields[4]));
-	gchar * file_name = g_strdup(koto_utils_unquote_string(fields[5]));
-	gchar * name = g_strdup(koto_utils_unquote_string(fields[6]));
-	guint * disc_num = (guint*) g_ascii_strtoull(fields[7], NULL, 10);
-	guint * position = (guint*) g_ascii_strtoull(fields[8], NULL, 10);
+	gchar * artist_uuid = g_strdup(koto_utils_unquote_string(fields[1]));
+	gchar * album_uuid = g_strdup(koto_utils_unquote_string(fields[2]));
+	gchar * name = g_strdup(koto_utils_unquote_string(fields[3]));
+	guint * disc_num = (guint*) g_ascii_strtoull(fields[4], NULL, 10);
+	guint * position = (guint*) g_ascii_strtoull(fields[5], NULL, 10);
 
 	KotoTrack * track = koto_track_new_with_uuid(track_uuid); // Create our file
 
-	g_object_set(track, "artist-uuid", artist_uuid, "album-uuid", album_uuid, "path", path, "file-name", file_name, "parsed-name", name, "cd", disc_num, "position", position, NULL);
+	g_object_set(
+		track,
+		"artist-uuid",
+		artist_uuid,
+		"album-uuid",
+		album_uuid,
+		"parsed-name",
+		name,
+		"cd",
+		disc_num,
+		"position",
+		position,
+		NULL
+	);
 
-	koto_album_add_track(album, track); // Add the track
+	int track_paths = sqlite3_exec(koto_db, g_strdup_printf("SELECT id, path FROM libraries_tracks WHERE track_id=\"%s\"", track_uuid), process_track_paths, track, NULL); // Process all pathes associated with the track
+
+	if (track_paths != SQLITE_OK) { // Failed to read the paths
+		g_warning("Failed to read paths associated with track %s: %s", track_uuid, sqlite3_errmsg(koto_db));
+		return 1;
+	}
+
+	KotoArtist * artist = koto_cartographer_get_artist_by_uuid(koto_maps, artist_uuid); // Get the artist
+	koto_artist_add_track(artist, track); // Add the track for the artist
+
+	if (koto_utils_is_string_valid(album_uuid)) { // If we have an album UUID
+		KotoAlbum * album = koto_cartographer_get_album_by_uuid(koto_maps, album_uuid); // Attempt to get album
+
+		if (KOTO_IS_ALBUM(album)) { // This is an album
+			koto_album_add_track(album, track); // Add the track
+		}
+	}
 
 	g_free(track_uuid);
-	g_free(path);
 	g_free(artist_uuid);
 	g_free(album_uuid);
-	g_free(file_name);
 	g_free(name);
 
 	return 0;
 }
+
+int process_track_paths(
+	void * data,
+	int num_columns,
+	char ** fields,
+	char ** column_names
+) {
+	KotoTrack * track = (KotoTrack*) data;
+	(void) num_columns;
+	(void) column_names; // Don't need these
+
+	KotoLibrary * library = koto_cartographer_get_library_by_uuid(koto_maps, koto_utils_unquote_string(fields[0]));
+
+	if (!KOTO_IS_LIBRARY(library)) { // Not a library
+		return 1;
+	}
+
+	koto_track_set_path(track, library, koto_utils_unquote_string(fields[1]));
+	return 0;
+}
+
 
 void read_from_db() {
 	int artists_rc = sqlite3_exec(koto_db, "SELECT * FROM artists", process_artists, NULL, NULL); // Process our artists

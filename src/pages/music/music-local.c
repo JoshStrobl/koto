@@ -31,6 +31,7 @@ struct _KotoPageMusicLocal {
 	GtkWidget * scrolled_window;
 	GtkWidget * artist_list;
 	GtkWidget * stack;
+	GHashTable * artist_name_to_buttons;
 
 	gboolean constructed;
 };
@@ -54,6 +55,7 @@ static void koto_page_music_local_class_init(KotoPageMusicLocalClass * c) {
 
 static void koto_page_music_local_init(KotoPageMusicLocal * self) {
 	self->constructed = FALSE;
+	self->artist_name_to_buttons = g_hash_table_new(g_str_hash, g_str_equal);
 
 	gtk_widget_add_css_class(GTK_WIDGET(self), "page-music-local");
 	gtk_widget_set_hexpand(GTK_WIDGET(self), TRUE);
@@ -79,6 +81,9 @@ static void koto_page_music_local_init(KotoPageMusicLocal * self) {
 	gtk_widget_set_hexpand(self->stack, TRUE);
 	gtk_widget_set_vexpand(self->stack, TRUE);
 	gtk_box_append(GTK_BOX(self), self->stack);
+
+	g_signal_connect(koto_maps, "artist-added", G_CALLBACK(koto_page_music_local_handle_artist_added), self);
+	g_signal_connect(koto_maps, "artist-removed", G_CALLBACK(koto_page_music_local_handle_artist_removed), self);
 }
 
 static void koto_page_music_local_constructed(GObject * obj) {
@@ -92,17 +97,35 @@ void koto_page_music_local_add_artist(
 	KotoPageMusicLocal * self,
 	KotoArtist * artist
 ) {
-	gchar * artist_name;
+	if (!KOTO_IS_PAGE_MUSIC_LOCAL(self)) { // Not the local page
+		return;
+	}
 
-	g_object_get(artist, "name", &artist_name, NULL);
+	if (!KOTO_IS_ARTIST(artist)) { // Not an artist
+		return;
+	}
+
+	gchar * artist_name = koto_artist_get_name(artist); // Get the artist name
+
+	if (!GTK_IS_STACK(self->stack)) {
+		return;
+	}
+
+	GtkWidget * stack_child = gtk_stack_get_child_by_name(GTK_STACK(self->stack), artist_name);
+
+	if (GTK_IS_WIDGET(stack_child)) { // Already have a page for this artist
+		g_free(artist_name);
+		return;
+	}
+
 	KotoButton * artist_button = koto_button_new_plain(artist_name);
-
 	gtk_list_box_prepend(GTK_LIST_BOX(self->artist_list), GTK_WIDGET(artist_button));
+	g_hash_table_replace(self->artist_name_to_buttons, artist_name, artist_button); // Add the KotoButton for this artist to the hash table, that way we can reference and remove it when we remove the artist
 
-	KotoArtistView * artist_view = koto_artist_view_new(); // Create our new artist view
+	KotoArtistView * artist_view = koto_artist_view_new(artist); // Create our new artist view
 
-	koto_artist_view_add_artist(artist_view, artist); // Add the artist
 	gtk_stack_add_named(GTK_STACK(self->stack), koto_artist_view_get_main(artist_view), artist_name);
+	g_free(artist_name);
 }
 
 void koto_page_music_local_go_to_artist_by_name(
@@ -153,24 +176,51 @@ void koto_page_music_local_handle_artist_click(
 	koto_page_music_local_go_to_artist_by_name(self, artist_name);
 }
 
-void koto_page_music_local_build_ui(KotoPageMusicLocal * self) {
-	if (!self->constructed) {
+void koto_page_music_local_handle_artist_added(
+	KotoCartographer * carto,
+	KotoArtist * artist,
+	gpointer user_data
+) {
+	(void) carto;
+	KotoPageMusicLocal * self = user_data;
+
+	if (!KOTO_IS_PAGE_MUSIC_LOCAL(self)) { // Not the page
 		return;
 	}
 
-	GHashTableIter artist_list_iter;
-	gpointer artist_key;
-	gpointer artist_data;
+	if (!KOTO_IS_ARTIST(artist)) { // Not an artist
+		return;
+	}
 
-	GHashTable * artists = koto_cartographer_get_artists(koto_maps); // Get all the artists
+	if (koto_artist_get_lib_type(artist) != KOTO_LIBRARY_TYPE_MUSIC) { // Not in our music library
+		return;
+	}
 
-	g_hash_table_iter_init(&artist_list_iter, artists);
-	while (g_hash_table_iter_next(&artist_list_iter, &artist_key, &artist_data)) { // For each of the music artists
-		KotoArtist * artist = artist_data; // Cast our artist_data as an artist
+	koto_page_music_local_add_artist(self, artist); // Add the artist if needed
+}
 
-		if (KOTO_IS_ARTIST(artist)) { // Is an artist
-			koto_page_music_local_add_artist(self, artist);
-		}
+void koto_page_music_local_handle_artist_removed(
+	KotoCartographer * carto,
+	gchar * artist_uuid,
+	gchar * artist_name,
+	gpointer user_data
+) {
+	(void) carto;
+	(void) artist_uuid;
+
+	KotoPageMusicLocal * self = user_data;
+
+	GtkWidget * existing_artist_page = gtk_stack_get_child_by_name(GTK_STACK(self->stack), artist_name);
+
+	// TODO: Navigate away from artist if we are currently looking at it
+	if (GTK_IS_WIDGET(existing_artist_page)) { // Page exists
+		gtk_stack_remove(GTK_STACK(self->stack), existing_artist_page); // Remove the artist page
+	}
+
+	KotoButton * btn = g_hash_table_lookup(self->artist_name_to_buttons, artist_name);
+
+	if (KOTO_IS_BUTTON(btn)) { // If we have a button for this artist
+		gtk_list_box_remove(GTK_LIST_BOX(self->artist_list), GTK_WIDGET(btn)); // Remove the button
 	}
 }
 

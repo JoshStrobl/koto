@@ -18,8 +18,8 @@
 #include <glib-2.0/glib.h>
 #include <glib-2.0/gio/gio.h>
 #include <magic.h>
-#include <sqlite3.h>
 #include "../db/cartographer.h"
+#include "../db/db.h"
 #include "../koto-utils.h"
 #include "playlist.h"
 
@@ -372,17 +372,7 @@ void koto_playlist_commit(KotoPlaylist * self) {
 		self->art_path
 	);
 
-	gchar * commit_op_errmsg = NULL;
-	int rc = sqlite3_exec(koto_db, commit_op, 0, 0, &commit_op_errmsg);
-
-	if (rc != SQLITE_OK) {
-		g_warning("Failed to save playlist: %s", commit_op_errmsg);
-	} else { // Successfully saved our playlist
-		g_queue_foreach(self->tracks, koto_playlist_commit_tracks, self); // Iterate over each track to save it
-	}
-
-	g_free(commit_op);
-	g_free(commit_op_errmsg);
+	new_transaction(commit_op, "Failed to save playlist", FALSE);
 }
 
 void koto_playlist_commit_tracks(
@@ -660,7 +650,7 @@ gint koto_playlist_model_sort_by_track(
 			return 0; // Just consider them as equal
 		}
 
-		return g_utf8_collate(koto_album_get_album_name(first_album), koto_album_get_album_name(second_album));
+		return g_utf8_collate(koto_album_get_name(first_album), koto_album_get_name(second_album));
 	}
 
 	if (model == KOTO_PREFERRED_MODEL_TYPE_SORT_BY_ARTIST) { // Sort by artist name

@@ -126,6 +126,10 @@ static void koto_track_item_init(KotoTrackItem * self) {
 }
 
 KotoTrack * koto_track_item_get_track(KotoTrackItem * self) {
+	if (!KOTO_IS_TRACK_ITEM(self)) {
+		return NULL;
+	}
+
 	return self->track;
 }
 

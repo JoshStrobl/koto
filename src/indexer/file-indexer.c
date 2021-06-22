@@ -19,173 +19,13 @@
 #include <magic.h>
 #include <stdio.h>
 #include <sys/stat.h>
-#include <taglib/tag_c.h>
 #include "../db/cartographer.h"
-#include "../db/db.h"
-#include "../db/loaders.h"
-#include "../playlist/playlist.h"
+#include "../koto-utils.h"
 #include "structs.h"
+#include "track-helpers.h"
 
 extern KotoCartographer * koto_maps;
-extern sqlite3 * koto_db;
-
-struct _KotoLibrary {
-	GObject parent_instance;
-
-	gchar * path; // Compat
-
-	gchar * directory;
-	gchar * name;
-	KotoLibraryType type;
-	gchar * uuid;
-
-	gboolean override_builtin;
-
-	magic_t magic_cookie;
-};
-
-G_DEFINE_TYPE(KotoLibrary, koto_library, G_TYPE_OBJECT);
-
-enum {
-	PROP_0,
-	PROP_PATH,
-	N_PROPERTIES
-};
-
-static GParamSpec * props[N_PROPERTIES] = {
-	NULL,
-};
-
-static void koto_library_get_property(
-	GObject * obj,
-	guint prop_id,
-	GValue * val,
-	GParamSpec * spec
-);
-
-static void koto_library_set_property(
-	GObject * obj,
-	guint prop_id,
-	const GValue * val,
-	GParamSpec * spec
-);
-
-static void koto_library_class_init(KotoLibraryClass * c) {
-	GObjectClass * gobject_class;
-
-	gobject_class = G_OBJECT_CLASS(c);
-	gobject_class->set_property = koto_library_set_property;
-	gobject_class->get_property = koto_library_get_property;
-
-	props[PROP_PATH] = g_param_spec_string(
-		"path",
-		"Path",
-		"Path to Music",
-		NULL,
-		G_PARAM_CONSTRUCT | G_PARAM_EXPLICIT_NOTIFY | G_PARAM_READWRITE
-	);
-
-	g_object_class_install_properties(gobject_class, N_PROPERTIES, props);
-	taglib_id3v2_set_default_text_encoding(TagLib_ID3v2_UTF8); // Ensure our id3v2 text encoding is UTF-8
-}
-
-static void koto_library_init(KotoLibrary * self) {
-	(void) self;
-}
-
-static void koto_library_get_property(
-	GObject * obj,
-	guint prop_id,
-	GValue * val,
-	GParamSpec * spec
-) {
-	KotoLibrary * self = KOTO_LIBRARY(obj);
-
-	switch (prop_id) {
-		case PROP_PATH:
-			g_value_set_string(val, self->path);
-			break;
-		default:
-			G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, prop_id, spec);
-			break;
-	}
-}
-
-static void koto_library_set_property(
-	GObject * obj,
-	guint prop_id,
-	const GValue * val,
-	GParamSpec * spec
-) {
-	KotoLibrary * self = KOTO_LIBRARY(obj);
-
-	switch (prop_id) {
-		case PROP_PATH:
-			koto_library_set_path(self, g_strdup(g_value_get_string(val)));
-			break;
-		default:
-			G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, prop_id, spec);
-			break;
-	}
-}
-
-void koto_library_set_path(
-	KotoLibrary * self,
-	gchar * path
-) {
-	if (path == NULL) {
-		return;
-	}
-
-	if (self->path != NULL) {
-		g_free(self->path);
-	}
-
-	self->path = path;
-
-	if (created_new_db) { // Created new database
-		start_indexing(self); // Start index operation
-	} else { // Have existing database
-		read_from_db(NULL); // Read from the database
-	}
-}
-
-void start_indexing(KotoLibrary * self) {
-	struct stat library_stat;
-	int success = stat(self->path, &library_stat);
-
-	if (success != 0) { // Failed to read the library path
-		return;
-	}
-
-	if (!S_ISDIR(library_stat.st_mode)) { // Is not a directory
-		g_warning("%s is not a directory", self->path);
-		return;
-	}
-
-	self->magic_cookie = magic_open(MAGIC_MIME);
-
-	if (self->magic_cookie == NULL) {
-		return;
-	}
-
-	if (magic_load(self->magic_cookie, NULL) != 0) {
-		magic_close(self->magic_cookie);
-		return;
-	}
-
-	index_folder(self, self->path, 0);
-	magic_close(self->magic_cookie);
-}
-
-KotoLibrary * koto_library_new(const gchar * path) {
-	return g_object_new(
-		KOTO_TYPE_LIBRARY,
-		"path",
-		path,
-		NULL
-	);
-}
+extern magic_t magic_cookie;
 
 void index_folder(
 	KotoLibrary * self,
@@ -210,20 +50,14 @@ void index_folder(
 		gchar * full_path = g_strdup_printf("%s%s%s", path, G_DIR_SEPARATOR_S, entry->d_name);
 
 		if (entry->d_type == DT_DIR) { // Directory
-			if (depth == 1) { // If we are following FOLDER/ARTIST/ALBUM then this would be artist
-				KotoArtist * artist = koto_artist_new(full_path); // Attempt to get the artist
-				gchar * artist_name;
+			if (depth == 1) { // If we are following (ARTIST,AUTHOR,PODCAST)/ALBUM then this would be artist
+				KotoArtist * artist = koto_artist_new(entry->d_name); // Attempt to get the artist
 
-				g_object_get(
-					artist,
-					"name",
-					&artist_name,
-					NULL
-				);
-
-				koto_cartographer_add_artist(koto_maps, artist); // Add the artist to cartographer
-				index_folder(self, full_path, depth); // Index this directory
-				g_free(artist_name);
+				if (KOTO_IS_ARTIST(artist)) {
+					koto_artist_set_path(artist, self, full_path, TRUE); // Add the path for this library on this Artist and commit immediately
+					koto_cartographer_add_artist(koto_maps, artist); // Add the artist to cartographer
+					index_folder(self, full_path, depth); // Index this directory
+				}
 			} else if (depth == 2) { // If we are following FOLDER/ARTIST/ALBUM then this would be album
 				gchar * artist_name = g_path_get_basename(path); // Get the last entry from our path which is probably the artist
 				KotoArtist * artist = koto_cartographer_get_artist_by_name(koto_maps, artist_name);
@@ -232,18 +66,155 @@ void index_folder(
 					continue;
 				}
 
-				KotoAlbum * album = koto_album_new(artist, full_path);
-				koto_cartographer_add_album(koto_maps, album); // Add our album to the cartographer
+				gchar * artist_uuid = koto_artist_get_uuid(artist); // Get the artist's UUID
 
-				gchar * album_uuid = NULL;
-				g_object_get(album, "uuid", &album_uuid, NULL);
-				koto_artist_add_album(artist, album_uuid); // Add the album
+				KotoAlbum * album = koto_album_new(artist_uuid);
+
+				koto_album_set_path(album, self, full_path);
+				koto_album_commit(album); // Save to database immediately
+
+				koto_cartographer_add_album(koto_maps, album); // Add our album to the cartographer
+				koto_artist_add_album(artist, album); // Add the album
+
+				index_folder(self, full_path, depth); // Index inside the album
 				g_free(artist_name);
+			} else if (depth == 3) { // Possibly CD within album
+				gchar ** split = g_strsplit(full_path, G_DIR_SEPARATOR_S, -1);
+				guint split_len = g_strv_length(split);
+
+				if (split_len < 4) {
+					g_strfreev(split);
+					continue;
+				}
+
+				gchar * album_name = g_strdup(split[split_len - 2]);
+				gchar * artist_name = g_strdup(split[split_len - 3]);
+				g_strfreev(split);
+
+				if (!koto_utils_is_string_valid(album_name)) {
+					g_free(album_name);
+					continue;
+				}
+
+				if (!koto_utils_is_string_valid(artist_name)) {
+					g_free(album_name);
+					g_free(artist_name);
+					continue;
+				}
+
+				KotoArtist * artist = koto_cartographer_get_artist_by_name(koto_maps, artist_name);
+				g_free(artist_name);
+
+				if (!KOTO_IS_ARTIST(artist)) {
+					continue;
+				}
+
+				KotoAlbum * album = koto_artist_get_album_by_name(artist, album_name); // Get the album
+				g_free(album_name);
+
+				if (!KOTO_IS_ALBUM(album)) {
+					continue;
+				}
+
+				index_folder(self, full_path, depth); // Index inside the album
 			}
+		} else if ((entry->d_type == DT_REG)) { // Is a file in artist folder or lower in FS hierarchy
+			index_file(self, full_path); // Index this audio file or weird ogg thing
 		}
 
 		g_free(full_path);
 	}
 
 	closedir(dir); // Close the directory
+}
+
+void index_file(
+	KotoLibrary * lib,
+	const gchar * path
+) {
+	const char * mime_type = magic_file(magic_cookie, path);
+
+	if (mime_type == NULL) { // Failed to get the mimetype
+		return;
+	}
+
+	if (!g_str_has_prefix(mime_type, "audio/") && !g_str_has_prefix(mime_type, "video/ogg")) { // Is not an audio file or ogg
+		return;
+	}
+
+	gchar * relative_path_to_file = koto_library_get_relative_path_to_file(lib, g_strdup(path)); // Strip out library path so we have a relative path to the file
+	gchar ** split_on_relative_slashes = g_strsplit(relative_path_to_file, G_DIR_SEPARATOR_S, -1); // Split based on separator (e.g. / )
+	guint slash_sep_count = g_strv_length(split_on_relative_slashes);
+
+	gchar * artist_author_podcast_name = g_strdup(split_on_relative_slashes[0]); // No matter what, artist should be first
+	gchar * album_or_audiobook_name = NULL;
+	gchar * file_name = koto_track_helpers_get_name_for_file(path, artist_author_podcast_name); // Get the name of the file
+	guint cd = (guint) 1;
+
+	if (slash_sep_count >= 3) { // If this it is at least "artist" + "album" + "file" (or with CD)
+		album_or_audiobook_name = g_strdup(split_on_relative_slashes[1]); // Duplicate the second item as the album or audiobook name
+	}
+
+	// #region CD parsing logic
+
+	if ((slash_sep_count == 4)) { // If is at least "artist" + "album" + "cd" + "file"
+		gchar * cd_str = g_strdup(g_strstrip(koto_utils_replace_string_all(g_utf8_strdown(split_on_relative_slashes[2], -1), "cd", ""))); // Replace a lowercased version of our CD ("cd") and trim any whitespace
+
+		cd = (guint) g_ascii_strtoull(cd_str, NULL, 10); // Attempt to convert
+
+		if (cd == 0) { // Had an error during conversion
+			cd = 1; // Set back to 1
+		}
+	}
+
+	// #endregion
+
+	g_strfreev(split_on_relative_slashes);
+
+	gchar * sorta_uniqueish_key = NULL;
+
+	if (koto_utils_is_string_valid(album_or_audiobook_name)) { // Have audiobook or album name
+		sorta_uniqueish_key = g_strdup_printf("%s-%s-%s", artist_author_podcast_name, album_or_audiobook_name, file_name);
+	} else { // No audiobook or album name
+		sorta_uniqueish_key = g_strdup_printf("%s-%s", artist_author_podcast_name, file_name);
+	}
+
+	KotoTrack * track = koto_cartographer_get_track_by_uniqueish_key(koto_maps, sorta_uniqueish_key); // Attempt to get any existing KotoTrack
+
+	if (KOTO_IS_TRACK(track)) { // Got a track already
+		koto_track_set_path(track, lib, relative_path_to_file); // Add this path, which will determine the associated library within that function
+	} else { // Don't already have a track for this file
+		KotoArtist * artist = koto_cartographer_get_artist_by_name(koto_maps, artist_author_podcast_name); // Get the possible artist
+
+		if (!KOTO_IS_ARTIST(artist)) { // Have an artist for this already
+			return;
+		}
+
+		KotoAlbum * album = NULL;
+
+		if (koto_utils_is_string_valid(album_or_audiobook_name)) { // Have an album or audiobook name
+			KotoAlbum * possible_album = koto_artist_get_album_by_name(artist, album_or_audiobook_name);
+			album = KOTO_IS_ALBUM(possible_album) ? possible_album : NULL;
+		}
+
+		if (!KOTO_IS_ALBUM(album)) {
+			return;
+		}
+
+		gchar * album_uuid = KOTO_IS_ALBUM(album) ? koto_album_get_uuid(album) : NULL;
+
+		track = koto_track_new(koto_artist_get_uuid(artist), album_uuid, file_name, cd);
+		koto_track_set_path(track, lib, relative_path_to_file); // Immediately add the path to this file, for this Library
+		koto_artist_add_track(artist, track); // Add the track to the artist in the event this is a podcast (no album) or the track is directly in the artist directory
+
+		if (KOTO_IS_ALBUM(album)) { // Have an album
+			koto_album_add_track(album, track); // Add this track since we haven't yet
+		}
+
+		koto_cartographer_add_track(koto_maps, track); // Add to our cartographer tracks hashtable
+	}
+
+	if (KOTO_IS_TRACK(track)) { // Is a track
+		koto_track_commit(track); // Save the track immediately
+	}
 }

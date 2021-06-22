@@ -31,12 +31,9 @@ struct _KotoArtistView {
 	KotoArtist * artist;
 	GtkWidget * scrolled_window;
 	GtkWidget * content;
-	GtkWidget * favorites_list;
 	GtkWidget * album_list;
 
 	GHashTable * albums_to_component;
-
-	gboolean constructed;
 };
 
 G_DEFINE_TYPE(KotoArtistView, koto_artist_view, G_TYPE_OBJECT);
@@ -113,7 +110,7 @@ static void koto_artist_view_set_property(
 
 	switch (prop_id) {
 		case PROP_ARTIST:
-			koto_artist_view_add_artist(self, (KotoArtist*) g_value_get_object(val));
+			koto_artist_view_set_artist(self, (KotoArtist*) g_value_get_object(val));
 			break;
 		default:
 			G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, prop_id, spec);
@@ -123,13 +120,12 @@ static void koto_artist_view_set_property(
 
 static void koto_artist_view_init(KotoArtistView * self) {
 	self->artist = NULL;
-	self->constructed = FALSE;
+	self->albums_to_component = g_hash_table_new(g_str_hash, g_str_equal);
 }
 
 static void koto_artist_view_constructed(GObject * obj) {
 	KotoArtistView * self = KOTO_ARTIST_VIEW(obj);
 
-	self->albums_to_component = g_hash_table_new(g_str_hash, g_str_equal);
 	self->scrolled_window = gtk_scrolled_window_new(); // Create our scrolled window
 	self->content = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0); // Create our content as a GtkBox
 
@@ -139,77 +135,119 @@ static void koto_artist_view_constructed(GObject * obj) {
 	gtk_widget_add_css_class(GTK_WIDGET(self->scrolled_window), "artist-view");
 	gtk_widget_add_css_class(GTK_WIDGET(self->content), "artist-view-content");
 
-	self->favorites_list = gtk_flow_box_new(); // Create our favorites list
-	gtk_flow_box_set_activate_on_single_click(GTK_FLOW_BOX(self->favorites_list), TRUE);
-	gtk_flow_box_set_selection_mode(GTK_FLOW_BOX(self->favorites_list), GTK_SELECTION_NONE);
-	gtk_flow_box_set_min_children_per_line(GTK_FLOW_BOX(self->favorites_list), 6);
-	gtk_flow_box_set_max_children_per_line(GTK_FLOW_BOX(self->favorites_list), 6);
-	gtk_widget_add_css_class(GTK_WIDGET(self->favorites_list), "album-strip");
-	gtk_widget_set_halign(self->favorites_list, GTK_ALIGN_START);
-
 	self->album_list = gtk_flow_box_new(); // Create our list of our albums
-	//gtk_flow_box_set_activate_on_single_click(GTK_FLOW_BOX(self->album_list), FALSE);
 	gtk_flow_box_set_selection_mode(GTK_FLOW_BOX(self->album_list), GTK_SELECTION_NONE);
 	gtk_widget_add_css_class(self->album_list, "album-list");
 
-	gtk_box_prepend(GTK_BOX(self->content), self->favorites_list); // Add the strip
 	gtk_box_append(GTK_BOX(self->content), self->album_list); // Add the list
 
-	gtk_widget_set_hexpand(GTK_WIDGET(self->favorites_list), TRUE);
 	gtk_widget_set_hexpand(GTK_WIDGET(self->album_list), TRUE);
 
 	G_OBJECT_CLASS(koto_artist_view_parent_class)->constructed(obj);
-	self->constructed = TRUE;
 }
 
 void koto_artist_view_add_album(
 	KotoArtistView * self,
 	KotoAlbum * album
 ) {
-	gchar * album_art = koto_album_get_album_art(album); // Get the art for the album
+	if (!KOTO_IS_ARTIST_VIEW(self)) {
+		return;
+	}
 
-	GtkWidget * art_image = koto_utils_create_image_from_filepath(album_art, "audio-x-generic-symbolic", 220, 220);
+	if (!KOTO_IS_ALBUM(album)) {
+		return;
+	}
 
-	gtk_widget_set_halign(art_image, GTK_ALIGN_START); // Align to start
-	gtk_flow_box_insert(GTK_FLOW_BOX(self->favorites_list), art_image, -1); // Append the album art
+	gchar * album_uuid = koto_album_get_uuid(album); // Get the album UUID
+
+	if (g_hash_table_contains(self->albums_to_component, album_uuid)) { // Already added this album
+		return;
+	}
 
 	KotoAlbumView * album_view = koto_album_view_new(album); // Create our new album view
 	GtkWidget * album_view_main = koto_album_view_get_main(album_view);
 
 	gtk_flow_box_insert(GTK_FLOW_BOX(self->album_list), album_view_main, -1); // Append the album view to the album list
+	g_hash_table_replace(self->albums_to_component, album_uuid, album_view_main);
 }
 
-void koto_artist_view_add_artist(
+void koto_artist_view_handle_album_added(
+	KotoArtist * artist,
+	KotoAlbum * album,
+	gpointer user_data
+) {
+	KotoArtistView * self = user_data;
+
+	if (!KOTO_IS_ARTIST_VIEW(self)) {
+		return;
+	}
+
+	if (!KOTO_IS_ARTIST(artist)) {
+		return;
+	}
+
+	if (!KOTO_IS_ALBUM(album)) {
+		return;
+	}
+
+	if (g_strcmp0(koto_artist_get_uuid(self->artist), koto_artist_get_uuid(artist)) != 0) { // Not the same artist
+		return;
+	}
+
+	koto_artist_view_add_album(self, album); // Add the album if necessary
+}
+
+void koto_artist_view_handle_album_removed(
+	KotoArtist * artist,
+	gchar * album_uuid,
+	gpointer user_data
+) {
+	KotoArtistView * self = user_data;
+
+	if (!KOTO_IS_ARTIST_VIEW(self)) {
+		return;
+	}
+
+	if (g_strcmp0(koto_artist_get_uuid(self->artist), koto_artist_get_uuid(artist)) != 0) { // Not the same artist
+		return;
+	}
+
+	GtkWidget * album_view = g_hash_table_lookup(self->albums_to_component, album_uuid); // Get the album view if it exists
+
+	if (!GTK_IS_WIDGET(album_view)) { // Not a widget
+		return;
+	}
+
+	gtk_flow_box_remove(GTK_FLOW_BOX(self->album_list), album_view); // Remove the album
+	g_hash_table_remove(self->albums_to_component, album_uuid); // Remove the album from our hash table
+}
+
+void koto_artist_view_set_artist(
 	KotoArtistView * self,
 	KotoArtist * artist
 ) {
-	if (artist == NULL) {
+	if (!KOTO_IS_ARTIST_VIEW(self)) { // Not an Artist view
+		return;
+	}
+
+	if (!KOTO_IS_ARTIST(artist)) {
 		return;
 	}
 
 	self->artist = artist;
-
-	if (!self->constructed) {
-		return;
-	}
-
-	GList * albums = koto_artist_get_albums(self->artist); // Get the albums
-
-	GList * a;
-
-	for (a = albums; a != NULL; a = a->next) {
-		KotoAlbum * album = koto_cartographer_get_album_by_uuid(koto_maps, (gchar*) a->data);
-
-		if (album != NULL) {
-			koto_artist_view_add_album(self, album); // Add the album
-		}
-	}
+	g_signal_connect(artist, "album-added", G_CALLBACK(koto_artist_view_handle_album_added), self);
+	g_signal_connect(artist, "album-removed", G_CALLBACK(koto_artist_view_handle_album_removed), self);
 }
 
 GtkWidget * koto_artist_view_get_main(KotoArtistView * self) {
 	return self->scrolled_window;
 }
 
-KotoArtistView * koto_artist_view_new() {
-	return g_object_new(KOTO_TYPE_ARTIST_VIEW, NULL);
+KotoArtistView * koto_artist_view_new(KotoArtist * artist) {
+	return g_object_new(
+		KOTO_TYPE_ARTIST_VIEW,
+		"artist",
+		artist,
+		NULL
+	);
 }

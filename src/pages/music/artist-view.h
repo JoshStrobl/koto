@@ -27,13 +27,26 @@ G_BEGIN_DECLS
 
 G_DECLARE_FINAL_TYPE(KotoArtistView, koto_artist_view, KOTO, ARTIST_VIEW, GObject)
 
-KotoArtistView* koto_artist_view_new();
+KotoArtistView* koto_artist_view_new(KotoArtist * artist);
+
 void koto_artist_view_add_album(
 	KotoArtistView * self,
 	KotoAlbum * album
 );
 
-void koto_artist_view_add_artist(
+void koto_artist_view_handle_album_added(
+	KotoArtist * artist,
+	KotoAlbum * album,
+	gpointer user_data
+);
+
+void koto_artist_view_handle_album_removed(
+	KotoArtist * artist,
+	gchar * album_uuid,
+	gpointer user_data
+);
+
+void koto_artist_view_set_artist(
 	KotoArtistView * self,
 	KotoArtist * artist
 );

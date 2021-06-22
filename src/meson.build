@@ -14,6 +14,8 @@ koto_sources = [
 	'indexer/album.c',
 	'indexer/artist.c',
 	'indexer/file-indexer.c',
+	'indexer/library.c',
+	'indexer/track-helpers.c',
 	'indexer/track.c',
 	'pages/music/album-view.c',
 	'pages/music/artist-view.c',

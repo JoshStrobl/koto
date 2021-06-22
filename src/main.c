@@ -16,9 +16,13 @@
  */
 #include <glib.h>
 #include <gstreamer-1.0/gst/gst.h>
+#include <magic.h>
+#include <taglib/tag_c.h>
 #include "config/config.h"
 #include "db/cartographer.h"
 #include "db/db.h"
+#include "db/loaders.h"
+#include "playback/engine.h"
 #include "playback/media-keys.h"
 #include "playback/mimes.h"
 #include "playback/mpris.h"
@@ -33,6 +37,7 @@ extern KotoConfig * config;
 extern guint mpris_bus_id;
 extern GDBusNodeInfo * introspection_data;
 
+extern KotoPlaybackEngine * playback_engine;
 extern KotoCartographer * koto_maps;
 extern sqlite3 * koto_db;
 
@@ -41,9 +46,10 @@ extern GList * supported_mimes;
 
 extern gchar * koto_path_to_conf;
 extern gchar * koto_rev_dns;
-
+GVolumeMonitor * volume_monitor = NULL;
 GtkApplication * app = NULL;
 GtkWindow * main_window;
+magic_t magic_cookie;
 
 static void on_activate (GtkApplication * app) {
 	g_assert(GTK_IS_APPLICATION(app));
@@ -53,6 +59,7 @@ static void on_activate (GtkApplication * app) {
 		main_window = g_object_new(KOTO_TYPE_WINDOW, "application", app, "default-width", 1200, "default-height", 675, NULL);
 		setup_mpris_interfaces(); // Set up our MPRIS interfaces
 		setup_mediakeys_interface(); // Set up our media key support
+		read_from_db(); // Read the database, allowing us to propagate the UI with various data such as artists and playlist navigation elements
 	}
 
 	gtk_window_present(main_window);
@@ -83,9 +90,26 @@ int main (
 
 	koto_maps = koto_cartographer_new(); // Create our new cartographer and their collection of maps
 
+	volume_monitor = g_volume_monitor_get(); // Get a VolumeMonitor
+
 	config = koto_config_new(); // Set our config
 	koto_config_load(config, koto_path_to_conf);
+	playback_engine = koto_playback_engine_new(); // Initialize the engine now that the config is available, since it listens on various config signals
+
+	taglib_id3v2_set_default_text_encoding(TagLib_ID3v2_UTF8); // Ensure our id3v2 text encoding is UTF-8
+	magic_cookie = magic_open(MAGIC_MIME);
+
+	if (magic_cookie == NULL) { // Failed to open
+		g_critical("Failed to allocate a cookie pointer from libmagic.");
+	}
+
+	if (magic_load(magic_cookie, NULL) != 0) { // Failed to load data
+		magic_close(magic_cookie);
+		g_critical("Failed to load the system magic database.");
+	}
+
 	open_db(); // Open our database
+	g_thread_new("indexing-any-necessary-libs", (void*) koto_config_load_libs, config); // Load our libraries, now that our database is set up. Note that read_from_db is called in koto-window.c
 
 	app = gtk_application_new(koto_rev_dns, G_APPLICATION_FLAGS_NONE);
 	g_signal_connect(app, "activate", G_CALLBACK(on_activate), NULL);

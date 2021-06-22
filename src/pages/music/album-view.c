@@ -38,7 +38,7 @@ struct _KotoAlbumView {
 	KotoCoverArtButton * album_cover;
 
 	GtkWidget * album_label;
-	GHashTable * cd_to_track_listbox;
+	GHashTable * cd_to_disc_views;
 };
 
 G_DEFINE_TYPE(KotoAlbumView, koto_album_view, G_TYPE_OBJECT);
@@ -85,7 +85,7 @@ static void koto_album_view_class_init(KotoAlbumViewClass * c) {
 }
 
 static void koto_album_view_init(KotoAlbumView * self) {
-	self->cd_to_track_listbox = g_hash_table_new(g_str_hash, g_str_equal);
+	self->cd_to_disc_views = g_hash_table_new(g_str_hash, g_str_equal);
 	self->main = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
 	gtk_widget_add_css_class(self->main, "album-view");
 	gtk_widget_set_can_focus(self->main, FALSE);
@@ -153,66 +153,87 @@ static void koto_album_view_set_property(
 	}
 }
 
-void koto_album_view_add_track_to_listbox(
-	KotoAlbum * self,
+void koto_album_view_add_track(
+	KotoAlbumView * self,
 	KotoTrack * track
 ) {
-	(void) self;
-	(void) track;
+	if (!KOTO_IS_ALBUM_VIEW(self)) { // Not an album view
+		return;
+	}
+
+	if (!KOTO_IS_ALBUM(self->album)) { // Somehow don't have an album set
+		return;
+	}
+
+	if (!KOTO_IS_TRACK(track)) { // Track doesn't exist
+		return;
+	}
+
+	guint disc_number = koto_track_get_disc_number(track); // Get the disc number
+	gchar * disc_num_as_str = g_strdup_printf("%u", disc_number);
+
+	KotoDiscView * disc_view;
+
+	if (g_hash_table_contains(self->cd_to_disc_views, disc_num_as_str)) { // Already have this added this disc and its disc view
+		disc_view = g_hash_table_lookup(self->cd_to_disc_views, disc_num_as_str); // Get the disc view
+	} else {
+		disc_view = koto_disc_view_new(self->album, disc_number); // Build a new disc view
+		gtk_list_box_append(GTK_LIST_BOX(self->discs), GTK_WIDGET(disc_view)); // Add the Disc View to the List Box
+		g_hash_table_replace(self->cd_to_disc_views, disc_num_as_str, disc_view); // Add the new Disc View to our hash table
+	}
+
+	if (!KOTO_IS_DISC_VIEW(disc_view)) { // If this is not a Disc View
+		return;
+	}
+
+	koto_disc_view_add_track(disc_view, track); // Add the track to the disc view
+	koto_album_view_update_disc_labels(self); // Update our disc labels
+}
+
+void koto_album_view_handle_track_added(
+	KotoAlbum * album,
+	KotoTrack * track,
+	gpointer user_data
+) {
+	if (!KOTO_IS_ALBUM(album)) { // If not an album
+		return;
+	}
+
+	if (!KOTO_IS_TRACK(track)) { // If not a track
+		return;
+	}
+
+	KotoAlbumView * self = KOTO_ALBUM_VIEW(user_data); // Define as an album view
+
+	if (!KOTO_IS_ALBUM_VIEW(self)) {
+		return;
+	}
+
+	koto_album_view_add_track(self, track); // Add the track
 }
 
 void koto_album_view_set_album(
 	KotoAlbumView * self,
 	KotoAlbum * album
 ) {
-	if (album == NULL) {
+	if (!KOTO_IS_ALBUM_VIEW(self)) {
+		return;
+	}
+
+	if (!KOTO_IS_ALBUM(album)) {
 		return;
 	}
 
 	self->album = album;
 
-	gchar * album_art = koto_album_get_album_art(self->album); // Get the art for the album
+	gchar * album_art = koto_album_get_art(self->album); // Get the art for the album
 	koto_cover_art_button_set_art_path(self->album_cover, album_art);
 
-	gchar * album_name;
-	g_object_get(album, "name", &album_name, NULL); // Get the album name
-
-	self->album_label = gtk_label_new(album_name);
+	self->album_label = gtk_label_new(koto_album_get_name(album));
 	gtk_widget_set_halign(self->album_label, GTK_ALIGN_START);
 	gtk_box_prepend(GTK_BOX(self->album_tracks_box), self->album_label); // Prepend our new label to the album + tracks box
 
-	GHashTable * discs = g_hash_table_new(g_str_hash, g_str_equal);
-	GList * tracks = koto_album_get_tracks(album); // Get the tracks for this album
-
-	for (guint i = 0; i < g_list_length(tracks); i++) {
-		KotoTrack * track = koto_cartographer_get_track_by_uuid(koto_maps, (gchar*) g_list_nth_data(tracks, i)); // Get the track by its UUID
-
-		if (!KOTO_IS_TRACK(track)) { // Track doesn't exist
-			continue;
-		}
-
-		guint * disc_number;
-		g_object_get(track, "cd", &disc_number, NULL);
-		gchar * disc_num_as_str = g_strdup_printf("%u", GPOINTER_TO_UINT(disc_number));
-
-		if (g_hash_table_contains(discs, disc_num_as_str)) { // Already have this added
-			continue; // Skip
-		}
-
-		g_hash_table_insert(discs, disc_num_as_str, "0"); // Mark this disc number in the hash table
-		KotoDiscView * disc_view = koto_disc_view_new(album, disc_number);
-		gtk_list_box_append(GTK_LIST_BOX(self->discs), GTK_WIDGET(disc_view)); // Add the Disc View to the List Box
-	}
-
-	if (g_list_length(g_hash_table_get_keys(discs)) == 1) { // Only have one album
-		GtkListBoxRow * row = gtk_list_box_get_row_at_index(GTK_LIST_BOX(self->discs), 0); // Get the first item
-
-		if (GTK_IS_LIST_BOX_ROW(row)) { // Is a row
-			koto_disc_view_set_disc_label_visible((KotoDiscView*) gtk_list_box_row_get_child(row), FALSE); // Get
-		}
-	}
-
-	g_hash_table_destroy(discs);
+	g_signal_connect(self->album, "track-added", G_CALLBACK(koto_album_view_handle_track_added), self); // Handle track added on our album
 }
 
 int koto_album_view_sort_discs(
@@ -253,6 +274,23 @@ void koto_album_view_toggle_album_playback(
 	KotoAlbumView * self = data;
 
 	koto_album_set_as_current_playlist(self->album); // Set as the current playlist
+}
+
+void koto_album_view_update_disc_labels(KotoAlbumView * self) {
+	gboolean show_disc_labels = g_hash_table_size(self->cd_to_disc_views) > 1;
+	gpointer disc_num_ptr;
+	gpointer disc_view_ptr;
+
+	GHashTableIter disc_view_iter;
+	g_hash_table_iter_init(&disc_view_iter, self->cd_to_disc_views);
+
+	while (g_hash_table_iter_next(&disc_view_iter, &disc_num_ptr, &disc_view_ptr)) {
+		(void) disc_num_ptr;
+		KotoDiscView * view = (KotoDiscView*) disc_view_ptr;
+		if (KOTO_IS_DISC_VIEW(view)) {
+			koto_disc_view_set_disc_label_visible(view, show_disc_labels);
+		}
+	}
 }
 
 KotoAlbumView * koto_album_view_new(KotoAlbum * album) {
