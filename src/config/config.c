@@ -273,7 +273,7 @@ void koto_config_load(
 
 		if (create_err != NULL) {
 			if (create_err->code != G_IO_ERROR_EXISTS) { // Not an error indicating the file already exists
-				g_message("Failed to create or open file: %s", create_err->message);
+				g_warning("Failed to create or open file: %s", create_err->message);
 				return;
 			}
 		}

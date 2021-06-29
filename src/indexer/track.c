@@ -353,21 +353,24 @@ gchar * koto_track_get_path(KotoTrack * self) {
 		return NULL;
 	}
 
-	GList * libs = koto_cartographer_get_libraries(koto_maps); // Get all of our libraries
-	GList * cur_lib_list;
+	GHashTableIter iter;
 
-	for (cur_lib_list = libs; cur_lib_list != NULL; cur_lib_list = libs->next) { // Iterate over our libraries
-		KotoLibrary * cur_library = libs->data; // Get this as a KotoLibrary
-		gchar * library_relative_path = g_hash_table_lookup(self->paths, koto_library_get_uuid(cur_library)); // Get any relative path in our paths based on the current UUID
+	g_hash_table_iter_init(&iter, self->paths); // Create an iterator for our paths
+	gpointer uuidptr;
+	gpointer relpathptr;
 
-		if (!koto_utils_is_string_valid(library_relative_path)) { // Not a valid path
-			continue;
+	gchar * path = NULL;
+
+	while (g_hash_table_iter_next(&iter, &uuidptr, &relpathptr)) { // Iterate over all the paths for this file
+		KotoLibrary * library  = koto_cartographer_get_library_by_uuid(koto_maps, (gchar *) uuidptr);
+
+		if (KOTO_IS_LIBRARY(library)) {
+			path = g_strdup(g_build_path(G_DIR_SEPARATOR_S, koto_library_get_path(library), koto_library_get_relative_path_to_file(library, (gchar *) relpathptr), NULL)); // Build our full library path using library's path and our file relative path
+			break;
 		}
-
-		return g_strdup(g_build_path(G_DIR_SEPARATOR_S, koto_library_get_path(cur_library), library_relative_path, NULL)); // Build our full library path using library's path and our file relative path
 	}
 
-	return NULL;
+	return path;
 }
 
 guint koto_track_get_position(KotoTrack * self) {

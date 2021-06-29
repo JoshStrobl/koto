@@ -361,7 +361,7 @@ void koto_library_set_storage_uuid(
 	}
 
 	if (g_mount_is_shadowed(mount)) { // Is shadowed and should not use
-		g_message("This mount is considered \"shadowed\" and will not be used.");
+		g_warning("This mount is considered \"shadowed\" and will not be used.");
 		return;
 	}
 
