@@ -261,7 +261,7 @@ void koto_playlist_page_bind_track_item(
 		NULL
 	);
 
-	guint track_position = koto_playlist_get_position_of_track(self->playlist, track);
+	guint track_position = koto_playlist_get_position_of_track(self->playlist, track) + 1;
 
 	gtk_label_set_label(GTK_LABEL(track_position_label), g_strdup_printf("%u", track_position)); // Set the track position
 	gtk_label_set_label(GTK_LABEL(track_name_label), track_name); // Set our track name
