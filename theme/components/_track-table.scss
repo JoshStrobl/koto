@@ -1,0 +1,49 @@
+.track-list-content { // Our Track List
+	& > .track-list-header,
+	.track-list-columned-item {
+		font-size: x-large;
+		padding: 3ex 2ex;
+	}
+
+	& > .track-list-header { // Headers
+		font-weight: bold;
+
+		.koto-button { // All Koto buttons in our header
+			&.active { // Is active
+				color: $green;
+			}
+		}
+	}
+
+	& > .track-list-columned { // Column content
+		& > row {
+			&:not(:selected) {
+				color: $text-color-bright;
+			}
+
+			&:nth-child(odd):not(:selected) {
+				background-color: $bg-secondary;
+			}
+
+			& > .track-list-columned-item { // Track rows
+				font-size: x-large;
+			}
+		}
+	}
+
+	.track-column-number { // Column section within header and track items
+		
+	}
+
+	.track-column-name { // Name section within header and track items
+
+	}
+
+	.track-column-album { // Album section within headers and track items
+
+	}
+
+	.track-column-artist { // Artist section within headers and track items
+
+	}
+}

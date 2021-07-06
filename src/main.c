@@ -46,6 +46,9 @@ extern GList * supported_mimes;
 
 extern gchar * koto_path_to_conf;
 extern gchar * koto_rev_dns;
+
+extern gboolean created_new_db;
+
 GVolumeMonitor * volume_monitor = NULL;
 GtkApplication * app = NULL;
 GtkWindow * main_window;
@@ -59,7 +62,10 @@ static void on_activate (GtkApplication * app) {
 		main_window = g_object_new(KOTO_TYPE_WINDOW, "application", app, "default-width", 1200, "default-height", 675, NULL);
 		setup_mpris_interfaces(); // Set up our MPRIS interfaces
 		setup_mediakeys_interface(); // Set up our media key support
-		read_from_db(); // Read the database, allowing us to propagate the UI with various data such as artists and playlist navigation elements
+
+		if (!created_new_db) {
+			read_from_db(); // Read the database, allowing us to propagate the UI with various data such as artists and playlist navigation elements
+		}
 	}
 
 	gtk_window_present(main_window);

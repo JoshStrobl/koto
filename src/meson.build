@@ -7,6 +7,7 @@ add_global_arguments([
 koto_sources = [
 	'components/koto-action-bar.c',
 	'components/koto-cover-art-button.c',
+	'components/track-table.c',
 	'config/config.c',
 	'db/cartographer.c',
 	'db/db.c',

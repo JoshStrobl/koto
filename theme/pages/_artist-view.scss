@@ -1,0 +1,14 @@
+.artist-view {
+	.no-albums-view { // No Albums
+		.no-albums-view-header { // Header for artist when we have no albums
+			.cover-art-button { // Button to play all artist tracks
+				margin-right: 40px;
+			}
+
+			& > label { // Artist Name
+				font-weight: 800;
+				font-size: 10ex;
+			}
+		}
+	}
+}

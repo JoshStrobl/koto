@@ -51,10 +51,6 @@ void koto_playlist_page_remove_track(
 
 GtkWidget * koto_playlist_page_get_main(KotoPlaylistPage * self);
 
-void koto_playlist_page_handle_action_bar_closed(
-	KotoActionBar * bar,
-	gpointer data
-);
 
 void koto_playlist_page_handle_cover_art_clicked(
 	GtkGestureClick * gesture,
@@ -77,71 +73,15 @@ void koto_playlist_page_handle_playlist_modified(
 	gpointer user_data
 );
 
-void koto_playlist_page_handle_track_album_clicked(
-	GtkGestureClick * gesture,
-	int n_press,
-	double x,
-	double y,
-	gpointer user_data
-);
-
-void koto_playlist_page_handle_track_artist_clicked(
-	GtkGestureClick * gesture,
-	int n_press,
-	double x,
-	double y,
-	gpointer user_data
-);
-
-void koto_playlist_page_handle_track_name_clicked(
-	GtkGestureClick * gesture,
-	int n_press,
-	double x,
-	double y,
-	gpointer user_data
-);
-
-void koto_playlist_page_handle_track_num_clicked(
-	GtkGestureClick * gesture,
-	int n_press,
-	double x,
-	double y,
-	gpointer user_data
-);
-
-void koto_playlist_page_handle_tracks_selected(
-	GtkSelectionModel * model,
-	guint position,
-	guint n_items,
-	gpointer user_data
-);
-
 void koto_playlist_page_hide_popover(KotoPlaylistPage * self);
-
-void koto_playlist_page_setup_track_item(
-	GtkListItemFactory * factory,
-	GtkListItem * item,
-	gpointer user_data
-);
 
 void koto_playlist_page_set_playlist_uuid(
 	KotoPlaylistPage * self,
 	gchar * playlist_uuid
 );
 
-void koto_playlist_page_set_playlist_model(
-	KotoPlaylistPage * self,
-	KotoPreferredModelType model
-);
-
 void koto_playlist_page_show_popover(KotoPlaylistPage * self);
 
 void koto_playlist_page_update_header(KotoPlaylistPage * self);
-
-void koto_playlist_page_handle_listitem_activate(
-	GtkListView * list,
-	guint position,
-	gpointer user_data
-);
 
 G_END_DECLS

@@ -26,6 +26,7 @@
 #include "koto-button.h"
 #include "config/config.h"
 #include "koto-playerbar.h"
+#include "koto-utils.h"
 
 extern KotoAddRemoveTrackPopover * koto_add_remove_track_popup;
 extern KotoCartographer * koto_maps;
@@ -616,10 +617,8 @@ void koto_playerbar_update_track_info(
 	g_object_get(current_track, "parsed-name", &track_name, "artist-uuid", &artist_uuid, "album-uuid", &album_uuid, NULL);
 
 	KotoArtist * artist = koto_cartographer_get_artist_by_uuid(koto_maps, artist_uuid);
-	KotoAlbum * album = koto_cartographer_get_album_by_uuid(koto_maps, album_uuid);
 
 	g_free(artist_uuid);
-	g_free(album_uuid);
 
 	if ((track_name != NULL) && (strcmp(track_name, "") != 0)) { // Have a track name
 		gtk_label_set_text(GTK_LABEL(bar->playback_title), track_name); // Set the label
@@ -636,6 +635,13 @@ void koto_playerbar_update_track_info(
 			gtk_widget_hide(bar->playback_artist);
 		}
 	}
+
+	if (!koto_utils_is_string_valid(album_uuid)) { // Do not have a valid album UUID
+		return;
+	}
+
+	KotoAlbum * album = koto_cartographer_get_album_by_uuid(koto_maps, album_uuid);
+	g_free(album_uuid);
 
 	if (KOTO_IS_ALBUM(album)) {
 		gchar * album_name = NULL;

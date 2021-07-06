@@ -57,6 +57,7 @@ void index_folder(
 					koto_artist_set_path(artist, self, full_path, TRUE); // Add the path for this library on this Artist and commit immediately
 					koto_cartographer_add_artist(koto_maps, artist); // Add the artist to cartographer
 					index_folder(self, full_path, depth); // Index this directory
+					koto_artist_set_as_finalized(artist); // Indicate it is finalized
 				}
 			} else if (depth == 2) { // If we are following FOLDER/ARTIST/ALBUM then this would be album
 				gchar * artist_name = g_path_get_basename(path); // Get the last entry from our path which is probably the artist
@@ -195,10 +196,6 @@ void index_file(
 		if (koto_utils_is_string_valid(album_or_audiobook_name)) { // Have an album or audiobook name
 			KotoAlbum * possible_album = koto_artist_get_album_by_name(artist, album_or_audiobook_name);
 			album = KOTO_IS_ALBUM(possible_album) ? possible_album : NULL;
-		}
-
-		if (!KOTO_IS_ALBUM(album)) {
-			return;
 		}
 
 		gchar * album_uuid = KOTO_IS_ALBUM(album) ? koto_album_get_uuid(album) : NULL;

@@ -210,8 +210,7 @@ static void koto_track_set_property(
 			g_object_notify_by_pspec(G_OBJECT(self), props[PROP_ARTIST_UUID]);
 			break;
 		case PROP_ALBUM_UUID:
-			self->album_uuid = g_strdup(g_value_get_string(val));
-			g_object_notify_by_pspec(G_OBJECT(self), props[PROP_ALBUM_UUID]);
+			koto_track_set_album_uuid(self, g_value_get_string(val));
 			break;
 		case PROP_UUID:
 			self->uuid = g_strdup(g_value_get_string(val));
@@ -260,12 +259,14 @@ void koto_track_commit(KotoTrack * self) {
 		self->uuid,
 		self->artist_uuid,
 		self->album_uuid,
-		self->parsed_name,
+		g_strescape(self->parsed_name, NULL),
 		(int) self->cd,
 		(int) self->position
 	);
 
-	new_transaction(commit_op, "Failed to write our file to the database", FALSE);
+	if (new_transaction(commit_op, "Failed to write our file to the database", FALSE) != SQLITE_OK) {
+		g_message("Failed with song: %s", self->parsed_name);
+	}
 
 	GHashTableIter paths_iter;
 	g_hash_table_iter_init(&paths_iter, self->paths); // Create an iterator for our paths
@@ -315,7 +316,7 @@ GVariant * koto_track_get_metadata_vardict(KotoTrack * self) {
 			g_variant_builder_add(builder, "{sv}", "xesam:album", g_variant_new_string(album_name));
 		}
 	} else {
-	}         // TODO: Implement artist artwork fetching here
+	} // TODO: Implement artist artwork fetching here
 
 	g_variant_builder_add(builder, "{sv}", "mpris:trackid", g_variant_new_string(self->uuid));
 
@@ -362,10 +363,10 @@ gchar * koto_track_get_path(KotoTrack * self) {
 	gchar * path = NULL;
 
 	while (g_hash_table_iter_next(&iter, &uuidptr, &relpathptr)) { // Iterate over all the paths for this file
-		KotoLibrary * library  = koto_cartographer_get_library_by_uuid(koto_maps, (gchar *) uuidptr);
+		KotoLibrary * library = koto_cartographer_get_library_by_uuid(koto_maps, (gchar*) uuidptr);
 
 		if (KOTO_IS_LIBRARY(library)) {
-			path = g_strdup(g_build_path(G_DIR_SEPARATOR_S, koto_library_get_path(library), koto_library_get_relative_path_to_file(library, (gchar *) relpathptr), NULL)); // Build our full library path using library's path and our file relative path
+			path = g_strdup(g_build_path(G_DIR_SEPARATOR_S, koto_library_get_path(library), koto_library_get_relative_path_to_file(library, (gchar*) relpathptr), NULL)); // Build our full library path using library's path and our file relative path
 			break;
 		}
 	}
@@ -424,6 +425,28 @@ void koto_track_remove_from_playlist(
 	);
 
 	new_transaction(commit_op, "Failed to remove track from playlist", FALSE);
+}
+
+void koto_track_set_album_uuid(
+	KotoTrack * self,
+	const gchar * album_uuid
+) {
+	if (!KOTO_IS_TRACK(self)) {
+		return;
+	}
+
+	if (album_uuid == NULL) {
+		return;
+	}
+
+	gchar * uuid = g_strdup(album_uuid);
+
+	if (!koto_utils_is_string_valid(uuid)) { // If this is not a valid string
+		return;
+	}
+
+	self->album_uuid = uuid;
+	g_object_notify_by_pspec(G_OBJECT(self), props[PROP_ALBUM_UUID]);
 }
 
 void koto_track_save_to_playlist(

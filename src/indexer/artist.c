@@ -19,7 +19,9 @@
 #include <sqlite3.h>
 #include "../db/db.h"
 #include "../db/cartographer.h"
+#include "../playlist/playlist.h"
 #include "../koto-utils.h"
+#include "artist-playlist-funcs.h"
 #include "structs.h"
 #include "track-helpers.h"
 
@@ -39,6 +41,7 @@ static GParamSpec * props[N_PROPERTIES] = {
 enum  {
 	SIGNAL_ALBUM_ADDED,
 	SIGNAL_ALBUM_REMOVED,
+	SIGNAL_HAS_NO_ALBUMS,
 	SIGNAL_TRACK_ADDED,
 	SIGNAL_TRACK_REMOVED,
 	N_SIGNALS
@@ -52,6 +55,9 @@ struct _KotoArtist {
 	GObject parent_instance;
 	gchar * uuid;
 
+	KotoPlaylist * content_playlist;
+
+	gboolean finalized;
 	gboolean has_artist_art;
 	gchar * artist_name;
 	GList * albums;
@@ -71,6 +77,7 @@ struct _KotoArtistClass {
 		KotoArtist * artist,
 		KotoAlbum * album
 	);
+	void (* has_no_albums) (KotoArtist * artist);
 	void (* track_added) (
 		KotoArtist * artist,
 		KotoTrack * track
@@ -130,6 +137,18 @@ static void koto_artist_class_init(KotoArtistClass * c) {
 		KOTO_TYPE_ALBUM
 	);
 
+	artist_signals[SIGNAL_HAS_NO_ALBUMS] = g_signal_new(
+		"has-no-albums",
+		G_TYPE_FROM_CLASS(gobject_class),
+		G_SIGNAL_RUN_FIRST | G_SIGNAL_ACTION,
+		G_STRUCT_OFFSET(KotoArtistClass, has_no_albums),
+		NULL,
+		NULL,
+		NULL,
+		G_TYPE_NONE,
+		0
+	);
+
 	artist_signals[SIGNAL_TRACK_ADDED] = g_signal_new(
 		"track-added",
 		G_TYPE_FROM_CLASS(gobject_class),
@@ -175,6 +194,24 @@ static void koto_artist_class_init(KotoArtistClass * c) {
 	g_object_class_install_properties(gobject_class, N_PROPERTIES, props);
 }
 
+static void koto_artist_init(KotoArtist * self) {
+	self->albums = NULL; // Create a new GList
+
+	self->content_playlist = koto_playlist_new(); // Create our playlist
+	g_object_set(
+		self->content_playlist,
+		"ephemeral", // Indicate that it is temporary
+		TRUE,
+		NULL
+	);
+
+	self->finalized = FALSE; // Indicate we not finalized
+	self->has_artist_art = FALSE;
+	self->paths = g_hash_table_new(g_str_hash, g_str_equal);
+	self->tracks = NULL;
+	self->type = KOTO_LIBRARY_TYPE_UNKNOWN;
+}
+
 void koto_artist_commit(KotoArtist * self) {
 	if ((self->uuid == NULL) || strcmp(self->uuid, "")) { // UUID not set
 		self->uuid = g_strdup(g_uuid_string_random());
@@ -211,12 +248,12 @@ void koto_artist_commit(KotoArtist * self) {
 	}
 }
 
-static void koto_artist_init(KotoArtist * self) {
-	self->albums = NULL; // Create a new GList
-	self->has_artist_art = FALSE;
-	self->paths = g_hash_table_new(g_str_hash, g_str_equal);
-	self->tracks = NULL;
-	self->type = KOTO_LIBRARY_TYPE_UNKNOWN;
+KotoPlaylist * koto_artist_get_playlist(KotoArtist * self) {
+	if (!KOTO_IS_ARTIST(self)) {
+		return NULL;
+	}
+
+	return self->content_playlist;
 }
 
 static void koto_artist_get_property(
@@ -310,6 +347,8 @@ void koto_artist_add_track(
 
 	koto_cartographer_add_track(koto_maps, track); // Add the track to cartographer if necessary
 	self->tracks = g_list_insert_sorted_with_data(self->tracks, track_uuid, koto_track_helpers_sort_tracks_by_uuid, NULL);
+
+	koto_playlist_add_track(self->content_playlist, track, FALSE, FALSE); // Add this new track for the artist to its playlist
 
 	g_signal_emit(
 		self,
@@ -408,7 +447,10 @@ void koto_artist_remove_track(
 		return;
 	}
 
+	gchar * track_uuid = koto_track_get_uuid(track);
 	self->tracks = g_list_remove(self->tracks, koto_track_get_uuid(track));
+
+	koto_playlist_remove_track_by_uuid(self->content_playlist, track_uuid); // Remove the track from our playlist
 
 	g_signal_emit(
 		self,
@@ -436,6 +478,18 @@ void koto_artist_set_artist_name(
 
 	self->artist_name = g_strdup(artist_name);
 	g_object_notify_by_pspec(G_OBJECT(self), props[PROP_ARTIST_NAME]);
+}
+
+void koto_artist_set_as_finalized(KotoArtist * self) {
+	if (!KOTO_IS_ARTIST(self)) { // Not an artist
+		return;
+	}
+
+	self->finalized = TRUE;
+
+	if (g_list_length(self->albums) == 0) { // Have no albums
+		g_signal_emit_by_name(self, "has-no-albums");
+	}
 }
 
 void koto_artist_set_path(

@@ -180,6 +180,8 @@ void koto_artist_set_artist_name(
 	gchar * artist_name
 );
 
+void koto_artist_set_as_finalized(KotoArtist * self);
+
 void koto_artist_set_path(
 	KotoArtist * self,
 	KotoLibrary * lib,
@@ -280,6 +282,11 @@ gchar * koto_track_get_uuid(KotoTrack * self);
 void koto_track_remove_from_playlist(
 	KotoTrack * self,
 	gchar * playlist_uuid
+);
+
+void koto_track_set_album_uuid(
+	KotoTrack * self,
+	const gchar * album_uuid
 );
 
 void koto_track_save_to_playlist(

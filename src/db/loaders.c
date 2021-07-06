@@ -61,6 +61,8 @@ int process_artists(
 		return 1;
 	}
 
+	koto_artist_set_as_finalized(artist); // Indicate it is finalized
+
 	int tracks_rc = sqlite3_exec(koto_db, g_strdup_printf("SELECT * FROM tracks WHERE artist_id=\"%s\"", artist_uuid), process_tracks, NULL, NULL); // Process our tracks by artist uuid
 
 	if (tracks_rc != SQLITE_OK) { // Failed to get our tracks

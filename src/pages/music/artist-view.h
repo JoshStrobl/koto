@@ -34,6 +34,8 @@ void koto_artist_view_add_album(
 	KotoAlbum * album
 );
 
+GtkWidget * koto_artist_view_get_main(KotoArtistView * self);
+
 void koto_artist_view_handle_album_added(
 	KotoArtist * artist,
 	KotoAlbum * album,
@@ -46,11 +48,28 @@ void koto_artist_view_handle_album_removed(
 	gpointer user_data
 );
 
+void koto_artist_view_handle_artist_name_changed(
+	KotoArtist * artist,
+	guint prop_id,
+	KotoArtistView * self
+);
+
+void koto_artist_view_handle_has_no_albums(
+	KotoArtist * artist,
+	gpointer user_data
+);
+
 void koto_artist_view_set_artist(
 	KotoArtistView * self,
 	KotoArtist * artist
 );
 
-GtkWidget * koto_artist_view_get_main(KotoArtistView * self);
+void koto_artist_view_toggle_playback(
+	GtkGestureClick * gesture,
+	int n_press,
+	double x,
+	double y,
+	gpointer data
+);
 
 G_END_DECLS
