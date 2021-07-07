@@ -19,6 +19,17 @@ window {
 	& > headerbar, & > headerbar:active {
 		background-color: $bg-secondary;
 		background-image: none;
+		border-bottom-width: 0; // Unset default styling for headerbar
+
+		&:active windowcontrols button { // Minimize, Maximize, Close buttons when window is active
+			color: $text-color-bright;
+			text-decoration-color: $text-color-bright;
+		}
+
+		&:not(:active) windowcontrols button { // Minimize, Maximize, Close buttons when window is inactive
+			color: $text-color-faded;
+			text-decoration-color: $text-color-faded;
+		}
 	}
 
 	.koto-dialog-container {
