@@ -1,21 +1,16 @@
 .primary-nav {
-	padding: 10px;
+	padding: 20px;
 
 	& > viewport > box {
-		& > .koto-botton {
-			& > box {
-				padding: 10px 0;
-
-				& > label {
-					font-size: large;
-				}
-			}
+		& > .koto-button, // Direct buttons like Home
+		& > .expander > .expander-header { // Expander Headers
+			font-size: large;
+			padding: 10px 0;
 		}
 
 		& > .expander {
 			& > .expander-header {
 				color: $text-color-faded;
-				margin-bottom: 10px;
 			}
 		}
 	}
