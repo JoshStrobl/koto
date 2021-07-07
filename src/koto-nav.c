@@ -111,7 +111,7 @@ void koto_nav_create_audiobooks_section(KotoNav * self) {
 
 	koto_expander_set_content(a_expander, new_content);
 
-	self->audiobooks_local = koto_button_new_plain("Local Library");
+	self->audiobooks_local = koto_button_new_plain("Library");
 	self->audiobooks_audible = koto_button_new_plain("Audible");
 	self->audiobooks_librivox = koto_button_new_plain("LibriVox");
 
@@ -128,7 +128,7 @@ void koto_nav_create_music_section(KotoNav * self) {
 
 	GtkWidget * new_content = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
 
-	self->music_local = koto_button_new_plain("Local Library");
+	self->music_local = koto_button_new_plain("Library");
 	self->music_radio = koto_button_new_plain("Radio");
 
 	gtk_box_append(GTK_BOX(new_content), GTK_WIDGET(self->music_local));
