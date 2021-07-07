@@ -199,6 +199,7 @@ static void koto_expander_init(KotoExpander * self) {
 
 	self->constructed = TRUE;
 
+	koto_button_add_click_handler(self->header_button, KOTO_BUTTON_CLICK_TYPE_PRIMARY, G_CALLBACK(koto_expander_toggle_content), self);
 	koto_button_add_click_handler(self->header_expand_button, KOTO_BUTTON_CLICK_TYPE_PRIMARY, G_CALLBACK(koto_expander_toggle_content), self);
 }
 
