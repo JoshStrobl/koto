@@ -20,6 +20,7 @@
 #include "config/config.h"
 #include "koto-button.h"
 #include "koto-expander.h"
+#include "koto-utils.h"
 
 enum {
 	PROP_EXP_0,
@@ -146,20 +147,9 @@ static void koto_expander_set_property(
 ) {
 	KotoExpander * self = KOTO_EXPANDER(obj);
 
-	if (!GTK_IS_WIDGET(self->header_button)) { // Header Button is not a widget
-		KotoButton * new_button = koto_button_new_with_icon(NULL, "emblem-favorite-symbolic", NULL, KOTO_BUTTON_PIXBUF_SIZE_SMALL);
-
-		if (GTK_IS_WIDGET(new_button)) { // Created our widget successfully
-			self->header_button = new_button;
-			gtk_widget_set_hexpand(GTK_WIDGET(self->header_button), TRUE);
-			gtk_box_prepend(GTK_BOX(self->header), GTK_WIDGET(self->header_button));
-		}
-	}
-
 	switch (prop_id) {
 		case PROP_HEADER_ICON_NAME:
-			g_return_if_fail(GTK_IS_WIDGET(self->header_button));
-			koto_button_set_icon_name(self->header_button, g_strdup(g_value_get_string(val)), FALSE);
+			koto_expander_set_icon_name(self, g_strdup(g_value_get_string(val)));
 			break;
 		case PROP_HEADER_LABEL:
 			g_return_if_fail(GTK_IS_WIDGET(self->header_button));
@@ -193,6 +183,14 @@ static void koto_expander_init(KotoExpander * self) {
 	gtk_revealer_set_reveal_child(GTK_REVEALER(self->revealer), TRUE); // Set to be revealed by default
 	gtk_revealer_set_transition_type(GTK_REVEALER(self->revealer), GTK_REVEALER_TRANSITION_TYPE_SLIDE_DOWN);
 
+	KotoButton * new_button = koto_button_new_with_icon(NULL, "emblem-favorite-symbolic", NULL, KOTO_BUTTON_PIXBUF_SIZE_SMALL);
+
+	if (KOTO_IS_BUTTON(new_button)) { // Created our widget successfully
+		self->header_button = new_button;
+		gtk_widget_set_hexpand(GTK_WIDGET(self->header_button), TRUE);
+		gtk_box_prepend(GTK_BOX(self->header), GTK_WIDGET(self->header_button));
+	}
+
 	self->header_expand_button = koto_button_new_with_icon("", "pan-down-symbolic", "pan-up-symbolic", KOTO_BUTTON_PIXBUF_SIZE_SMALL);
 	gtk_box_append(GTK_BOX(self->header), GTK_WIDGET(self->header_expand_button));
 
@@ -202,6 +200,26 @@ static void koto_expander_init(KotoExpander * self) {
 	self->constructed = TRUE;
 
 	koto_button_add_click_handler(self->header_expand_button, KOTO_BUTTON_CLICK_TYPE_PRIMARY, G_CALLBACK(koto_expander_toggle_content), self);
+}
+
+// koto_expander_set_icon_name will set the icon for our inner KotoButton for this Expander
+void koto_expander_set_icon_name(
+	KotoExpander *self,
+	gchar * icon
+) {
+	if (!KOTO_IS_EXPANDER(self)) { // Not a KotoExpander
+		return;
+	}
+
+	if (!koto_utils_is_string_valid(icon)) { // Not a valid string
+		return;
+	}
+
+	if (!KOTO_IS_BUTTON(self->header_button)) { // Don't have a header button for whatever reason
+		return;
+	}
+
+	koto_button_set_icon_name(self->header_button, icon, FALSE);
 }
 
 void koto_expander_set_secondary_button(

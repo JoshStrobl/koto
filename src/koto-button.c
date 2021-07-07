@@ -309,6 +309,10 @@ void koto_button_flip(KotoButton * self) {
 }
 
 void koto_button_hide_image(KotoButton * self) {
+	if (!KOTO_IS_BUTTON(self)) { // Not a button
+		return;
+	}
+
 	if (GTK_IS_WIDGET(self->button_pic)) { // Is a widget
 		gtk_widget_hide(self->button_pic);
 	}
@@ -318,6 +322,10 @@ void koto_button_set_badge_text(
 	KotoButton * self,
 	gchar * text
 ) {
+	if (!KOTO_IS_BUTTON(self)) { // Not a button
+		return;
+	}
+
 	if ((text == NULL) || (strcmp(text, "") == 0)) { // If the text is empty
 		self->badge_text = g_strdup("");
 	} else {
@@ -366,6 +374,14 @@ void koto_button_set_icon_name(
 	gchar * icon_name,
 	gboolean for_alt
 ) {
+	if (!KOTO_IS_BUTTON(self)) { // Not a button
+		return;
+	}
+
+	if (!koto_utils_is_string_valid(icon_name)) { // Not a valid icon
+		return;
+	}
+
 	gchar * copied_icon_name = g_strdup(icon_name);
 
 	if (for_alt) { // Is for the alternate icon
@@ -390,12 +406,12 @@ void koto_button_set_icon_name(
 		hide_image = TRUE;
 	}
 
-	if (hide_image) { // Should hide the image
-		if (GTK_IS_PICTURE(self->button_pic)) { // If we already have a button image
+	if (GTK_IS_IMAGE(self->button_pic)) { // If we already have a button image
+		if (hide_image) { // Should hide the image
 			gtk_widget_hide(self->button_pic); // Hide
+		} else { // Should be showing the image
+			gtk_image_set_from_icon_name(GTK_IMAGE(self->button_pic), self->icon_name); // Just update the existing image immediately
 		}
-
-		return;
 	}
 
 	g_object_notify_by_pspec(G_OBJECT(self), for_alt ? btn_props[PROP_ALT_ICON_NAME] : btn_props[PROP_ICON_NAME]);
@@ -405,6 +421,10 @@ void koto_button_set_image_position(
 	KotoButton * self,
 	KotoButtonImagePosition pos
 ) {
+	if (!KOTO_IS_BUTTON(self)) { // Not a button
+		return;
+	}
+
 	if (self->image_position == pos) { // Is a different position that currently
 		return;
 	}
@@ -424,6 +444,10 @@ void koto_button_set_pixbuf_size(
 	KotoButton * self,
 	guint size
 ) {
+	if (!KOTO_IS_BUTTON(self)) {
+		return;
+	}
+
 	if (size == self->pix_size) {
 		return;
 	}
@@ -438,11 +462,15 @@ void koto_button_set_text(
 	KotoButton * self,
 	gchar * text
 ) {
-	if (text == NULL) {
+	if (!KOTO_IS_BUTTON(self)) {
 		return;
 	}
 
-	if (self->text != NULL) { // Text defined
+	if (!koto_utils_is_string_valid(text)) { // Invalid text
+		return;
+	}
+
+	if (koto_utils_is_string_valid(self->text)) { // Text defined
 		g_free(self->text); // Free existing text
 	}
 
@@ -492,7 +520,6 @@ void koto_button_show_image(
 			gtk_box_prepend(GTK_BOX(self), self->button_pic); // Prepend to the box
 		}
 	} else { // From icon name
-
 		if (use_alt && ((self->alt_icon_name == NULL) || (strcmp(self->alt_icon_name, "") == 0))) { // Don't have an alt icon set
 			return;
 		} else if (!use_alt && ((self->icon_name == NULL) || (strcmp(self->icon_name, "") == 0))) { // Don't have icon set
@@ -503,7 +530,7 @@ void koto_button_show_image(
 		gchar * name = use_alt ? self->alt_icon_name : self->icon_name;
 
 		if (GTK_IS_IMAGE(self->button_pic)) {
-			gtk_image_set_from_icon_name(GTK_IMAGE(self->button_pic), name); // Just update the existing iamge
+			gtk_image_set_from_icon_name(GTK_IMAGE(self->button_pic), name); // Just update the existing image
 		} else { // Not an image
 			self->button_pic = gtk_image_new_from_icon_name(name); // Get our new image
 			gtk_box_prepend(GTK_BOX(self), self->button_pic); // Prepend to the box
