@@ -223,6 +223,10 @@ void koto_album_add_track(
 	for (current_genre_list = track_genres; current_genre_list != NULL; current_genre_list = current_genre_list->next) { // Iterate over each item in the track genres
 		gchar * track_genre = current_genre_list->data; // Get this genre
 
+		if (g_strcmp0(track_genre, "") == 0) {
+			continue;
+		}
+
 		if (koto_utils_string_contains_substring(existing_genres_as_string, track_genre)) { // Genres list contains this genre
 			continue;
 		}

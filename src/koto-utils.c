@@ -150,6 +150,10 @@ gchar * koto_utils_replace_string_all(
 	gchar * find,
 	gchar * repl
 ) {
+	if (!koto_utils_is_string_valid(str)) { // Not a valid string
+		return g_strdup("");
+	}
+
 	gchar ** split = g_strsplit(str, find, -1); // Split on find
 
 	guint split_len = g_strv_length(split);
@@ -177,6 +181,10 @@ GList * koto_utils_string_to_string_list(
 	gchar * sep
 ) {
 	GList * list = NULL;
+	if (!koto_utils_is_string_valid(s)) { // Provided string is not valid
+		return list;
+	}
+
 	gchar ** separated_strings = g_strsplit(s, sep, -1); // Split on separator for the string
 
 	for (guint i = 0; i < g_strv_length(separated_strings); i++) { // Iterate over each item
@@ -190,6 +198,11 @@ GList * koto_utils_string_to_string_list(
 
 gchar * koto_utils_unquote_string(gchar * s) {
 	gchar * new_s = NULL;
+
+	if (!koto_utils_is_string_valid(s)) { // Not a valid string
+		new_s = g_strdup("");
+		return new_s;
+	}
 
 	if (g_str_has_prefix(s, "'") && g_str_has_suffix(s, "'")) { // Begins and ends with '
 		new_s = g_utf8_substring(s, 1, g_utf8_strlen(s, -1) - 1); // Start at 1 and end at n-1

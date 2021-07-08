@@ -214,7 +214,7 @@ static void koto_playback_engine_init(KotoPlaybackEngine * self) {
 	self->monitor = gst_bus_new(); // Get the bus for the playbin
 
 	self->duration_query = gst_query_new_duration(GST_FORMAT_TIME); // Create our re-usable query for querying the duration
-	self->position_query = gst_query_new_position(GST_FORMAT_TIME); // Create our re-usable query for querying the position
+	self->position_query = gst_query_new_position(GST_FORMAT_DEFAULT); // Create our re-usable query for querying the position
 
 	if (GST_IS_BUS(self->monitor)) {
 		gst_bus_add_watch(self->monitor, koto_playback_engine_monitor_changed, self);
@@ -336,10 +336,16 @@ KotoTrack * koto_playback_engine_get_current_track(KotoPlaybackEngine * self) {
 }
 
 gint64 koto_playback_engine_get_duration(KotoPlaybackEngine * self) {
+	guint64 track_duration = koto_track_get_duration(self->current_track); // Get the current track's duration
+
+	if (track_duration != 0) { // Have a duration stored
+		return (gint64) track_duration; // Trust what we got from the ID3 data
+	}
+
 	gint64 duration = 0;
 
 	if (gst_element_query(self->player, self->duration_query)) { // Able to query our duration
-		gst_query_parse_duration(self->duration_query, NULL, &duration); // Get the duration
+		gst_query_parse_duration(self->duration_query, NULL, &duration); // Get the duration")
 		duration = duration / GST_SECOND; // Divide by NS to get seconds
 	}
 
@@ -357,7 +363,7 @@ gdouble koto_playback_engine_get_progress(KotoPlaybackEngine * self) {
 			return 0.0;
 		}
 
-		progress = gstprog / GST_SECOND; // Divide by GST_SECOND then again by 100.
+		progress = gstprog / 100000;
 	}
 
 	return progress;
@@ -388,7 +394,6 @@ gboolean koto_playback_engine_monitor_changed(
 	KotoPlaybackEngine * self = user_data;
 
 	switch (GST_MESSAGE_TYPE(msg)) {
-		case GST_MESSAGE_ASYNC_DONE:
 		case GST_MESSAGE_DURATION_CHANGED: { // Duration changed
 			koto_playback_engine_tick_duration(self);
 			koto_playback_engine_tick_track(self);
@@ -450,7 +455,16 @@ void koto_playback_engine_set_position(
 	KotoPlaybackEngine * self,
 	int position
 ) {
-	gst_element_seek_simple(self->playbin, GST_FORMAT_TIME, GST_SEEK_FLAG_FLUSH, position * GST_SECOND);
+	gst_element_seek(
+		self->playbin,
+		1.0,
+		GST_FORMAT_TIME,
+		GST_SEEK_FLAG_FLUSH | GST_SEEK_FLAG_ACCURATE,
+		GST_SEEK_TYPE_SET,
+		position * GST_SECOND,
+		GST_SEEK_TYPE_NONE,
+		-1
+	);
 }
 
 void koto_playback_engine_set_track_repeat(
