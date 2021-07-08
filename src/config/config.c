@@ -506,7 +506,12 @@ void koto_config_save(KotoConfig * self) {
 	gchar * playback_hash = g_strdup("playback");
 	gchar * ui_hash = g_strdup("ui");
 
-	gdouble current_playback_volume = koto_playback_engine_get_volume(playback_engine); // Get the last used volume in the playback engine
+	gdouble current_playback_volume = 1.0;
+
+	if (KOTO_IS_PLAYBACK_ENGINE(playback_engine)) { // Have a playback engine (useful since it may not be initialized before the config performs saving on first application load)
+		current_playback_volume = koto_playback_engine_get_volume(playback_engine); // Get the last used volume in the playback engine
+	}
+
 	self->playback_last_used_volume = current_playback_volume; // Update our value so we have it during save
 
 	int i;

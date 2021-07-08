@@ -34,6 +34,11 @@ gchar * koto_utils_gboolean_to_string(gboolean b);
 
 gchar * koto_utils_get_filename_without_extension(gchar * filename);
 
+gchar * koto_utils_join_string_list(
+	GList * list,
+	gchar * sep
+);
+
 gboolean koto_utils_is_string_valid(gchar * str);
 
 void koto_utils_mkdir(gchar * path);
@@ -47,6 +52,16 @@ gchar * koto_utils_replace_string_all(
 	gchar * str,
 	gchar * find,
 	gchar * repl
+);
+
+gboolean koto_utils_string_contains_substring(
+	gchar * s,
+	gchar * sub
+);
+
+GList * koto_utils_string_to_string_list(
+	gchar * s,
+	gchar * sep
 );
 
 gchar * koto_utils_unquote_string(gchar * s);

@@ -22,6 +22,7 @@
 #include "db/cartographer.h"
 #include "db/db.h"
 #include "db/loaders.h"
+#include "indexer/track-helpers.h"
 #include "playback/engine.h"
 #include "playback/media-keys.h"
 #include "playback/mimes.h"
@@ -88,6 +89,7 @@ int main (
 	gtk_init();
 	gst_init(&argc, &argv);
 
+	koto_track_helpers_init(); // Init our track helpers (primarily our genre replacement hashtable)
 	koto_paths_setup(); // Set up our required paths
 
 	supported_mimes_hash = g_hash_table_new(g_str_hash, g_str_equal);

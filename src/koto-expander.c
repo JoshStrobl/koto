@@ -205,7 +205,7 @@ static void koto_expander_init(KotoExpander * self) {
 
 // koto_expander_set_icon_name will set the icon for our inner KotoButton for this Expander
 void koto_expander_set_icon_name(
-	KotoExpander *self,
+	KotoExpander * self,
 	gchar * icon
 ) {
 	if (!KOTO_IS_EXPANDER(self)) { // Not a KotoExpander

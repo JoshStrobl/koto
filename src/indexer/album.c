@@ -39,6 +39,7 @@ enum {
 	PROP_ALBUM_NAME,
 	PROP_ART_PATH,
 	PROP_ARTIST_UUID,
+	PROP_ALBUM_PREPARED_GENRES,
 	N_PROPERTIES
 };
 
@@ -63,6 +64,8 @@ struct _KotoAlbum {
 	gchar * name;
 	gchar * art_path;
 	gchar * artist_uuid;
+
+	GList * genres;
 
 	GList * tracks;
 	GHashTable * paths;
@@ -147,6 +150,14 @@ static void koto_album_class_init(KotoAlbumClass * c) {
 		G_PARAM_CONSTRUCT_ONLY | G_PARAM_EXPLICIT_NOTIFY | G_PARAM_READWRITE
 	);
 
+	props[PROP_ALBUM_PREPARED_GENRES] = g_param_spec_string(
+		"preparsed-genres",
+		"Preparsed Genres",
+		"Preparsed Genres",
+		NULL,
+		G_PARAM_CONSTRUCT | G_PARAM_EXPLICIT_NOTIFY | G_PARAM_WRITABLE
+	);
+
 	g_object_class_install_properties(gobject_class, N_PROPERTIES, props);
 
 	album_signals[SIGNAL_TRACK_ADDED] = g_signal_new(
@@ -178,6 +189,7 @@ static void koto_album_class_init(KotoAlbumClass * c) {
 
 static void koto_album_init(KotoAlbum * self) {
 	self->has_album_art = FALSE;
+	self->genres = NULL;
 	self->tracks = NULL;
 	self->paths = g_hash_table_new(g_str_hash, g_str_equal);
 }
@@ -196,17 +208,34 @@ void koto_album_add_track(
 
 	gchar * track_uuid = koto_track_get_uuid(track);
 
-	if (g_list_index(self->tracks, track_uuid) == -1) { // Haven't already added the track
-		koto_cartographer_add_track(koto_maps, track); // Add the track to cartographer if necessary
-		self->tracks = g_list_insert_sorted_with_data(self->tracks, track_uuid, koto_track_helpers_sort_tracks_by_uuid, NULL);
-
-		g_signal_emit(
-			self,
-			album_signals[SIGNAL_TRACK_ADDED],
-			0,
-			track
-		);
+	if (g_list_index(self->tracks, track_uuid) != -1) { // Have added it already
+		return;
 	}
+
+	koto_cartographer_add_track(koto_maps, track); // Add the track to cartographer if necessary
+	self->tracks = g_list_insert_sorted_with_data(self->tracks, track_uuid, koto_track_helpers_sort_tracks_by_uuid, NULL);
+
+	GList * track_genres = koto_track_get_genres(track); // Get the genres for the track
+	GList * current_genre_list;
+
+	gchar * existing_genres_as_string = koto_utils_join_string_list(self->genres, ";");
+
+	for (current_genre_list = track_genres; current_genre_list != NULL; current_genre_list = current_genre_list->next) { // Iterate over each item in the track genres
+		gchar * track_genre = current_genre_list->data; // Get this genre
+
+		if (koto_utils_string_contains_substring(existing_genres_as_string, track_genre)) { // Genres list contains this genre
+			continue;
+		}
+
+		self->genres = g_list_append(self->genres, g_strdup(track_genre)); // Duplicate the genre and add it to our list
+	}
+
+	g_signal_emit(
+		self,
+		album_signals[SIGNAL_TRACK_ADDED],
+		0,
+		track
+	);
 }
 
 void koto_album_commit(KotoAlbum * self) {
@@ -214,17 +243,22 @@ void koto_album_commit(KotoAlbum * self) {
 		koto_album_set_album_art(self, ""); // Set to an empty string
 	}
 
+	gchar * genres_string = koto_utils_join_string_list(self->genres, ";");
+
 	gchar * commit_op = g_strdup_printf(
-		"INSERT INTO albums(id, artist_id, name, art_path)"
-		"VALUES('%s', '%s', quote(\"%s\"), quote(\"%s\"))"
-		"ON CONFLICT(id) DO UPDATE SET artist_id=excluded.artist_id, name=excluded.name, art_path=excluded.art_path;",
+		"INSERT INTO albums(id, artist_id, name, art_path, genres)"
+		"VALUES('%s', '%s', quote(\"%s\"), quote(\"%s\"), '%s')"
+		"ON CONFLICT(id) DO UPDATE SET artist_id=excluded.artist_id, name=excluded.name, art_path=excluded.art_path, genres=excluded.genres;",
 		self->uuid,
 		self->artist_uuid,
 		self->name,
-		self->art_path
+		self->art_path,
+		genres_string
 	);
 
 	new_transaction(commit_op, "Failed to write our album to the database", FALSE);
+
+	g_free(genres_string);
 
 	GHashTableIter paths_iter;
 	g_hash_table_iter_init(&paths_iter, self->paths); // Create an iterator for our paths
@@ -302,6 +336,14 @@ void koto_album_find_album_art(KotoAlbum * self) {
 	closedir(dir);
 }
 
+GList * koto_album_get_genres(KotoAlbum * self) {
+	if (!KOTO_IS_ALBUM(self)) { // Not an album
+		return NULL;
+	}
+
+	return self->genres;
+}
+
 static void koto_album_get_property(
 	GObject * obj,
 	guint prop_id,
@@ -356,6 +398,9 @@ static void koto_album_set_property(
 			break;
 		case PROP_ARTIST_UUID:
 			koto_album_set_artist_uuid(self, g_value_get_string(val));
+			break;
+		case PROP_ALBUM_PREPARED_GENRES:
+			koto_album_set_preparsed_genres(self, g_strdup(g_value_get_string(val)));
 			break;
 		default:
 			G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, prop_id, spec);
@@ -572,6 +617,30 @@ void koto_album_set_as_current_playlist(KotoAlbum * self) {
 	koto_playlist_apply_model(new_album_playlist, KOTO_PREFERRED_MODEL_TYPE_DEFAULT); // Ensure we are using our default model
 	koto_current_playlist_set_playlist(current_playlist, new_album_playlist); // Set our new current playlist
 }
+
+void koto_album_set_preparsed_genres(
+	KotoAlbum * self,
+	gchar * genrelist
+) {
+	if (!KOTO_IS_ALBUM(self)) { // Not an album
+		return;
+	}
+
+	if (!koto_utils_is_string_valid(genrelist)) { // If it is an empty string
+		return;
+	}
+
+	GList * preparsed_genres_list = koto_utils_string_to_string_list(genrelist, ";");
+
+	if (g_list_length(preparsed_genres_list) == 0) { // No genres
+		g_list_free(preparsed_genres_list);
+		return;
+	}
+
+	// TODO: Do a pass on in first memory optimization phase to ensure string elements are freed.
+	g_list_free_full(self->genres, NULL); // Free the existing genres list
+	self->genres = preparsed_genres_list;
+};
 
 KotoAlbum * koto_album_new(gchar * artist_uuid) {
 	if (!koto_utils_is_string_valid(artist_uuid)) { // Invalid artist UUID provided

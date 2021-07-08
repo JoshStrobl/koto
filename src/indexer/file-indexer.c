@@ -72,12 +72,12 @@ void index_folder(
 				KotoAlbum * album = koto_album_new(artist_uuid);
 
 				koto_album_set_path(album, self, full_path);
-				koto_album_commit(album); // Save to database immediately
 
 				koto_cartographer_add_album(koto_maps, album); // Add our album to the cartographer
 				koto_artist_add_album(artist, album); // Add the album
 
 				index_folder(self, full_path, depth); // Index inside the album
+				koto_album_commit(album); // Save to database immediately
 				g_free(artist_name);
 			} else if (depth == 3) { // Possibly CD within album
 				gchar ** split = g_strsplit(full_path, G_DIR_SEPARATOR_S, -1);

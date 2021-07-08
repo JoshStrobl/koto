@@ -133,6 +133,7 @@ void koto_button_show_image(
 );
 
 void koto_button_unflatten(KotoButton * self);
+
 void koto_button_unset_pseudoactive_styling(KotoButton * self);
 
 G_END_DECLS

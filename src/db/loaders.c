@@ -116,6 +116,7 @@ int process_albums(
 	gchar * artist_uuid = g_strdup(koto_utils_unquote_string(fields[1]));
 	gchar * album_name = g_strdup(koto_utils_unquote_string(fields[2]));
 	gchar * album_art = (fields[3] != NULL) ? g_strdup(koto_utils_unquote_string(fields[3])) : NULL;
+	gchar * album_genres = (fields[4] != NULL) ? g_strdup(koto_utils_unquote_string(fields[4])) : NULL;
 
 	KotoAlbum * album = koto_album_new_with_uuid(artist, album_uuid); // Create our album
 
@@ -125,6 +126,8 @@ int process_albums(
 		album_name,         // Set name
 		"art-path",
 		album_art,             // Set art path if any
+		"preparsed-genres",
+		album_genres,
 		NULL
 	);
 
@@ -134,6 +137,7 @@ int process_albums(
 	g_free(album_uuid);
 	g_free(artist_uuid);
 	g_free(album_name);
+	g_free(album_genres);
 
 	if (album_art != NULL) {
 		g_free(album_art);
@@ -224,7 +228,9 @@ int process_tracks(
 	gchar * album_uuid = g_strdup(koto_utils_unquote_string(fields[2]));
 	gchar * name = g_strdup(koto_utils_unquote_string(fields[3]));
 	guint * disc_num = (guint*) g_ascii_strtoull(fields[4], NULL, 10);
-	guint * position = (guint*) g_ascii_strtoull(fields[5], NULL, 10);
+	guint64 * position = (guint64*) g_ascii_strtoull(fields[5], NULL, 10);
+	guint64 * duration = (guint64*) g_ascii_strtoull(fields[6], NULL, 10);
+	gchar * genres = g_strdup(koto_utils_unquote_string(fields[7]));
 
 	KotoTrack * track = koto_track_new_with_uuid(track_uuid); // Create our file
 
@@ -240,13 +246,22 @@ int process_tracks(
 		disc_num,
 		"position",
 		position,
+		"duration",
+		duration,
+		"preparsed-genres",
+		genres,
 		NULL
 	);
+
+	g_free(name);
 
 	int track_paths = sqlite3_exec(koto_db, g_strdup_printf("SELECT id, path FROM libraries_tracks WHERE track_id=\"%s\"", track_uuid), process_track_paths, track, NULL); // Process all pathes associated with the track
 
 	if (track_paths != SQLITE_OK) { // Failed to read the paths
 		g_warning("Failed to read paths associated with track %s: %s", track_uuid, sqlite3_errmsg(koto_db));
+		g_free(track_uuid);
+		g_free(artist_uuid);
+		g_free(album_uuid);
 		return 1;
 	}
 
@@ -264,7 +279,6 @@ int process_tracks(
 	g_free(track_uuid);
 	g_free(artist_uuid);
 	g_free(album_uuid);
-	g_free(name);
 
 	return 0;
 }

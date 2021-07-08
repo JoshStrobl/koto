@@ -250,6 +250,11 @@ void koto_album_set_path(
 	const gchar * fixed_path
 );
 
+void koto_album_set_preparsed_genres(
+	KotoAlbum * self,
+	gchar * genrelist
+);
+
 /**
  * File / Track Functions
  **/
@@ -267,13 +272,17 @@ void koto_track_commit(KotoTrack * self);
 
 guint koto_track_get_disc_number(KotoTrack * self);
 
+guint64 koto_track_get_duration(KotoTrack * self);
+
+GList * koto_track_get_genres(KotoTrack * self);
+
 GVariant * koto_track_get_metadata_vardict(KotoTrack * self);
 
 gchar * koto_track_get_path(KotoTrack * self);
 
 gchar * koto_track_get_name(KotoTrack * self);
 
-guint koto_track_get_position(KotoTrack * self);
+guint64 koto_track_get_position(KotoTrack * self);
 
 gchar * koto_track_get_uniqueish_key(KotoTrack * self);
 
@@ -305,6 +314,16 @@ void koto_track_set_cd(
 	guint cd
 );
 
+void koto_track_set_duration(
+	KotoTrack * self,
+	guint64 duration
+);
+
+void koto_track_set_genres(
+	KotoTrack * self,
+	char * genrelist
+);
+
 void koto_track_set_parsed_name(
 	KotoTrack * self,
 	gchar * new_parsed_name
@@ -318,7 +337,12 @@ void koto_track_set_path(
 
 void koto_track_set_position(
 	KotoTrack * self,
-	guint pos
+	guint64 pos
+);
+
+void koto_track_set_preparsed_genres(
+	KotoTrack * self,
+	gchar * genrelist
 );
 
 void koto_track_update_metadata(KotoTrack * self);

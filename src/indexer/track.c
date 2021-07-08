@@ -37,8 +37,10 @@ struct _KotoTrack {
 
 	gchar * parsed_name;
 	guint cd;
-	guint position;
-	guint * playback_position;
+	guint64 position;
+	guint64 duration;
+	guint64 * playback_position;
+	GList * genres;
 
 	gboolean do_initial_index;
 };
@@ -54,7 +56,9 @@ enum {
 	PROP_PARSED_NAME,
 	PROP_CD,
 	PROP_POSITION,
+	PROP_DURATION,
 	PROP_PLAYBACK_POSITION,
+	PROP_PREPARSED_GENRES,
 	N_PROPERTIES
 };
 
@@ -133,31 +137,52 @@ static void koto_track_class_init(KotoTrackClass * c) {
 		G_PARAM_CONSTRUCT | G_PARAM_EXPLICIT_NOTIFY | G_PARAM_READWRITE
 	);
 
-	props[PROP_POSITION] = g_param_spec_uint(
+	props[PROP_POSITION] = g_param_spec_uint64(
 		"position",
 		"Position in Audiobook, Album, etc.",
 		"Position in Audiobook, Album, etc.",
 		0,
-		G_MAXUINT16,
+		G_MAXUINT64,
 		0,
 		G_PARAM_CONSTRUCT | G_PARAM_EXPLICIT_NOTIFY | G_PARAM_READWRITE
 	);
 
-	props[PROP_PLAYBACK_POSITION] = g_param_spec_uint(
+	props[PROP_DURATION] = g_param_spec_uint64(
+		"duration",
+		"Duration of Track",
+		"Duration of Track",
+		0,
+		G_MAXUINT64,
+		0,
+		G_PARAM_CONSTRUCT | G_PARAM_EXPLICIT_NOTIFY | G_PARAM_READWRITE
+	);
+
+	props[PROP_PLAYBACK_POSITION] = g_param_spec_uint64(
 		"playback-position",
 		"Current playback position",
 		"Current playback position",
 		0,
-		G_MAXUINT16,
+		G_MAXUINT64,
 		0,
 		G_PARAM_CONSTRUCT | G_PARAM_EXPLICIT_NOTIFY | G_PARAM_READWRITE
+	);
+
+	props[PROP_PREPARSED_GENRES] = g_param_spec_string(
+		"preparsed-genres",
+		"Preparsed Genres",
+		"Preparsed Genres",
+		NULL,
+		G_PARAM_CONSTRUCT | G_PARAM_EXPLICIT_NOTIFY | G_PARAM_WRITABLE
 	);
 
 	g_object_class_install_properties(gobject_class, N_PROPERTIES, props);
 }
 
 static void koto_track_init(KotoTrack * self) {
+	self->duration = 0; // Initialize our duration
+	self->genres = NULL; // Initialize our genres list
 	self->paths = g_hash_table_new(g_str_hash, g_str_equal); // Create our hash table of paths
+	self->position = 0; // Initialize our duration
 }
 
 static void koto_track_get_property(
@@ -226,10 +251,16 @@ static void koto_track_set_property(
 			koto_track_set_cd(self, g_value_get_uint(val));
 			break;
 		case PROP_POSITION:
-			koto_track_set_position(self, g_value_get_uint(val));
+			koto_track_set_position(self, g_value_get_uint64(val));
 			break;
 		case PROP_PLAYBACK_POSITION:
-			self->playback_position = GUINT_TO_POINTER(g_value_get_uint(val));
+			self->playback_position = GUINT_TO_POINTER(g_value_get_uint64(val));
+			break;
+		case PROP_DURATION:
+			koto_track_set_duration(self, g_value_get_uint64(val));
+			break;
+		case PROP_PREPARSED_GENRES:
+			koto_track_set_preparsed_genres(self, g_strdup(g_value_get_string(val)));
 			break;
 		default:
 			G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, prop_id, spec);
@@ -250,9 +281,12 @@ void koto_track_commit(KotoTrack * self) {
 		self->album_uuid = g_strdup("");
 	}
 
-	gchar * commit_msg = "INSERT INTO tracks(id, artist_id, album_id, name, disc, position)" \
-						 "VALUES('%s', '%s', '%s', quote(\"%s\"), %d, %d)" \
-						 "ON CONFLICT(id) DO UPDATE SET album_id=excluded.album_id, artist_id=excluded.artist_id, name=excluded.name, disc=excluded.disc, position=excluded.position;";
+	gchar * commit_msg = "INSERT INTO tracks(id, artist_id, album_id, name, disc, position, duration, genres)" \
+						 "VALUES('%s', '%s', '%s', quote(\"%s\"), %d, %d, %d, '%s')" \
+						 "ON CONFLICT(id) DO UPDATE SET album_id=excluded.album_id, artist_id=excluded.artist_id, name=excluded.name, disc=excluded.disc, position=excluded.position, duration=excluded.duration, genres=excluded.genres;";
+
+	// Combine our list items into a semi-colon separated string
+	gchar * genres = koto_utils_join_string_list(self->genres, ";"); // Join our GList of strings into a single
 
 	gchar * commit_op = g_strdup_printf(
 		commit_msg,
@@ -261,12 +295,16 @@ void koto_track_commit(KotoTrack * self) {
 		self->album_uuid,
 		g_strescape(self->parsed_name, NULL),
 		(int) self->cd,
-		(int) self->position
+		(int) self->position,
+		(int) self->duration,
+		genres
 	);
 
 	if (new_transaction(commit_op, "Failed to write our file to the database", FALSE) != SQLITE_OK) {
-		g_message("Failed with song: %s", self->parsed_name);
+		return;
 	}
+
+	g_free(genres); // Free the genres string
 
 	GHashTableIter paths_iter;
 	g_hash_table_iter_init(&paths_iter, self->paths); // Create an iterator for our paths
@@ -290,6 +328,14 @@ void koto_track_commit(KotoTrack * self) {
 
 guint koto_track_get_disc_number(KotoTrack * self) {
 	return KOTO_IS_TRACK(self) ? self->cd : 1;
+}
+
+guint64 koto_track_get_duration(KotoTrack * self) {
+	return KOTO_IS_TRACK(self) ? self->duration : 0;
+}
+
+GList * koto_track_get_genres(KotoTrack * self) {
+	return KOTO_IS_TRACK(self) ? self->genres : NULL;
 }
 
 GVariant * koto_track_get_metadata_vardict(KotoTrack * self) {
@@ -374,7 +420,7 @@ gchar * koto_track_get_path(KotoTrack * self) {
 	return path;
 }
 
-guint koto_track_get_position(KotoTrack * self) {
+guint64 koto_track_get_position(KotoTrack * self) {
 	return KOTO_IS_TRACK(self) ? self->position : 0;
 }
 
@@ -473,6 +519,10 @@ void koto_track_set_cd(
 	KotoTrack * self,
 	guint cd
 ) {
+	if (!KOTO_IS_TRACK(self)) {
+		return;
+	}
+
 	if (cd == 0) { // No change really
 		return;
 	}
@@ -481,10 +531,68 @@ void koto_track_set_cd(
 	g_object_notify_by_pspec(G_OBJECT(self), props[PROP_CD]);
 }
 
+void koto_track_set_duration(
+	KotoTrack * self,
+	guint64 duration
+) {
+	if (!KOTO_IS_TRACK(self)) {
+		return;
+	}
+
+	if (duration == 0) {
+		return;
+	}
+
+	self->duration = duration;
+}
+
+void koto_track_set_genres(
+	KotoTrack * self,
+	char * genrelist
+) {
+	if (!KOTO_IS_TRACK(self)) {
+		return;
+	}
+
+	if (!koto_utils_is_string_valid((gchar*) genrelist)) { // If it is an empty string
+		return;
+	}
+
+	gchar ** genres = g_strsplit(genrelist, ";", -1); // Split on semicolons for each genre, e.g. Electronic;Rock
+	guint len = g_strv_length(genres);
+
+	if (len == 0) { // No genres
+		g_strfreev(genres); // Free the list
+		return;
+	}
+
+	for (guint i = 0; i < len; i++) { // Iterate over each item
+		gchar * genre = genres[i]; // Get the genre
+		gchar * lowercased_genre = g_utf8_strdown(g_strstrip(genre), -1); // Lowercase the genre
+
+		gchar * lowercased_hyphenated_genre = koto_utils_replace_string_all(lowercased_genre, " ", "-");
+		g_free(lowercased_genre); // Free the lowercase genre string since we no longer need it
+
+		gchar * corrected_genre = koto_track_helpers_get_corrected_genre(lowercased_hyphenated_genre); // Get any corrected genre
+
+		if (g_list_index(self->genres, corrected_genre) == -1) { // Don't have this genre added
+			self->genres = g_list_append(self->genres, g_strdup(corrected_genre)); // Add the genre to our list
+		}
+
+		g_free(lowercased_hyphenated_genre); // Free our remaining string
+	}
+
+	g_strfreev(genres); // Free the list of genres locally
+}
+
 void koto_track_set_parsed_name(
 	KotoTrack * self,
 	gchar * new_parsed_name
 ) {
+	if (!KOTO_IS_TRACK(self)) {
+		return;
+	}
+
 	if (!koto_utils_is_string_valid(new_parsed_name)) {
 		return;
 	}
@@ -529,7 +637,7 @@ void koto_track_set_path(
 
 void koto_track_set_position(
 	KotoTrack * self,
-	guint pos
+	guint64 pos
 ) {
 	if (pos == 0) { // No position change really
 		return;
@@ -550,7 +658,11 @@ void koto_track_update_metadata(KotoTrack * self) {
 
 	if ((t_file != NULL) && taglib_file_is_valid(t_file)) { // If we got the taglib file and it is valid
 		TagLib_Tag * tag = taglib_file_tag(t_file); // Get our tag
+		koto_track_set_genres(self, taglib_tag_genre(tag)); // Set our genres to any genres listed for the track
 		koto_track_set_position(self, (uint) taglib_tag_track(tag)); // Get the track, convert to uint and cast as a pointer
+
+		const TagLib_AudioProperties * tag_props = taglib_file_audioproperties(t_file); // Get the audio properties of the file
+		koto_track_set_duration(self, taglib_audioproperties_length(tag_props)); // Get the length of the track and set it as our duration
 	} else { // Failed to get tag info
 		guint64 position = koto_track_helpers_get_position_based_on_file_name(g_path_get_basename(optimal_track_path)); // Get the likely position
 		koto_track_set_position(self, position); // Set our position
@@ -558,6 +670,30 @@ void koto_track_update_metadata(KotoTrack * self) {
 
 	taglib_tag_free_strings(); // Free strings
 	taglib_file_free(t_file); // Free the file
+}
+
+void koto_track_set_preparsed_genres(
+	KotoTrack * self,
+	gchar * genrelist
+) {
+	if (!KOTO_IS_TRACK(self)) {
+		return;
+	}
+
+	if (!koto_utils_is_string_valid(genrelist)) { // If it is an empty string
+		return;
+	}
+
+	GList * preparsed_genres_list = koto_utils_string_to_string_list(genrelist, ";");
+
+	if (g_list_length(preparsed_genres_list) == 0) { // No genres
+		g_list_free(preparsed_genres_list);
+		return;
+	}
+
+	// TODO: Do a pass on in first memory optimization phase to ensure string elements are freed.
+	g_list_free_full(self->genres, NULL); // Free the existing genres list
+	self->genres = preparsed_genres_list;
 }
 
 KotoTrack * koto_track_new(

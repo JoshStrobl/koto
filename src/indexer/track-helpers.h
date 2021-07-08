@@ -17,6 +17,10 @@
 
 #include <glib-2.0/glib.h>
 
+void koto_track_helpers_init();
+
+gchar * koto_track_helpers_get_corrected_genre(gchar * original_genre);
+
 gchar * koto_track_helpers_get_name_for_file(
 	const gchar * path,
 	gchar * optional_artist_name

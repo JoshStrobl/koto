@@ -36,7 +36,7 @@ KotoExpander * koto_expander_new_with_button(
 GtkWidget * koto_expander_get_content(KotoExpander * self);
 
 void koto_expander_set_icon_name(
-	KotoExpander *self,
+	KotoExpander * self,
 	gchar * icon
 );
 

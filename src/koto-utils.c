@@ -20,6 +20,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include "koto-utils.h"
 
 extern GtkWindow * main_window;
 
@@ -102,6 +103,32 @@ gchar * koto_utils_get_filename_without_extension(gchar * filename) {
 	return stripped_file_name;
 }
 
+gchar * koto_utils_join_string_list (
+	GList * list,
+	gchar * sep
+) {
+	gchar * liststring = NULL;
+	GList * cur_list;
+	for (cur_list = list; cur_list != NULL; cur_list = cur_list->next) { // For each item in the list
+		gchar * current_item = cur_list->data;
+		if (!koto_utils_is_string_valid(current_item)) { // Not a valid string
+			continue;
+		}
+
+		gchar * item_plus_sep = g_strdup_printf("%s%s", current_item, sep);
+
+		if (koto_utils_is_string_valid(liststring)) { // Is a valid string
+			gchar * new_string = g_strconcat(liststring, item_plus_sep, NULL);
+			g_free(liststring);
+			liststring = new_string;
+		} else { // Don't have any content yet
+			liststring = item_plus_sep;
+		}
+	}
+
+	return (liststring == NULL) ? g_strdup("") : liststring;
+}
+
 gboolean koto_utils_is_string_valid(gchar * str) {
 	return ((str != NULL) && (g_strcmp0(str, "") != 0));
 }
@@ -123,15 +150,42 @@ gchar * koto_utils_replace_string_all(
 	gchar * find,
 	gchar * repl
 ) {
-	gchar * cleaned_string = "";
 	gchar ** split = g_strsplit(str, find, -1); // Split on find
 
-	for (guint i = 0; i < g_strv_length(split); i++) { // For each split
-		cleaned_string = g_strjoin(repl, cleaned_string, split[i], NULL); // Join the strings with our replace string
+	guint split_len = g_strv_length(split);
+
+	if (split_len == 1) { // Only one item
+		g_strfreev(split);
+		return g_strdup(str); // Just set to the string we were provided
 	}
 
-	g_strfreev(split);
-	return cleaned_string;
+	return g_strdup(g_strjoinv(repl, split));
+}
+
+gboolean koto_utils_string_contains_substring(
+	gchar * s,
+	gchar * sub
+) {
+	gchar ** separated_string = g_strsplit(s, sub, -1); // Split on our substring
+	gboolean contains = (g_strv_length(separated_string) > 1);
+	g_strfreev(separated_string);
+	return contains;
+}
+
+GList * koto_utils_string_to_string_list(
+	gchar * s,
+	gchar * sep
+) {
+	GList * list = NULL;
+	gchar ** separated_strings = g_strsplit(s, sep, -1); // Split on separator for the string
+
+	for (guint i = 0; i < g_strv_length(separated_strings); i++) { // Iterate over each item
+		gchar * item = separated_strings[i];
+		list = g_list_append(list, g_strdup(item));
+	}
+
+	g_strfreev(separated_strings); // Free our strings
+	return list;
 }
 
 gchar * koto_utils_unquote_string(gchar * s) {

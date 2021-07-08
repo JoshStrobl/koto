@@ -39,8 +39,8 @@ void close_db() {
 
 int create_db_tables() {
 	gchar * tables_creation_queries = "CREATE TABLE IF NOT EXISTS artists(id string UNIQUE PRIMARY KEY, name string, art_path string);"
-									  "CREATE TABLE IF NOT EXISTS albums(id string UNIQUE PRIMARY KEY, artist_id string, name string, art_path string, FOREIGN KEY(artist_id) REFERENCES artists(id) ON DELETE CASCADE);"
-									  "CREATE TABLE IF NOT EXISTS tracks(id string UNIQUE PRIMARY KEY, artist_id string, album_id string, name string, disc int, position int, FOREIGN KEY(artist_id) REFERENCES artists(id) ON DELETE CASCADE);"
+									  "CREATE TABLE IF NOT EXISTS albums(id string UNIQUE PRIMARY KEY, artist_id string, name string, art_path string, genres string, FOREIGN KEY(artist_id) REFERENCES artists(id) ON DELETE CASCADE);"
+									  "CREATE TABLE IF NOT EXISTS tracks(id string UNIQUE PRIMARY KEY, artist_id string, album_id string, name string, disc int, position int, duration int, genres string, FOREIGN KEY(artist_id) REFERENCES artists(id) ON DELETE CASCADE);"
 									  "CREATE TABLE IF NOT EXISTS libraries_albums(id string, album_id string, path string, PRIMARY KEY (id, album_id) FOREIGN KEY(album_id) REFERENCES albums(id) ON DELETE CASCADE);"
 									  "CREATE TABLE IF NOT EXISTS libraries_artists(id string, artist_id string, path string, PRIMARY KEY(id, artist_id) FOREIGN KEY(artist_id) REFERENCES artists(id) ON DELETE CASCADE);"
 									  "CREATE TABLE IF NOT EXISTS libraries_tracks(id string, track_id string, path string, PRIMARY KEY(id, track_id) FOREIGN KEY(track_id) REFERENCES tracks(id) ON DELETE CASCADE);"

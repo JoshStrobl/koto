@@ -24,6 +24,25 @@
 
 extern KotoCartographer * koto_maps;
 
+GHashTable * genre_replacements;
+
+void koto_track_helpers_init() {
+	genre_replacements = g_hash_table_new(g_str_hash, g_str_equal);
+
+	gchar * corrected_genre_hiphop = g_strdup("hip-hop");
+	gchar * correct_genre_indie = g_strdup("indie");
+	gchar * correct_genre_scifi = g_strdup("sci-fi");
+
+	g_hash_table_insert(genre_replacements, g_strdup("alternative/indie"), correct_genre_indie); // Change Alternative/Indie (lowercased) to indie
+	g_hash_table_insert(genre_replacements, g_strdup("rap-&-hip-hop"), corrected_genre_hiphop); // Change rap-&-hip-hop to just hip-hop
+	g_hash_table_insert(genre_replacements, g_strdup("science-fiction"), correct_genre_scifi); // Change science-fiction to sci-fi
+}
+
+gchar * koto_track_helpers_get_corrected_genre(gchar * original_genre) {
+	gchar * lookedup_genre = g_hash_table_lookup(genre_replacements, original_genre); // Look up the genre
+	return koto_utils_is_string_valid(lookedup_genre) ? lookedup_genre : original_genre;
+}
+
 gchar * koto_track_helpers_get_name_for_file(
 	const gchar * path,
 	gchar * optional_artist_name
