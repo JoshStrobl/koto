@@ -1,11 +1,29 @@
 .primary-nav {
-	padding: 20px;
+	padding: 10px 0;
 
 	& > viewport > box {
 		& > .koto-button, // Direct buttons like Home
 		& > .expander > .expander-header { // Expander Headers
 			font-size: large;
-			padding: 10px 0;
+			padding-top: 10px;
+			padding-bottom: 10px;
+		}
+
+		& > .koto-button, // Direct buttons like Home
+		& > .expander > .expander-header, // Expander Headers
+		& > .expander revealer .koto-button { // Expander revealer Buttons
+			margin-left: 10px;
+			margin-right: 10px;
+			padding-left: 10px;
+			padding-right: 10px;
+		}
+
+		& > .koto-button, // Direct buttons like Home
+		& > .expander revealer .koto-button { // Expander revealer Buttons
+			&.pseudoactive { // When hovering or explicit request to show as active
+				background-color: $primary-nav-button-active-color;
+				border-radius: 10px;
+			}
 		}
 
 		& > .expander {

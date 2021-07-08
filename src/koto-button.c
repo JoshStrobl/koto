@@ -191,6 +191,11 @@ static void koto_button_init(KotoButton * self) {
 
 	gtk_widget_add_controller(GTK_WIDGET(self), GTK_EVENT_CONTROLLER(self->left_click_gesture)); // Add our left click gesture
 	gtk_widget_add_controller(GTK_WIDGET(self), GTK_EVENT_CONTROLLER(self->right_click_gesture)); // Add our right click gesture
+
+	GtkEventController * motion = gtk_event_controller_motion_new(); // Create a new motion controller
+	g_signal_connect(motion, "enter", G_CALLBACK(koto_button_handle_mouse_enter), self); // Handle mouse enter on motion
+	g_signal_connect(motion, "leave", G_CALLBACK(koto_button_handle_mouse_leave), self); // Handle mouse leave on motion
+	gtk_widget_add_controller(GTK_WIDGET(self), motion);
 }
 
 static void koto_button_constructed(GObject * obj) {
@@ -308,6 +313,40 @@ void koto_button_flip(KotoButton * self) {
 	koto_button_show_image(self, !self->currently_showing_alt);
 }
 
+void koto_button_handle_mouse_enter(
+	GtkEventControllerMotion * controller,
+	double x,
+	double y,
+	gpointer user_data
+) {
+	(void) controller;
+	(void) x;
+	(void) y;
+
+	KotoButton * self = user_data;
+
+	if (!KOTO_IS_BUTTON(self)) { // Not a button
+		return;
+	}
+
+	koto_button_set_pseudoactive_styling(self); // Set to be pseudoactive in styling
+}
+
+void koto_button_handle_mouse_leave(
+	GtkEventControllerMotion * controller,
+	gpointer user_data
+) {
+	(void) controller;
+
+	KotoButton * self = user_data;
+
+	if (!KOTO_IS_BUTTON(self)) { // Not a button
+		return;
+	}
+
+	koto_button_unset_pseudoactive_styling(self); // Unset the pseudoactive styling
+}
+
 void koto_button_hide_image(KotoButton * self) {
 	if (!KOTO_IS_BUTTON(self)) { // Not a button
 		return;
@@ -316,6 +355,18 @@ void koto_button_hide_image(KotoButton * self) {
 	if (GTK_IS_WIDGET(self->button_pic)) { // Is a widget
 		gtk_widget_hide(self->button_pic);
 	}
+}
+
+void koto_button_set_pseudoactive_styling(KotoButton * self) {
+	if (!KOTO_IS_BUTTON(self)) { // Not a button
+		return;
+	}
+
+	if (gtk_widget_has_css_class(GTK_WIDGET(self), "pseudoactive")) { // Already is pseudoactive
+		return;
+	}
+
+	gtk_widget_add_css_class(GTK_WIDGET(self), "pseudoactive"); // Set to pseudoactive
 }
 
 void koto_button_set_badge_text(
@@ -548,6 +599,18 @@ void koto_button_unflatten(KotoButton * self) {
 	}
 
 	gtk_widget_remove_css_class(GTK_WIDGET(self), "flat");
+}
+
+void koto_button_unset_pseudoactive_styling(KotoButton * self) {
+	if (!KOTO_IS_BUTTON(self)) {
+		return;
+	}
+
+	if (!gtk_widget_has_css_class(GTK_WIDGET(self), "pseudoactive")) { // Don't have the CSS class
+		return;
+	}
+
+	gtk_widget_remove_css_class(GTK_WIDGET(self), "pseudoactive"); // Remove pseudoactive class
 }
 
 KotoButton * koto_button_new_plain(gchar * label) {

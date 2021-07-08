@@ -75,7 +75,21 @@ void koto_button_add_click_handler(
 
 void koto_button_flip(KotoButton * self);
 
+void koto_button_handle_mouse_enter(
+	GtkEventControllerMotion * controller,
+	double x,
+	double y,
+	gpointer user_data
+);
+
+void koto_button_handle_mouse_leave(
+	GtkEventControllerMotion * controller,
+	gpointer user_data
+);
+
 void koto_button_hide_image(KotoButton * self);
+
+void koto_button_set_pseudoactive_styling(KotoButton * self);
 
 void koto_button_set_badge_text(
 	KotoButton * self,
@@ -119,5 +133,6 @@ void koto_button_show_image(
 );
 
 void koto_button_unflatten(KotoButton * self);
+void koto_button_unset_pseudoactive_styling(KotoButton * self);
 
 G_END_DECLS
