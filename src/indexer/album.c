@@ -24,7 +24,7 @@
 #include "../playlist/current.h"
 #include "../playlist/playlist.h"
 #include "../koto-utils.h"
-#include "structs.h"
+#include "album-playlist-funcs.h"
 #include "track-helpers.h"
 
 extern KotoCartographer * koto_maps;
@@ -282,6 +282,42 @@ void koto_album_commit(KotoAlbum * self) {
 
 		new_transaction(commit_op, "Failed to add this path for the album", FALSE);
 	}
+}
+
+KotoPlaylist * koto_album_create_playlist(KotoAlbum * self) {
+	if (!KOTO_IS_ALBUM(self)) { // Not an album
+		return NULL;
+	}
+
+	if (self->tracks == NULL) { // No files to add to the playlist
+		return NULL;
+	}
+
+	KotoPlaylist * new_album_playlist = koto_playlist_new(); // Create a new playlist
+
+	g_object_set(new_album_playlist, "ephemeral", TRUE, NULL); // Set as ephemeral / temporary
+
+	// The following section effectively reverses our tracks, so the first is now last.
+	// It then adds them in reverse order, since our playlist add function will prepend to our queue
+	// This enables the preservation and defaulting of "newest" first everywhere else, while in albums preserving the rightful order of the album
+	// e.g. first track (0) being added last is actually first in the playlist's tracks
+	GList * reversed_tracks = g_list_copy(self->tracks); // Copy our tracks so we can reverse the order
+
+	reversed_tracks = g_list_reverse(reversed_tracks); // Actually reverse it
+
+	GList * t;
+
+	for (t = reversed_tracks; t != NULL; t = t->next) { // For each of the tracks
+		gchar * track_uuid = t->data;
+		koto_playlist_add_track_by_uuid(new_album_playlist, track_uuid, FALSE, FALSE); // Add the UUID, skip commit to table since it is temporary
+	}
+
+	g_list_free(t);
+	g_list_free(reversed_tracks);
+
+	koto_playlist_apply_model(new_album_playlist, KOTO_PREFERRED_MODEL_TYPE_DEFAULT); // Ensure we are using our default model
+
+	return new_album_playlist;
 }
 
 void koto_album_find_album_art(KotoAlbum * self) {
@@ -588,38 +624,21 @@ void koto_album_set_artist_uuid(
 }
 
 void koto_album_set_as_current_playlist(KotoAlbum * self) {
-	if (!KOTO_IS_ALBUM(self)) { // Not an album
+	if (!KOTO_IS_ALBUM(self)) {
 		return;
 	}
 
-	if (self->tracks == NULL) { // No files to add to the playlist
+	if (!KOTO_IS_CURRENT_PLAYLIST(current_playlist)) {
 		return;
 	}
 
-	KotoPlaylist * new_album_playlist = koto_playlist_new(); // Create a new playlist
+	KotoPlaylist * album_playlist = koto_album_create_playlist(self);
 
-	g_object_set(new_album_playlist, "ephemeral", TRUE, NULL); // Set as ephemeral / temporary
-
-	// The following section effectively reverses our tracks, so the first is now last.
-	// It then adds them in reverse order, since our playlist add function will prepend to our queue
-	// This enables the preservation and defaulting of "newest" first everywhere else, while in albums preserving the rightful order of the album
-	// e.g. first track (0) being added last is actually first in the playlist's tracks
-	GList * reversed_tracks = g_list_copy(self->tracks); // Copy our tracks so we can reverse the order
-
-	reversed_tracks = g_list_reverse(reversed_tracks); // Actually reverse it
-
-	GList * t;
-
-	for (t = reversed_tracks; t != NULL; t = t->next) { // For each of the tracks
-		gchar * track_uuid = t->data;
-		koto_playlist_add_track_by_uuid(new_album_playlist, track_uuid, FALSE, FALSE); // Add the UUID, skip commit to table since it is temporary
+	if (!KOTO_IS_PLAYLIST(album_playlist)) {
+		return;
 	}
 
-	g_list_free(t);
-	g_list_free(reversed_tracks);
-
-	koto_playlist_apply_model(new_album_playlist, KOTO_PREFERRED_MODEL_TYPE_DEFAULT); // Ensure we are using our default model
-	koto_current_playlist_set_playlist(current_playlist, new_album_playlist); // Set our new current playlist
+	koto_current_playlist_set_playlist(current_playlist, album_playlist, TRUE); // Set our new current playlist and start playing immediately
 }
 
 void koto_album_set_preparsed_genres(

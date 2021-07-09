@@ -18,6 +18,8 @@
 #include <glib-2.0/glib.h>
 #include <gtk-4.0/gtk/gtk.h>
 #include "../db/cartographer.h"
+#include "../playback/engine.h"
+#include "../playlist/current.h"
 #include "../playlist/playlist.h"
 #include "../koto-button.h"
 #include "../koto-utils.h"
@@ -27,6 +29,8 @@
 
 extern KotoActionBar * action_bar;
 extern KotoCartographer * koto_maps;
+extern KotoCurrentPlaylist * current_playlist;
+extern KotoPlaybackEngine * playback_engine;
 extern KotoWindow * main_window;
 
 struct _KotoTrackTable {
@@ -106,7 +110,8 @@ void koto_track_table_bind_track_item(
 ) {
 	(void) factory;
 
-	GtkWidget * track_position_label = gtk_widget_get_first_child(gtk_list_item_get_child(item));
+	GtkWidget * box = gtk_list_item_get_child(item);
+	GtkWidget * track_position_label = gtk_widget_get_first_child(box);
 	GtkWidget * track_name_label = gtk_widget_get_next_sibling(track_position_label);
 	GtkWidget * track_album_label = gtk_widget_get_next_sibling(track_name_label);
 	GtkWidget * track_artist_label = gtk_widget_get_next_sibling(track_album_label);
@@ -150,6 +155,12 @@ void koto_track_table_bind_track_item(
 	if (KOTO_IS_ARTIST(artist)) {
 		gtk_label_set_label(GTK_LABEL(track_artist_label), koto_artist_get_name(artist)); // Get the name of the artist and set it to the label
 	}
+
+	GList * data = NULL;
+	data = g_list_append(data, self); // Reference self first
+	data = g_list_append(data, koto_track_get_uuid(track)); // Next reference the track UUID string
+
+	g_object_set_data(G_OBJECT(box), "data", data); // Bind our list data
 }
 
 void koto_track_table_create_tracks_header(KotoTrackTable * self) {
@@ -237,6 +248,45 @@ void koto_track_table_handle_track_artist_clicked(
 	gtk_widget_add_css_class(GTK_WIDGET(self->track_artist_button), "active");
 	koto_button_hide_image(self->track_num_button); // Go back to hiding the image
 	koto_track_table_set_playlist_model(self, KOTO_PREFERRED_MODEL_TYPE_SORT_BY_ARTIST);
+}
+
+void koto_track_table_item_handle_clicked(
+	GtkGesture * gesture,
+	int n_press,
+	double x,
+	double y,
+	gpointer user_data
+) {
+	(void) gesture;
+	(void) x;
+	(void) y;
+
+	if (n_press != 2) { // Not a double click or tap
+		return;
+	}
+
+	GObject * track_item_as_object = G_OBJECT(user_data);
+
+	if (!G_IS_OBJECT(track_item_as_object)) { // Not a GObject
+		return;
+	}
+
+	GList * data = g_object_get_data(track_item_as_object, "data");
+
+	KotoTrackTable * self = g_list_nth_data(data, 0);
+	gchar * track_uuid = g_list_nth_data(data, 1);
+
+	if (!koto_utils_is_string_valid(track_uuid)) { // Not a valid string
+		return;
+	}
+
+	gtk_selection_model_unselect_all(self->selection_model);
+	gtk_widget_grab_focus(GTK_WIDGET(main_window)); // Focus on the window
+	koto_action_bar_toggle_reveal(action_bar, FALSE);
+	koto_action_bar_close(action_bar); // Close the action bar
+	koto_current_playlist_set_playlist(current_playlist, self->playlist, FALSE); // Set the current playlist to the artist's playlist but do not play immediately
+	koto_playlist_set_track_as_current(self->playlist, track_uuid); // Set this track as the current one for the playlist
+	koto_playback_engine_set_track_by_uuid(playback_engine, track_uuid, FALSE); // Tell our playback engine to start playing at this track
 }
 
 void koto_track_table_handle_track_name_clicked(
@@ -476,6 +526,10 @@ void koto_track_table_setup_track_item(
 	gtk_size_group_add_widget(self->track_artist_size_group, track_artist);
 
 	gtk_list_item_set_child(item, item_content);
+
+	GtkGesture * double_click_gesture = gtk_gesture_click_new(); // Create our new GtkGesture for double-click handling
+	gtk_widget_add_controller(item_content, GTK_EVENT_CONTROLLER(double_click_gesture)); // Have our item handle double clicking
+	g_signal_connect(double_click_gesture, "released", G_CALLBACK(koto_track_table_item_handle_clicked), item_content);
 }
 
 KotoTrackTable * koto_track_table_new() {

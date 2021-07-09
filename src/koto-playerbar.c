@@ -518,6 +518,14 @@ void koto_playerbar_handle_volume_button_change(
 }
 
 void koto_playerbar_reset_progressbar(KotoPlayerBar * bar) {
+	if (!KOTO_IS_PLAYERBAR(bar)) {
+		return;
+	}
+
+	if (!GTK_IS_RANGE(bar->progress_bar)) {
+		return;
+	}
+
 	gtk_range_set_range(GTK_RANGE(bar->progress_bar), 0, 0); // Reset range
 	gtk_range_set_value(GTK_RANGE(bar->progress_bar), 0); // Set value to 0
 }
@@ -526,6 +534,14 @@ void koto_playerbar_set_progressbar_duration(
 	KotoPlayerBar * bar,
 	gint64 duration
 ) {
+	if (!KOTO_IS_PLAYERBAR(bar)) {
+		return;
+	}
+
+	if (!GTK_IS_RANGE(bar->progress_bar)) {
+		return;
+	}
+
 	if (duration <= 0) {
 		return;
 	}
@@ -540,6 +556,14 @@ void koto_playerbar_set_progressbar_value(
 	KotoPlayerBar * bar,
 	double progress
 ) {
+	if (!KOTO_IS_PLAYERBAR(bar)) {
+		return;
+	}
+
+	if (!GTK_IS_RANGE(bar->progress_bar)) {
+		return;
+	}
+
 	gtk_range_set_value(GTK_RANGE(bar->progress_bar), progress);
 }
 
@@ -620,7 +644,7 @@ void koto_playerbar_update_track_info(
 
 	g_free(artist_uuid);
 
-	if ((track_name != NULL) && (strcmp(track_name, "") != 0)) { // Have a track name
+	if (koto_utils_is_string_valid(track_name)) { // Have a track name
 		gtk_label_set_text(GTK_LABEL(bar->playback_title), track_name); // Set the label
 	}
 
@@ -636,30 +660,29 @@ void koto_playerbar_update_track_info(
 		}
 	}
 
-	if (!koto_utils_is_string_valid(album_uuid)) { // Do not have a valid album UUID
-		return;
+	gchar * art_path = NULL;
+
+	if (koto_utils_is_string_valid(album_uuid)) { // Have a valid album UUID
+		KotoAlbum * album = koto_cartographer_get_album_by_uuid(koto_maps, album_uuid);
+		g_free(album_uuid);
+
+		if (KOTO_IS_ALBUM(album)) {
+			gchar * album_name = NULL;
+			g_object_get(album, "name", &album_name, "art-path", &art_path, NULL); // Get album name and art path
+
+			if ((album_name != NULL) && (strcmp(album_name, "") != 0)) { // Have an album name
+				gtk_label_set_text(GTK_LABEL(bar->playback_album), album_name);
+				gtk_widget_show(bar->playback_album);
+			} else {
+				gtk_widget_hide(bar->playback_album);
+			}
+		}
 	}
 
-	KotoAlbum * album = koto_cartographer_get_album_by_uuid(koto_maps, album_uuid);
-	g_free(album_uuid);
-
-	if (KOTO_IS_ALBUM(album)) {
-		gchar * album_name = NULL;
-		gchar * art_path = NULL;
-		g_object_get(album, "name", &album_name, "art-path", &art_path, NULL); // Get album name and art path
-
-		if ((album_name != NULL) && (strcmp(album_name, "") != 0)) { // Have an album name
-			gtk_label_set_text(GTK_LABEL(bar->playback_album), album_name);
-			gtk_widget_show(bar->playback_album);
-		} else {
-			gtk_widget_hide(bar->playback_album);
-		}
-
-		if ((art_path != NULL) && g_path_is_absolute(art_path)) { // Have an album artist path
-			gtk_image_set_from_file(GTK_IMAGE(bar->artwork), art_path); // Update the art
-		} else {
-			gtk_image_set_from_icon_name(GTK_IMAGE(bar->artwork), "audio-x-generic-symbolic"); // Use generic instead
-		}
+	if ((art_path != NULL) && g_path_is_absolute(art_path)) { // Have an album artist path
+		gtk_image_set_from_file(GTK_IMAGE(bar->artwork), art_path); // Update the art
+	} else {
+		gtk_image_set_from_icon_name(GTK_IMAGE(bar->artwork), "audio-x-generic-symbolic"); // Use generic instead
 	}
 }
 

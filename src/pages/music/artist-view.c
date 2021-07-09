@@ -323,7 +323,7 @@ void koto_artist_view_toggle_playback(
 		return;
 	}
 
-	koto_current_playlist_set_playlist(current_playlist, artist_playlist); // Set our playlist to the one associated with the Artist
+	koto_current_playlist_set_playlist(current_playlist, artist_playlist, TRUE); // Set our playlist to the one associated with the Artist and start playback immediately
 }
 
 KotoArtistView * koto_artist_view_new(KotoArtist * artist) {

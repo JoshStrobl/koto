@@ -18,7 +18,9 @@
 #include <glib-2.0/glib.h>
 #include <gtk-4.0/gtk/gtk.h>
 #include "koto-action-bar.h"
+#include "../config/config.h"
 #include "../db/cartographer.h"
+#include "../indexer/album-playlist-funcs.h"
 #include "../pages/music/music-local.h"
 #include "../playlist/add-remove-track-popover.h"
 #include "../playlist/current.h"
@@ -29,6 +31,7 @@
 
 extern KotoAddRemoveTrackPopover * koto_add_remove_track_popup;
 extern KotoCartographer * koto_maps;
+extern KotoConfig * config;
 extern KotoCurrentPlaylist * current_playlist;
 extern KotoPageMusicLocal * music_local_page;
 extern KotoPlaybackEngine * playback_engine;
@@ -252,16 +255,26 @@ void koto_action_bar_handle_play_track_button_clicked(
 		goto doclose;
 	}
 
-	if (self->relative == KOTO_ACTION_BAR_IS_PLAYLIST_RELATIVE) { // Relative to a playlist
-		KotoPlaylist * playlist = koto_cartographer_get_playlist_by_uuid(koto_maps, self->current_playlist_uuid);
+	KotoPlaylist * playlist = NULL;
 
-		if (KOTO_IS_PLAYLIST(playlist)) { // Is a playlist
-			koto_current_playlist_set_playlist(current_playlist, playlist); // Update our playlist to the one associated with the track we are playing
-			koto_playlist_set_track_as_current(playlist, koto_track_get_uuid(track)); // Get this track as the current track in the position
+	if (self->relative == KOTO_ACTION_BAR_IS_PLAYLIST_RELATIVE) { // Relative to a playlist
+		playlist = koto_cartographer_get_playlist_by_uuid(koto_maps, self->current_playlist_uuid);
+	} else if (self->relative == KOTO_ACTION_BAR_IS_ALBUM_RELATIVE) { // Relative to an Album
+		KotoAlbum * album = koto_cartographer_get_album_by_uuid(koto_maps, self->current_album_uuid); // Get the Album
+
+		if (KOTO_IS_ALBUM(album)) { // Have an Album
+			playlist = koto_album_create_playlist(album); // Create our playlist dynamically for the Album
 		}
 	}
 
-	koto_playback_engine_set_track_by_uuid(playback_engine, koto_track_get_uuid(track), TRUE); // Set the track to play
+	if (KOTO_IS_PLAYLIST(playlist)) { // Is a playlist
+		koto_current_playlist_set_playlist(current_playlist, playlist, FALSE); // Update our playlist to the one associated with the track we are playing
+		koto_playlist_set_track_as_current(playlist, koto_track_get_uuid(track)); // Get this track as the current track in the position
+	}
+
+	gboolean continue_playback = FALSE;
+	g_object_get(config, "playback-continue-on-playlist", &continue_playback, NULL);
+	koto_playback_engine_set_track_by_uuid(playback_engine, koto_track_get_uuid(track), continue_playback); // Set the track to play
 
 doclose:
 	koto_action_bar_close(self);

@@ -26,8 +26,14 @@ G_BEGIN_DECLS
  **/
 
 #define KOTO_TYPE_CURRENT_PLAYLIST koto_current_playlist_get_type()
-G_DECLARE_FINAL_TYPE(KotoCurrentPlaylist, koto_current_playlist, KOTO, CURRENT_PLAYLIST, GObject);
+#define KOTO_CURRENT_PLAYLIST(obj) (G_TYPE_CHECK_INSTANCE_CAST((obj), KOTO_TYPE_CURRENT_PLAYLIST, KotoCurrentPlaylist))
 #define KOTO_IS_CURRENT_PLAYLIST(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), KOTO_TYPE_CURRENT_PLAYLIST))
+
+typedef struct _KotoCurrentPlaylist KotoCurrentPlaylist;
+typedef struct _KotoCurrentPlaylistClass KotoCurrentPlaylistClass;
+
+GLIB_AVAILABLE_IN_ALL
+GType koto_current_playlist_get_type(void) G_GNUC_CONST;
 
 /**
  * Current Playlist Functions
@@ -39,7 +45,8 @@ KotoPlaylist * koto_current_playlist_get_playlist(KotoCurrentPlaylist * self);
 
 void koto_current_playlist_set_playlist(
 	KotoCurrentPlaylist * self,
-	KotoPlaylist * playlist
+	KotoPlaylist * playlist,
+	gboolean play_immediately
 );
 
 G_END_DECLS

@@ -209,7 +209,7 @@ void koto_playlist_page_handle_cover_art_clicked(
 		return;
 	}
 
-	koto_current_playlist_set_playlist(current_playlist, self->playlist);
+	koto_current_playlist_set_playlist(current_playlist, self->playlist, TRUE); // Switch to this playlist and start playing immediately
 }
 
 void koto_playlist_page_handle_edit_button_clicked(

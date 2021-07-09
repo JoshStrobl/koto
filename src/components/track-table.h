@@ -73,6 +73,14 @@ void koto_track_table_handle_track_name_clicked(
 	gpointer user_data
 );
 
+void koto_track_table_handle_track_name_clicked(
+	GtkGestureClick * gesture,
+	int n_press,
+	double x,
+	double y,
+	gpointer user_data
+);
+
 void koto_track_table_handle_track_num_clicked(
 	GtkGestureClick * gesture,
 	int n_press,

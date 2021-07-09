@@ -238,7 +238,7 @@ static void koto_playback_engine_init(KotoPlaybackEngine * self) {
 	g_signal_connect(config, "notify::maintain-shuffle", G_CALLBACK(koto_playback_engine_apply_configuration_state), self); // Handle changes to our config
 
 	if (KOTO_IS_CURRENT_PLAYLIST(current_playlist)) {
-		g_signal_connect(current_playlist, "notify::current-playlist", G_CALLBACK(koto_playback_engine_current_playlist_changed), self);
+		g_signal_connect(current_playlist, "playlist-changed", G_CALLBACK(koto_playback_engine_handle_current_playlist_changed), self);
 	}
 }
 
@@ -287,21 +287,16 @@ void koto_playback_engine_backwards(KotoPlaybackEngine * self) {
 	koto_playback_engine_set_track_by_uuid(self, koto_playlist_go_to_previous(playlist), FALSE);
 }
 
-void koto_playback_engine_current_playlist_changed(
+void koto_playback_engine_handle_current_playlist_changed(
 	KotoCurrentPlaylist * current_pl,
-	guint prop_id,
-	KotoPlaybackEngine * self
+	KotoPlaylist * playlist,
+	gboolean play_immediately,
+	gpointer user_data
 ) {
 	(void) current_pl;
-	(void) prop_id;
+	KotoPlaybackEngine * self = user_data;
 
 	if (!KOTO_IS_PLAYBACK_ENGINE(self)) {
-		return;
-	}
-
-	KotoPlaylist * playlist = koto_current_playlist_get_playlist(current_playlist); // Get the current playlist
-
-	if (!KOTO_IS_PLAYLIST(playlist)) { // If we do not have a playlist currently
 		return;
 	}
 
@@ -309,7 +304,9 @@ void koto_playback_engine_current_playlist_changed(
 		koto_playback_engine_set_track_shuffle(self, self->via_config_maintain_shuffle); // Set to our maintain shuffle value
 	}
 
-	koto_playback_engine_set_track_by_uuid(playback_engine, koto_playlist_go_to_next(playlist), FALSE); // Go to "next" which is the first track
+	if (play_immediately) { // Should play immediately
+		koto_playback_engine_set_track_by_uuid(self, koto_playlist_go_to_next(playlist), FALSE); // Go to "next" which is the first track
+	}
 }
 
 void koto_playback_engine_forwards(KotoPlaybackEngine * self) {
@@ -495,6 +492,10 @@ void koto_playback_engine_set_track_by_uuid(
 	gchar * track_uuid,
 	gboolean playing_specific_track
 ) {
+	if (!KOTO_IS_PLAYBACK_ENGINE(self)) {
+		return;
+	}
+
 	if (!koto_utils_is_string_valid(track_uuid)) { // If this is not a valid track uuid string
 		return;
 	}
@@ -534,12 +535,12 @@ void koto_playback_engine_set_track_by_uuid(
 	const gchar * track_name = g_variant_get_string(track_name_var, NULL); // Get the string of the track name
 
 	GVariant * album_name_var = g_variant_dict_lookup_value(metadata_dict, "xesam:album", NULL); // Get the GVariant for the album name
-	const gchar * album_name = g_variant_get_string(album_name_var, NULL); // Get the string for the album name
+	gchar * album_name = (album_name_var != NULL) ? g_strdup(g_variant_get_string(album_name_var, NULL)) : NULL; // Get the string for the album name
 
 	GVariant * artist_name_var = g_variant_dict_lookup_value(metadata_dict, "playbackengine:artist", NULL); // Get the GVariant for the name of the artist
-	const gchar * artist_name = g_variant_get_string(artist_name_var, NULL); // Get the string for the artist name
+	gchar * artist_name = g_strdup(g_variant_get_string(artist_name_var, NULL)); // Get the string for the artist name
 
-	gchar * artist_album_combo = g_strjoin(" - ", artist_name, album_name, NULL); // Join artist and album name separated by " - "
+	gchar * artist_album_combo = koto_utils_is_string_valid(album_name) ? g_strjoin(" - ", artist_name, album_name, NULL) : artist_name; // Join artist and album name separated by " - "
 
 	gchar * icon_name = "audio-x-generic-symbolic";
 

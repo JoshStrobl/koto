@@ -208,6 +208,10 @@ void koto_disc_view_handle_selected_rows_changed(
 ) {
 	KotoDiscView * self = user_data;
 
+	if (!KOTO_IS_DISC_VIEW(self)) {
+		return;
+	}
+
 	gchar * album_uuid = koto_album_get_album_uuid(self->album); // Get the UUID
 
 	if (!koto_utils_is_string_valid(album_uuid)) { // Not set
