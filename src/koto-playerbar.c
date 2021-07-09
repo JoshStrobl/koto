@@ -174,7 +174,7 @@ void koto_playerbar_apply_configuration_state(
 		NULL
 	);
 
-	gtk_scale_button_set_value(GTK_SCALE_BUTTON(self->volume_button), config_last_used_volume);
+	gtk_scale_button_set_value(GTK_SCALE_BUTTON(self->volume_button), config_last_used_volume * 100);
 }
 
 void koto_playerbar_create_playback_details(KotoPlayerBar * bar) {
@@ -263,7 +263,7 @@ void koto_playerbar_create_secondary_controls(KotoPlayerBar * bar) {
 	}
 
 	if (GTK_IS_VOLUME_BUTTON(bar->volume_button)) {
-		GtkAdjustment * granular_volume_change = gtk_adjustment_new(0.5, 0, 1.0, 0.02, 0.02, 0.02);
+		GtkAdjustment * granular_volume_change = gtk_adjustment_new(50.0, 0, 100.0, 1.0, 1.0, 1.0);
 		g_object_set(bar->volume_button, "use-symbolic", TRUE, NULL);
 		gtk_scale_button_set_adjustment(GTK_SCALE_BUTTON(bar->volume_button), granular_volume_change); // Set our adjustment
 		gtk_box_append(GTK_BOX(bar->secondary_controls_section), bar->volume_button);
@@ -514,7 +514,7 @@ void koto_playerbar_handle_volume_button_change(
 ) {
 	(void) button;
 	(void) user_data;
-	koto_playback_engine_set_volume(playback_engine, value);
+	koto_playback_engine_set_volume(playback_engine, (double) value / 100);
 }
 
 void koto_playerbar_reset_progressbar(KotoPlayerBar * bar) {
