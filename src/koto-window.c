@@ -102,7 +102,7 @@ static void koto_window_init (KotoWindow * self) {
 	self->pages = gtk_stack_new(); // New stack to hold our pages
 
 	if (GTK_IS_STACK(self->pages)) { // Created our stack successfully
-		gtk_stack_set_transition_type(GTK_STACK(self->pages), GTK_STACK_TRANSITION_TYPE_OVER_LEFT_RIGHT);
+		gtk_stack_set_transition_type(GTK_STACK(self->pages), GTK_STACK_TRANSITION_TYPE_SLIDE_LEFT_RIGHT);
 		gtk_box_append(GTK_BOX(self->content_layout), self->pages);
 		gtk_widget_set_hexpand(self->pages, TRUE);
 		gtk_widget_set_vexpand(self->pages, TRUE);
