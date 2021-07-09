@@ -87,7 +87,7 @@ void koto_current_playlist_set_playlist(
 		return;
 	}
 
-	if (self->current_playlist != NULL && KOTO_IS_PLAYLIST(self->current_playlist)) {
+	if (KOTO_IS_PLAYLIST(self->current_playlist)) {
 		gboolean * is_temp = FALSE;
 		g_object_get(self->current_playlist, "ephemeral", &is_temp, NULL); // Get the current ephemeral value
 

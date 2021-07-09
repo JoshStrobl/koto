@@ -62,32 +62,28 @@ gchar * koto_track_helpers_get_name_for_file(
 		return file_name;
 	}
 
-	gchar * file_name_without_path = koto_utils_get_filename_without_extension((gchar*) path); // Get the "default" file name without the extension or path (strips all but basename)
+	gchar * name_without_hyphen_surround = koto_utils_replace_string_all(koto_utils_get_filename_without_extension((gchar*) path), " - ", ""); // Remove - surrounded by spaces
+
+	gchar * name_without_hyphen = koto_utils_replace_string_all(name_without_hyphen_surround, "-", ""); // Remove just -
+	g_free(name_without_hyphen_surround);
+
+	file_name = koto_utils_replace_string_all(name_without_hyphen, "_", " "); // Replace underscore with whitespace
 
 	if (koto_utils_is_string_valid(optional_artist_name)) { // Was provided an optional artist name
-		gchar * removed_artist_name = koto_utils_replace_string_all(file_name_without_path, optional_artist_name, ""); // Remove the artist
-		g_free(file_name_without_path);
-		file_name_without_path = removed_artist_name;
+		gchar * replaced_artist = koto_utils_replace_string_all(file_name, optional_artist_name, ""); // Remove the artist
+		g_free(file_name);
+		file_name = g_strdup(replaced_artist);
+		g_free(replaced_artist);
 	}
 
-	gchar ** split = g_regex_split_simple("^([\\d]+)", file_name_without_path, G_REGEX_JAVASCRIPT_COMPAT, 0); // Split based on any possible position
+	gchar ** split = g_regex_split_simple("^([\\d]+)", file_name, G_REGEX_JAVASCRIPT_COMPAT, 0); // Split based on any possible position
 	if (g_strv_length(split) > 1) { // Has positional info at the beginning of the file name
-		g_free(file_name_without_path); // Free the prior name
-		file_name_without_path = g_strdup(split[2]); // Set to our second item which is the rest of the song name without the prefixed numbers
+		g_free(file_name); // Free the prior name
+		file_name = g_strdup(split[2]); // Set to our second item which is the rest of the song name without the prefixed numbers
 	}
 
 	g_strfreev(split);
-	split = g_strsplit(file_name_without_path, " - ", -1); // Split whenever we encounter " - "
-	file_name_without_path = g_strjoinv("", split); // Remove entirely
-	g_strfreev(split);
-
-	split = g_strsplit(file_name_without_path, "-", -1); // Split whenever we encounter -
-	file_name_without_path = g_strjoinv("", split); // Remove entirely
-	g_strfreev(split);
-
-	file_name = g_strdup(file_name_without_path); // Set file_name to the duplicate of the file name without the path, now all cleaned up
-	g_free(file_name_without_path); // Free old reference
-	return file_name;
+	return g_strdup(g_strstrip(file_name));
 }
 
 guint64 koto_track_helpers_get_position_based_on_file_name(const gchar * file_name) {
