@@ -6,6 +6,7 @@ Koto is an in-development audiobook, music, and podcast manager that is designed
 
 ## Blog
 
+- [Dev Diary 10: Koto June Progress Report](https://joshuastrobl.com/2021/07/08/dev-diary-10-koto-june-progress-report)
 - [Dev Diary 9: Koto May Progress Report (B-side)](https://joshuastrobl.com/2021/06/10/dev-diary-9-koto-may-progress-report-b-side/)
 - [Dev Diary 8: Koto May Progress Report (A-side)](https://joshuastrobl.com/2021/05/27/dev-diary-8-koto-may-progress-report-a-side/)
 - [Dev Diary 7: Koto April Progress Report (B-side)](https://joshuastrobl.com/2021/05/07/dev-diary-7-koto-april-progress-report-b-side/)
