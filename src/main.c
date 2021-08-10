@@ -28,6 +28,7 @@
 #include "playback/mimes.h"
 #include "playback/mpris.h"
 #include "paths.h"
+#include "playlist/current.h"
 
 #include "config/config.h"
 #include "koto-paths.h"
@@ -40,6 +41,7 @@ extern GDBusNodeInfo * introspection_data;
 
 extern KotoPlaybackEngine * playback_engine;
 extern KotoCartographer * koto_maps;
+extern KotoCurrentPlaylist * current_playlist;
 extern sqlite3 * koto_db;
 
 extern GHashTable * supported_mimes_hash;
@@ -74,6 +76,7 @@ static void on_activate (GtkApplication * app) {
 
 static void on_shutdown(GtkApplication * app) {
 	(void) app;
+	koto_current_playlist_save_playlist_state(current_playlist); // Save the current playlist state if necessary before closure
 	koto_config_save(config); // Save our config
 	close_db(); // Close the database
 	g_bus_unown_name(mpris_bus_id);

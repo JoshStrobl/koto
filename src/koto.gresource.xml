@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <gresources>
 	<gresource prefix="/com/github/joshstrobl/koto">
+		<file alias="business-and-personal-finance.png">../data/genres/business-and-personal-finance.png</file>
+		<file alias="foreign-languages.png">../data/genres/foreign-languages.png</file>
+		<file alias="mystery-and-thriller.png">../data/genres/mystery-and-thriller.png</file>
+		<file alias="sci-fi.png">../data/genres/sci-fi.png</file>
+		<file alias="travel.png">../data/genres/travel.png</file>
 		<file alias="koto-builtin-dark.css">../theme/koto-builtin-dark.css</file>
 		<file alias="koto-builtin-gruvbox.css">../theme/koto-builtin-gruvbox.css</file>
 		<file alias="koto-builtin-light.css">../theme/koto-builtin-light.css</file>

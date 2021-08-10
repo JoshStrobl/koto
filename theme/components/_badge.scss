@@ -1,0 +1,12 @@
+ // This file contains the styling for our label badge
+
+@import '../vars';
+
+.label-badge {
+	color: $text-color-faded;
+	font-size: large;
+	font-weight: 900;
+	background-color: $bg-secondary;
+	border-radius: 10px;
+	padding: 5px 20px;
+}

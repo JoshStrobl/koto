@@ -1,4 +1,4 @@
-/* koto-action-bar.c
+/* action-bar.c
  *
  * Copyright 2021 Joshua Strobl
  *
@@ -17,7 +17,6 @@
 
 #include <glib-2.0/glib.h>
 #include <gtk-4.0/gtk/gtk.h>
-#include "koto-action-bar.h"
 #include "../config/config.h"
 #include "../db/cartographer.h"
 #include "../indexer/album-playlist-funcs.h"
@@ -25,9 +24,10 @@
 #include "../playlist/add-remove-track-popover.h"
 #include "../playlist/current.h"
 #include "../playback/engine.h"
-#include "../koto-button.h"
 #include "../koto-utils.h"
 #include "../koto-window.h"
+#include "action-bar.h"
+#include "button.h"
 
 extern KotoAddRemoveTrackPopover * koto_add_remove_track_popup;
 extern KotoCartographer * koto_maps;
@@ -263,12 +263,12 @@ void koto_action_bar_handle_play_track_button_clicked(
 		KotoAlbum * album = koto_cartographer_get_album_by_uuid(koto_maps, self->current_album_uuid); // Get the Album
 
 		if (KOTO_IS_ALBUM(album)) { // Have an Album
-			playlist = koto_album_create_playlist(album); // Create our playlist dynamically for the Album
+			playlist = koto_album_get_playlist(album); // Create our playlist dynamically for the Album
 		}
 	}
 
 	if (KOTO_IS_PLAYLIST(playlist)) { // Is a playlist
-		koto_current_playlist_set_playlist(current_playlist, playlist, FALSE); // Update our playlist to the one associated with the track we are playing
+		koto_current_playlist_set_playlist(current_playlist, playlist, FALSE, FALSE); // Update our playlist to the one associated with the track we are playing
 		koto_playlist_set_track_as_current(playlist, koto_track_get_uuid(track)); // Get this track as the current track in the position
 	}
 
@@ -295,7 +295,7 @@ void koto_action_bar_handle_remove_from_playlist_button_clicked(
 		goto doclose;
 	}
 
-	if (!koto_utils_is_string_valid(self->current_playlist_uuid)) { // Not valid UUID
+	if (!koto_utils_string_is_valid(self->current_playlist_uuid)) { // Not valid UUID
 		goto doclose;
 	}
 
@@ -325,11 +325,11 @@ void koto_action_bar_set_tracks_in_album_selection(
 		return;
 	}
 
-	if (koto_utils_is_string_valid(self->current_album_uuid)) { // Album UUID currently set
+	if (koto_utils_string_is_valid(self->current_album_uuid)) { // Album UUID currently set
 		g_free(self->current_album_uuid);
 	}
 
-	if (koto_utils_is_string_valid(self->current_playlist_uuid)) { // Playlist UUID currently set
+	if (koto_utils_string_is_valid(self->current_playlist_uuid)) { // Playlist UUID currently set
 		g_free(self->current_playlist_uuid);
 	}
 
@@ -359,11 +359,11 @@ void koto_action_bar_set_tracks_in_playlist_selection(
 		return;
 	}
 
-	if (koto_utils_is_string_valid(self->current_album_uuid)) { // Album UUID currently set
+	if (koto_utils_string_is_valid(self->current_album_uuid)) { // Album UUID currently set
 		g_free(self->current_album_uuid);
 	}
 
-	if (koto_utils_is_string_valid(self->current_playlist_uuid)) { // Playlist UUID currently set
+	if (koto_utils_string_is_valid(self->current_playlist_uuid)) { // Playlist UUID currently set
 		g_free(self->current_playlist_uuid);
 	}
 

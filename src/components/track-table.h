@@ -20,7 +20,7 @@
 #include <glib-2.0/glib-object.h>
 #include <gtk-4.0/gtk/gtk.h>
 #include "../playlist/playlist.h"
-#include "koto-action-bar.h"
+#include "action-bar.h"
 
 G_BEGIN_DECLS
 
@@ -98,12 +98,12 @@ void koto_track_table_handle_tracks_selected(
 
 void koto_track_table_set_model(
 	KotoTrackTable * self,
-	KotoPreferredModelType model
+	KotoPreferredPlaylistSortType model
 );
 
 void koto_track_table_set_playlist_model(
 	KotoTrackTable * self,
-	KotoPreferredModelType model
+	KotoPreferredPlaylistSortType model
 );
 
 void koto_track_table_set_playlist(

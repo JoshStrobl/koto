@@ -259,7 +259,7 @@ void koto_cartographer_add_album(
 
 	gchar * album_uuid = koto_album_get_uuid(album); // Get the album UUID
 
-	if (!koto_utils_is_string_valid(album_uuid) || koto_cartographer_has_album_by_uuid(self, album_uuid)) { // Have the album or invalid UUID
+	if (!koto_utils_string_is_valid(album_uuid) || koto_cartographer_has_album_by_uuid(self, album_uuid)) { // Have the album or invalid UUID
 		return;
 	}
 
@@ -287,7 +287,7 @@ void koto_cartographer_add_artist(
 
 	gchar * artist_uuid = koto_artist_get_uuid(artist);
 
-	if (!koto_utils_is_string_valid(artist_uuid) || koto_cartographer_has_artist_by_uuid(self, artist_uuid)) { // Have the artist or invalid UUID
+	if (!koto_utils_string_is_valid(artist_uuid) || koto_cartographer_has_artist_by_uuid(self, artist_uuid)) { // Have the artist or invalid UUID
 		return;
 	}
 
@@ -316,7 +316,7 @@ void koto_cartographer_add_library(
 
 	gchar * library_uuid = koto_library_get_uuid(library);
 
-	if (!koto_utils_is_string_valid(library_uuid) || koto_cartographer_has_library_by_uuid(self, library_uuid)) { // Have the library or invalid UUID
+	if (!koto_utils_string_is_valid(library_uuid) || koto_cartographer_has_library_by_uuid(self, library_uuid)) { // Have the library or invalid UUID
 		return;
 	}
 
@@ -387,7 +387,7 @@ void koto_cartographer_add_track(
 
 	gchar * track_uuid = koto_track_get_uuid(track);
 
-	if (!koto_utils_is_string_valid(track_uuid) || koto_cartographer_has_track_by_uuid(self, track_uuid)) { // Have the track or invalid UUID
+	if (!koto_utils_string_is_valid(track_uuid) || koto_cartographer_has_track_by_uuid(self, track_uuid)) { // Have the track or invalid UUID
 		return;
 	}
 
@@ -424,7 +424,7 @@ KotoArtist * koto_cartographer_get_artist_by_name(
 		return NULL;
 	}
 
-	if (!koto_utils_is_string_valid(artist_name)) { // Not a valid name
+	if (!koto_utils_string_is_valid(artist_name)) { // Not a valid name
 		return NULL;
 	}
 
@@ -439,7 +439,7 @@ KotoArtist * koto_cartographer_get_artist_by_uuid(
 		return NULL;
 	}
 
-	if (!koto_utils_is_string_valid(artist_uuid)) {
+	if (!koto_utils_string_is_valid(artist_uuid)) {
 		return NULL;
 	}
 
@@ -454,7 +454,7 @@ KotoLibrary * koto_cartographer_get_library_by_uuid(
 		return NULL;
 	}
 
-	if (!koto_utils_is_string_valid(library_uuid)) { // Not a valid string
+	if (!koto_utils_string_is_valid(library_uuid)) { // Not a valid string
 		return NULL;
 	}
 
@@ -469,7 +469,7 @@ KotoLibrary * koto_cartographer_get_library_containing_path(
 		return NULL;
 	}
 
-	if (!koto_utils_is_string_valid(relative_path)) { // Not a valid string
+	if (!koto_utils_string_is_valid(relative_path)) { // Not a valid string
 		return NULL;
 	}
 
@@ -503,7 +503,7 @@ GList * koto_cartographer_get_libraries_for_storage_uuid(
 
 	GList * libraries = NULL; // Initialize our list
 
-	if (!koto_utils_is_string_valid(storage_uuid)) { // Not a valid storage UUID string
+	if (!koto_utils_string_is_valid(storage_uuid)) { // Not a valid storage UUID string
 		return libraries;
 	}
 
@@ -544,6 +544,10 @@ KotoTrack * koto_cartographer_get_track_by_uuid(
 		return NULL;
 	}
 
+	if (!koto_utils_string_is_valid(track_uuid)) {
+		return NULL;
+	}
+
 	return g_hash_table_lookup(self->tracks, track_uuid);
 }
 
@@ -555,7 +559,7 @@ KotoTrack * koto_cartographer_get_track_by_uniqueish_key(
 		return NULL;
 	}
 
-	if (!koto_utils_is_string_valid(key)) {
+	if (!koto_utils_string_is_valid(key)) {
 		return NULL;
 	}
 
@@ -588,7 +592,7 @@ gboolean koto_cartographer_has_album_by_uuid(
 		return FALSE;
 	}
 
-	if (!koto_utils_is_string_valid(album_uuid)) { // Not a valid UUID
+	if (!koto_utils_string_is_valid(album_uuid)) { // Not a valid UUID
 		return FALSE;
 	}
 
@@ -618,7 +622,7 @@ gboolean koto_cartographer_has_artist_by_uuid(
 		return FALSE;
 	}
 
-	if (!koto_utils_is_string_valid(artist_uuid)) { // Not a valid UUID
+	if (!koto_utils_string_is_valid(artist_uuid)) { // Not a valid UUID
 		return FALSE;
 	}
 
@@ -649,7 +653,7 @@ gboolean koto_cartographer_has_library_by_uuid(
 		return FALSE;
 	}
 
-	if (!koto_utils_is_string_valid(library_uuid)) { // Not a valid UUID
+	if (!koto_utils_string_is_valid(library_uuid)) { // Not a valid UUID
 		return FALSE;
 	}
 
@@ -679,7 +683,7 @@ gboolean koto_cartographer_has_playlist_by_uuid(
 		return FALSE;
 	}
 
-	if (!koto_utils_is_string_valid(playlist_uuid)) { // Not a valid UUID
+	if (!koto_utils_string_is_valid(playlist_uuid)) { // Not a valid UUID
 		return FALSE;
 	}
 
@@ -709,7 +713,7 @@ gboolean koto_cartographer_has_track_by_uuid(
 		return FALSE;
 	}
 
-	if (!koto_utils_is_string_valid(track_uuid)) { // Not a valid UUID
+	if (!koto_utils_string_is_valid(track_uuid)) { // Not a valid UUID
 		return FALSE;
 	}
 
@@ -739,7 +743,7 @@ void koto_cartographer_remove_album_by_uuid(
 		return;
 	}
 
-	if (!koto_utils_is_string_valid(album_uuid)) {
+	if (!koto_utils_string_is_valid(album_uuid)) {
 		return;
 	}
 
@@ -792,7 +796,7 @@ void koto_cartographer_remove_artist_by_uuid(
 		return;
 	}
 
-	if (!koto_utils_is_string_valid(artist_uuid)) { // Artist UUID not valid
+	if (!koto_utils_string_is_valid(artist_uuid)) { // Artist UUID not valid
 		return;
 	}
 
@@ -842,7 +846,7 @@ void koto_cartographer_remove_playlist_by_uuid(
 		return;
 	}
 
-	if (!koto_utils_is_string_valid(playlist_uuid)) { // Not a valid playlist UUID string
+	if (!koto_utils_string_is_valid(playlist_uuid)) { // Not a valid playlist UUID string
 		return;
 	}
 
@@ -883,7 +887,7 @@ void koto_cartographer_remove_track_by_uuid(
 		return;
 	}
 
-	if (!koto_utils_is_string_valid(track_uuid)) {
+	if (!koto_utils_string_is_valid(track_uuid)) {
 		return;
 	}
 

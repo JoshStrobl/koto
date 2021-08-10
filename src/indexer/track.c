@@ -39,7 +39,11 @@ struct _KotoTrack {
 	guint cd;
 	guint64 position;
 	guint64 duration;
-	guint64 * playback_position;
+	gchar * description;
+	gchar * narrator;
+	guint64 playback_position;
+	guint64 year;
+
 	GList * genres;
 
 	gboolean do_initial_index;
@@ -57,6 +61,9 @@ enum {
 	PROP_CD,
 	PROP_POSITION,
 	PROP_DURATION,
+	PROP_DESCRIPTION,
+	PROP_NARRATOR,
+	PROP_YEAR,
 	PROP_PLAYBACK_POSITION,
 	PROP_PREPARSED_GENRES,
 	N_PROPERTIES
@@ -157,6 +164,32 @@ static void koto_track_class_init(KotoTrackClass * c) {
 		G_PARAM_CONSTRUCT | G_PARAM_EXPLICIT_NOTIFY | G_PARAM_READWRITE
 	);
 
+	props[PROP_DESCRIPTION] = g_param_spec_string(
+		"description",
+		"Description of Track, typically show notes for a podcast episode",
+		"Description of Track, typically show notes for a podcast episode",
+		NULL,
+		G_PARAM_CONSTRUCT | G_PARAM_EXPLICIT_NOTIFY | G_PARAM_READWRITE
+	);
+
+	props[PROP_NARRATOR] = g_param_spec_string(
+		"narrator",
+		"Narrator, typically of an Audiobook",
+		"Narrator, typically of an Audiobook",
+		NULL,
+		G_PARAM_CONSTRUCT | G_PARAM_EXPLICIT_NOTIFY | G_PARAM_READWRITE
+	);
+
+	props[PROP_YEAR] = g_param_spec_uint64(
+		"year",
+		"Year",
+		"Year",
+		0,
+		G_MAXUINT64,
+		0,
+		G_PARAM_CONSTRUCT | G_PARAM_EXPLICIT_NOTIFY | G_PARAM_READWRITE
+	);
+
 	props[PROP_PLAYBACK_POSITION] = g_param_spec_uint64(
 		"playback-position",
 		"Current playback position",
@@ -179,10 +212,13 @@ static void koto_track_class_init(KotoTrackClass * c) {
 }
 
 static void koto_track_init(KotoTrack * self) {
+	self->description = NULL; // Initialize our description
 	self->duration = 0; // Initialize our duration
 	self->genres = NULL; // Initialize our genres list
+	self->narrator = NULL, // Initialize our narrator
 	self->paths = g_hash_table_new(g_str_hash, g_str_equal); // Create our hash table of paths
 	self->position = 0; // Initialize our duration
+	self->year = 0; // Initialize our year
 }
 
 static void koto_track_get_property(
@@ -209,11 +245,20 @@ static void koto_track_get_property(
 		case PROP_CD:
 			g_value_set_uint(val, self->cd);
 			break;
+		case PROP_DESCRIPTION:
+			g_value_set_string(val, self->description);
+			break;
+		case PROP_NARRATOR:
+			g_value_set_string(val, self->narrator);
+			break;
+		case PROP_YEAR:
+			g_value_set_uint64(val, self->year);
+			break;
 		case PROP_POSITION:
-			g_value_set_uint(val, self->position);
+			g_value_set_uint64(val, self->position);
 			break;
 		case PROP_PLAYBACK_POSITION:
-			g_value_set_uint(val, GPOINTER_TO_UINT(self->playback_position));
+			g_value_set_uint64(val, koto_track_get_playback_position(self));
 			break;
 		default:
 			G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, prop_id, spec);
@@ -254,10 +299,19 @@ static void koto_track_set_property(
 			koto_track_set_position(self, g_value_get_uint64(val));
 			break;
 		case PROP_PLAYBACK_POSITION:
-			self->playback_position = GUINT_TO_POINTER(g_value_get_uint64(val));
+			koto_track_set_playback_position(self, g_value_get_uint64(val));
 			break;
 		case PROP_DURATION:
 			koto_track_set_duration(self, g_value_get_uint64(val));
+			break;
+		case PROP_DESCRIPTION:
+			koto_track_set_description(self, g_value_get_string(val));
+			break;
+		case PROP_NARRATOR:
+			koto_track_set_narrator(self, g_strdup(g_value_get_string(val)));
+			break;
+		case PROP_YEAR:
+			koto_track_set_year(self, g_value_get_uint64(val));
 			break;
 		case PROP_PREPARSED_GENRES:
 			koto_track_set_preparsed_genres(self, g_strdup(g_value_get_string(val)));
@@ -273,12 +327,8 @@ void koto_track_commit(KotoTrack * self) {
 		return;
 	}
 
-	if (!koto_utils_is_string_valid(self->artist_uuid)) { // No valid required artist UUID
+	if (!koto_utils_string_is_valid(self->artist_uuid)) { // No valid required artist UUID
 		return;
-	}
-
-	if (!koto_utils_is_string_valid(self->album_uuid)) { // If we do not have a valid album UUID
-		self->album_uuid = g_strdup("");
 	}
 
 	gchar * commit_msg = "INSERT INTO tracks(id, artist_id, album_id, name, disc, position, duration, genres)" \
@@ -292,7 +342,7 @@ void koto_track_commit(KotoTrack * self) {
 		commit_msg,
 		self->uuid,
 		self->artist_uuid,
-		self->album_uuid,
+		koto_utils_string_get_valid(self->album_uuid),
 		g_strescape(self->parsed_name, NULL),
 		(int) self->cd,
 		(int) self->position,
@@ -326,6 +376,10 @@ void koto_track_commit(KotoTrack * self) {
 	}
 }
 
+gchar * koto_track_get_description(KotoTrack * self) {
+	return KOTO_IS_TRACK(self) ? g_strdup(self->description) : NULL;
+}
+
 guint koto_track_get_disc_number(KotoTrack * self) {
 	return KOTO_IS_TRACK(self) ? self->cd : 1;
 }
@@ -347,14 +401,14 @@ GVariant * koto_track_get_metadata_vardict(KotoTrack * self) {
 	KotoArtist * artist = koto_cartographer_get_artist_by_uuid(koto_maps, self->artist_uuid);
 	gchar * artist_name = koto_artist_get_name(artist);
 
-	if (koto_utils_is_string_valid(self->album_uuid)) { // Have an album associated
+	if (koto_utils_string_is_valid(self->album_uuid)) { // Have an album associated
 		KotoAlbum * album = koto_cartographer_get_album_by_uuid(koto_maps, self->album_uuid);
 
 		if (KOTO_IS_ALBUM(album)) {
 			gchar * album_art_path = koto_album_get_art(album);
 			gchar * album_name = koto_album_get_name(album);
 
-			if (koto_utils_is_string_valid(album_art_path)) { // Valid album art path
+			if (koto_utils_string_is_valid(album_art_path)) { // Valid album art path
 				album_art_path = g_strconcat("file://", album_art_path, NULL); // Prepend with file://
 				g_variant_builder_add(builder, "{sv}", "mpris:artUrl", g_variant_new_string(album_art_path));
 			}
@@ -366,7 +420,7 @@ GVariant * koto_track_get_metadata_vardict(KotoTrack * self) {
 
 	g_variant_builder_add(builder, "{sv}", "mpris:trackid", g_variant_new_string(self->uuid));
 
-	if (koto_utils_is_string_valid(artist_name)) { // Valid artist name
+	if (koto_utils_string_is_valid(artist_name)) { // Valid artist name
 		GVariant * artist_name_variant;
 		GVariantBuilder * artist_list_builder = g_variant_builder_new(G_VARIANT_TYPE("as"));
 		g_variant_builder_add(artist_list_builder, "s", artist_name);
@@ -388,11 +442,11 @@ GVariant * koto_track_get_metadata_vardict(KotoTrack * self) {
 }
 
 gchar * koto_track_get_name(KotoTrack * self) {
-	if (!KOTO_IS_TRACK(self)) { // Not a track
-		return NULL;
-	}
+	return KOTO_IS_TRACK(self) ? g_strdup(self->parsed_name) : NULL;
+}
 
-	return g_strdup(self->parsed_name);
+gchar * koto_track_get_narrator(KotoTrack * self) {
+	return KOTO_IS_TRACK(self) ? g_strdup(self->narrator) : NULL;
 }
 
 gchar * koto_track_get_path(KotoTrack * self) {
@@ -420,6 +474,10 @@ gchar * koto_track_get_path(KotoTrack * self) {
 	return path;
 }
 
+guint64 koto_track_get_playback_position(KotoTrack * self) {
+	return KOTO_IS_TRACK(self) ? self->playback_position : 0;
+}
+
 guint64 koto_track_get_position(KotoTrack * self) {
 	return KOTO_IS_TRACK(self) ? self->position : 0;
 }
@@ -433,13 +491,13 @@ gchar * koto_track_get_uniqueish_key(KotoTrack * self) {
 
 	gchar * artist_name = koto_artist_get_name(artist); // Get the artist name
 
-	if (koto_utils_is_string_valid(self->album_uuid)) { // If we have an album associated with this track (not necessarily guaranteed)
+	if (koto_utils_string_is_valid(self->album_uuid)) { // If we have an album associated with this track (not necessarily guaranteed)
 		KotoAlbum * possible_album = koto_cartographer_get_album_by_uuid(koto_maps, self->album_uuid);
 
 		if (KOTO_IS_ALBUM(possible_album)) { // Album exists
 			gchar * album_name = koto_album_get_name(possible_album); // Get the name of the album
 
-			if (koto_utils_is_string_valid(album_name)) {
+			if (koto_utils_string_is_valid(album_name)) {
 				return g_strdup_printf("%s-%s-%s", artist_name, album_name, self->parsed_name); // Create a key of (ARTIST/WRITER)-(ALBUM/AUDIOBOOK)-(CHAPTER/TRACK)
 			}
 		}
@@ -454,6 +512,14 @@ gchar * koto_track_get_uuid(KotoTrack * self) {
 	}
 
 	return self->uuid; // Do not return a duplicate since otherwise comparison refs fail due to pointer positions being different
+}
+
+guint64 koto_track_get_year(KotoTrack * self) {
+	if (!KOTO_IS_TRACK(self)) {
+		return 0;
+	}
+
+	return self->year;
 }
 
 void koto_track_remove_from_playlist(
@@ -487,7 +553,7 @@ void koto_track_set_album_uuid(
 
 	gchar * uuid = g_strdup(album_uuid);
 
-	if (!koto_utils_is_string_valid(uuid)) { // If this is not a valid string
+	if (!koto_utils_string_is_valid(uuid)) { // If this is not a valid string
 		return;
 	}
 
@@ -497,19 +563,17 @@ void koto_track_set_album_uuid(
 
 void koto_track_save_to_playlist(
 	KotoTrack * self,
-	gchar * playlist_uuid,
-	gint current
+	gchar * playlist_uuid
 ) {
 	if (!KOTO_IS_TRACK(self)) {
 		return;
 	}
 
 	gchar * commit_op = g_strdup_printf(
-		"INSERT INTO playlist_tracks(playlist_id, track_id, current)"
-		"VALUES('%s', '%s', quote(\"%d\"))",
+		"INSERT INTO playlist_tracks(playlist_id, track_id)"
+		"VALUES('%s', '%s')",
 		playlist_uuid,
-		self->uuid,
-		current
+		self->uuid
 	);
 
 	new_transaction(commit_op, "Failed to save track to playlist", FALSE);
@@ -531,6 +595,30 @@ void koto_track_set_cd(
 	g_object_notify_by_pspec(G_OBJECT(self), props[PROP_CD]);
 }
 
+void koto_track_set_description(
+	KotoTrack * self,
+	const gchar * description
+) {
+	if (!KOTO_IS_TRACK(self)) {
+		return;
+	}
+
+	if (!koto_utils_string_is_valid(description)) {
+		return;
+	}
+
+	if (g_strcmp0(self->description, description) == 0) { // Same description
+		return;
+	}
+
+	if (koto_utils_string_is_valid(self->description)) {
+		g_free(self->description); // Free the existing narrator
+	}
+
+	self->description = g_strdup(description); // Duplicate our description
+	g_object_notify_by_pspec(G_OBJECT(self), props[PROP_DESCRIPTION]);
+}
+
 void koto_track_set_duration(
 	KotoTrack * self,
 	guint64 duration
@@ -544,6 +632,7 @@ void koto_track_set_duration(
 	}
 
 	self->duration = duration;
+	g_object_notify_by_pspec(G_OBJECT(self), props[PROP_DURATION]);
 }
 
 void koto_track_set_genres(
@@ -554,7 +643,7 @@ void koto_track_set_genres(
 		return;
 	}
 
-	if (!koto_utils_is_string_valid((gchar*) genrelist)) { // If it is an empty string
+	if (!koto_utils_string_is_valid((gchar*) genrelist)) { // If it is an empty string
 		return;
 	}
 
@@ -570,7 +659,7 @@ void koto_track_set_genres(
 		gchar * genre = genres[i]; // Get the genre
 		gchar * lowercased_genre = g_utf8_strdown(g_strstrip(genre), -1); // Lowercase the genre
 
-		gchar * lowercased_hyphenated_genre = koto_utils_replace_string_all(lowercased_genre, " ", "-");
+		gchar * lowercased_hyphenated_genre = koto_utils_string_replace_all(lowercased_genre, " ", "-");
 		g_free(lowercased_genre); // Free the lowercase genre string since we no longer need it
 
 		gchar * corrected_genre = koto_track_helpers_get_corrected_genre(lowercased_hyphenated_genre); // Get any corrected genre
@@ -585,6 +674,30 @@ void koto_track_set_genres(
 	g_strfreev(genres); // Free the list of genres locally
 }
 
+void koto_track_set_narrator(
+	KotoTrack * self,
+	const gchar * narrator
+) {
+	if (!KOTO_IS_TRACK(self)) {
+		return;
+	}
+
+	if (!koto_utils_string_is_valid(narrator)) {
+		return;
+	}
+
+	if (g_strcmp0(self->narrator, narrator) == 0) { // Same narrator
+		return;
+	}
+
+	if (koto_utils_string_is_valid(self->narrator)) {
+		g_free(self->narrator); // Free the existing narrator
+	}
+
+	self->narrator = g_strdup(narrator); // Duplicate our narrator
+	g_object_notify_by_pspec(G_OBJECT(self), props[PROP_NARRATOR]);
+}
+
 void koto_track_set_parsed_name(
 	KotoTrack * self,
 	gchar * new_parsed_name
@@ -593,11 +706,11 @@ void koto_track_set_parsed_name(
 		return;
 	}
 
-	if (!koto_utils_is_string_valid(new_parsed_name)) {
+	if (!koto_utils_string_is_valid(new_parsed_name)) {
 		return;
 	}
 
-	gboolean have_existing_name = koto_utils_is_string_valid(self->parsed_name);
+	gboolean have_existing_name = koto_utils_string_is_valid(self->parsed_name);
 
 	if (have_existing_name && (strcmp(self->parsed_name, new_parsed_name) == 0)) { // Have existing name that matches one provided
 		return; // Don't do anything
@@ -620,7 +733,7 @@ void koto_track_set_path(
 		return;
 	}
 
-	if (!koto_utils_is_string_valid(fixed_path)) { // Not a valid path
+	if (!koto_utils_string_is_valid(fixed_path)) { // Not a valid path
 		return;
 	}
 
@@ -635,10 +748,25 @@ void koto_track_set_path(
 	}
 }
 
+void koto_track_set_playback_position(
+	KotoTrack * self,
+	guint64 position
+) {
+	if (!KOTO_IS_TRACK(self)) { // Not a track
+		return;
+	}
+
+	self->playback_position = position;
+}
+
 void koto_track_set_position(
 	KotoTrack * self,
 	guint64 pos
 ) {
+	if (!KOTO_IS_TRACK(self)) { // Not a track
+		return;
+	}
+
 	if (pos == 0) { // No position change really
 		return;
 	}
@@ -647,29 +775,48 @@ void koto_track_set_position(
 	g_object_notify_by_pspec(G_OBJECT(self), props[PROP_POSITION]);
 }
 
+void koto_track_set_year(
+	KotoTrack * self,
+	guint64 year
+) {
+	if (!KOTO_IS_TRACK(self)) {
+		return;
+	}
+
+	self->year = year;
+	g_object_notify_by_pspec(G_OBJECT(self), props[PROP_YEAR]);
+}
+
 void koto_track_update_metadata(KotoTrack * self) {
 	if (!KOTO_IS_TRACK(self)) { // Not a track
 		return;
 	}
 
 	gchar * optimal_track_path = koto_track_get_path(self); // Check all the libraries associated with this track, based on priority, return a built path using lib path + relative file path
+
+	if (!koto_utils_string_is_valid(optimal_track_path)) { // Not a valid string
+		return;
+	}
+
 	TagLib_File * t_file = taglib_file_new(optimal_track_path); // Get a taglib file for this file
-	g_free(optimal_track_path);
 
 	if ((t_file != NULL) && taglib_file_is_valid(t_file)) { // If we got the taglib file and it is valid
 		TagLib_Tag * tag = taglib_file_tag(t_file); // Get our tag
 		koto_track_set_genres(self, taglib_tag_genre(tag)); // Set our genres to any genres listed for the track
 		koto_track_set_position(self, (uint) taglib_tag_track(tag)); // Get the track, convert to uint and cast as a pointer
-
+		koto_track_set_year(self, (guint64) taglib_tag_year(tag)); // Get the track year and convert it to guint64
 		const TagLib_AudioProperties * tag_props = taglib_file_audioproperties(t_file); // Get the audio properties of the file
 		koto_track_set_duration(self, taglib_audioproperties_length(tag_props)); // Get the length of the track and set it as our duration
-	} else { // Failed to get tag info
+	}
+
+	if (self->position == 0) { // Failed to get tag info or got the tag info but position is zero
 		guint64 position = koto_track_helpers_get_position_based_on_file_name(g_path_get_basename(optimal_track_path)); // Get the likely position
 		koto_track_set_position(self, position); // Set our position
 	}
 
 	taglib_tag_free_strings(); // Free strings
 	taglib_file_free(t_file); // Free the file
+	g_free(optimal_track_path);
 }
 
 void koto_track_set_preparsed_genres(
@@ -680,7 +827,7 @@ void koto_track_set_preparsed_genres(
 		return;
 	}
 
-	if (!koto_utils_is_string_valid(genrelist)) { // If it is an empty string
+	if (!koto_utils_string_is_valid(genrelist)) { // If it is an empty string
 		return;
 	}
 

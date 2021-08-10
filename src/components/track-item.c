@@ -1,4 +1,4 @@
-/* koto-track-item.c
+/* track-item.c
  *
  * Copyright 2021 Joshua Strobl
  *
@@ -18,8 +18,8 @@
 #include <gtk-4.0/gtk/gtk.h>
 #include "indexer/structs.h"
 #include "playlist/add-remove-track-popover.h"
-#include "koto-button.h"
-#include "koto-track-item.h"
+#include "button.h"
+#include "track-item.h"
 
 extern KotoAddRemoveTrackPopover * koto_add_remove_track_popup;
 

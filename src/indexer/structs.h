@@ -16,9 +16,11 @@
  */
 
 #pragma once
-#include <glib-2.0/glib-object.h>
+#include <glib-2.0/glib.h>
+#include <glib-2.0/gio/gio.h>
 #include <magic.h>
 #include <toml.h>
+#include "misc-types.h"
 
 typedef enum {
 	KOTO_LIBRARY_TYPE_AUDIOBOOK = 1,
@@ -148,9 +150,16 @@ void koto_artist_add_track(
 	KotoTrack * track
 );
 
+void koto_artist_apply_model(
+	KotoArtist * self,
+	KotoPreferredAlbumSortType model
+);
+
 void koto_artist_commit(KotoArtist * self);
 
-GList * koto_artist_get_albums(KotoArtist * self);
+GQueue * koto_artist_get_albums(KotoArtist * self);
+
+GListStore * koto_artist_get_albums_store(KotoArtist * self);
 
 KotoAlbum * koto_artist_get_album_by_name(
 	KotoArtist * self,
@@ -159,11 +168,19 @@ KotoAlbum * koto_artist_get_album_by_name(
 
 gchar * koto_artist_get_name(KotoArtist * self);
 
+gchar * koto_artist_get_path(KotoArtist * self);
+
 GList * koto_artist_get_tracks(KotoArtist * self);
 
 gchar * koto_artist_get_uuid(KotoArtist * self);
 
 KotoLibraryType koto_artist_get_lib_type(KotoArtist * self);
+
+gint koto_artist_model_sort_albums(
+	gconstpointer first_item,
+	gconstpointer second_item,
+	gpointer user_data
+);
 
 void koto_artist_remove_album(
 	KotoArtist * self,
@@ -211,15 +228,27 @@ void koto_album_find_album_art(KotoAlbum * self);
 
 gchar * koto_album_get_art(KotoAlbum * self);
 
+gchar * koto_album_get_artist_uuid(KotoAlbum * self);
+
+gchar * koto_album_get_description(KotoAlbum * self);
+
+GList * koto_album_get_genres(KotoAlbum * self);
+
+KotoLibraryType koto_album_get_lib_type(KotoAlbum * self);
+
 gchar * koto_album_get_name(KotoAlbum * self);
 
-gchar * koto_album_get_album_uuid(KotoAlbum * self);
+gchar * koto_album_get_narrator(KotoAlbum * self);
 
 gchar * koto_album_get_path(KotoAlbum * self);
 
-GList * koto_album_get_tracks(KotoAlbum * self);
+GListStore * koto_album_get_store(KotoAlbum * self);
 
 gchar * koto_album_get_uuid(KotoAlbum * self);
+
+guint64 koto_album_get_year(KotoAlbum * self);
+
+void koto_album_mark_as_finalized(KotoAlbum * self);
 
 void koto_album_remove_track(
 	KotoAlbum * self,
@@ -241,8 +270,17 @@ void koto_album_set_artist_uuid(
 	const gchar * artist_uuid
 );
 
+void koto_album_set_description(
+	KotoAlbum * self,
+	const char * description
+);
+
 void koto_album_set_as_current_playlist(KotoAlbum * self);
 
+void koto_album_set_narrator(
+	KotoAlbum * self,
+	const char * narrator
+);
 
 void koto_album_set_path(
 	KotoAlbum * self,
@@ -253,6 +291,16 @@ void koto_album_set_path(
 void koto_album_set_preparsed_genres(
 	KotoAlbum * self,
 	gchar * genrelist
+);
+
+void koto_album_set_uuid(
+	KotoAlbum * self,
+	const gchar * uuid
+);
+
+void koto_album_set_year(
+	KotoAlbum * self,
+	guint64 year
 );
 
 /**
@@ -270,6 +318,8 @@ KotoTrack * koto_track_new_with_uuid(const gchar * uuid);
 
 void koto_track_commit(KotoTrack * self);
 
+gchar * koto_track_get_description(KotoTrack * self);
+
 guint koto_track_get_disc_number(KotoTrack * self);
 
 guint64 koto_track_get_duration(KotoTrack * self);
@@ -282,11 +332,17 @@ gchar * koto_track_get_path(KotoTrack * self);
 
 gchar * koto_track_get_name(KotoTrack * self);
 
+gchar * koto_track_get_narrator(KotoTrack * self);
+
+guint64 koto_track_get_playback_position(KotoTrack * self);
+
 guint64 koto_track_get_position(KotoTrack * self);
 
 gchar * koto_track_get_uniqueish_key(KotoTrack * self);
 
 gchar * koto_track_get_uuid(KotoTrack * self);
+
+guint64 koto_track_get_year(KotoTrack * self);
 
 void koto_track_remove_from_playlist(
 	KotoTrack * self,
@@ -300,13 +356,7 @@ void koto_track_set_album_uuid(
 
 void koto_track_save_to_playlist(
 	KotoTrack * self,
-	gchar * playlist_uuid,
-	gint current
-);
-
-void koto_track_set_file_name(
-	KotoTrack * self,
-	gchar * new_file_name
+	gchar * playlist_uuid
 );
 
 void koto_track_set_cd(
@@ -314,14 +364,29 @@ void koto_track_set_cd(
 	guint cd
 );
 
+void koto_track_set_description(
+	KotoTrack * self,
+	const gchar * description
+);
+
 void koto_track_set_duration(
 	KotoTrack * self,
 	guint64 duration
 );
 
+void koto_track_set_file_name(
+	KotoTrack * self,
+	gchar * new_file_name
+);
+
 void koto_track_set_genres(
 	KotoTrack * self,
 	char * genrelist
+);
+
+void koto_track_set_narrator(
+	KotoTrack * self,
+	const gchar * narrator
 );
 
 void koto_track_set_parsed_name(
@@ -335,6 +400,11 @@ void koto_track_set_path(
 	gchar * fixed_path
 );
 
+void koto_track_set_playback_position(
+	KotoTrack * self,
+	guint64 position
+);
+
 void koto_track_set_position(
 	KotoTrack * self,
 	guint64 pos
@@ -343,6 +413,11 @@ void koto_track_set_position(
 void koto_track_set_preparsed_genres(
 	KotoTrack * self,
 	gchar * genrelist
+);
+
+void koto_track_set_year(
+	KotoTrack * self,
+	guint64 year
 );
 
 void koto_track_update_metadata(KotoTrack * self);

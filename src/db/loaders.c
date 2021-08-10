@@ -18,6 +18,7 @@
 #include "cartographer.h"
 #include "db.h"
 #include "loaders.h"
+#include "../indexer/album-playlist-funcs.h"
 #include "../indexer/structs.h"
 #include "../koto-utils.h"
 
@@ -34,8 +35,8 @@ int process_artists(
 	(void) num_columns;
 	(void) column_names; // Don't need any of the params
 
-	gchar * artist_uuid = g_strdup(koto_utils_unquote_string(fields[0])); // First column is UUID
-	gchar * artist_name = g_strdup(koto_utils_unquote_string(fields[1])); // Second column is artist name
+	gchar * artist_uuid = g_strdup(koto_utils_string_unquote(fields[0])); // First column is UUID
+	gchar * artist_name = g_strdup(koto_utils_string_unquote(fields[1])); // Second column is artist name
 
 	KotoArtist * artist = koto_artist_new_with_uuid(artist_uuid); // Create our artist with the UUID
 
@@ -63,7 +64,7 @@ int process_artists(
 
 	koto_artist_set_as_finalized(artist); // Indicate it is finalized
 
-	int tracks_rc = sqlite3_exec(koto_db, g_strdup_printf("SELECT * FROM tracks WHERE artist_id=\"%s\"", artist_uuid), process_tracks, NULL, NULL); // Process our tracks by artist uuid
+	int tracks_rc = sqlite3_exec(koto_db, g_strdup_printf("SELECT * FROM tracks WHERE artist_id=\"%s\" AND album_id=''", artist_uuid), process_tracks, NULL, NULL); // Load all tracks for an artist that are NOT in an album (e.g. artists without albums)
 
 	if (tracks_rc != SQLITE_OK) { // Failed to get our tracks
 		g_critical("Failed to read our tracks: %s", sqlite3_errmsg(koto_db));
@@ -87,8 +88,8 @@ int process_artist_paths(
 
 	KotoArtist * artist = (KotoArtist*) data;
 
-	gchar * library_uuid = g_strdup(koto_utils_unquote_string(fields[0]));
-	gchar * relative_path = g_strdup(koto_utils_unquote_string(fields[2]));
+	gchar * library_uuid = g_strdup(koto_utils_string_unquote(fields[0]));
+	gchar * relative_path = g_strdup(koto_utils_string_unquote(fields[2]));
 
 	KotoLibrary * lib = koto_cartographer_get_library_by_uuid(koto_maps, library_uuid); // Get the library for this artist
 
@@ -112,11 +113,14 @@ int process_albums(
 
 	KotoArtist * artist = (KotoArtist*) data;
 
-	gchar * album_uuid = g_strdup(koto_utils_unquote_string(fields[0]));
-	gchar * artist_uuid = g_strdup(koto_utils_unquote_string(fields[1]));
-	gchar * album_name = g_strdup(koto_utils_unquote_string(fields[2]));
-	gchar * album_art = (fields[3] != NULL) ? g_strdup(koto_utils_unquote_string(fields[3])) : NULL;
-	gchar * album_genres = (fields[4] != NULL) ? g_strdup(koto_utils_unquote_string(fields[4])) : NULL;
+	gchar * album_uuid = g_strdup(koto_utils_string_unquote(fields[0]));
+	gchar * artist_uuid = g_strdup(koto_utils_string_unquote(fields[1]));
+	gchar * album_name = g_strdup(koto_utils_string_unquote(fields[2]));
+	gchar * album_description = (fields[3] != NULL) ? g_strdup(koto_utils_string_unquote(fields[3])) : NULL;
+	gchar * album_narrator = (fields[4] != NULL) ? g_strdup(koto_utils_string_unquote(fields[4])) : NULL;
+	gchar * album_art = (fields[5] != NULL) ? g_strdup(koto_utils_string_unquote(fields[5])) : NULL;
+	gchar * album_genres = (fields[6] != NULL) ? g_strdup(koto_utils_string_unquote(fields[6])) : NULL;
+	guint64 * album_year = (guint64*) g_ascii_strtoull(fields[7], NULL, 10);
 
 	KotoAlbum * album = koto_album_new_with_uuid(artist, album_uuid); // Create our album
 
@@ -124,15 +128,30 @@ int process_albums(
 		album,
 		"name",
 		album_name,         // Set name
+		"description",
+		album_description,
+		"narrator",
+		album_narrator,
 		"art-path",
 		album_art,             // Set art path if any
 		"preparsed-genres",
 		album_genres,
+		"year",
+		album_year,
 		NULL
 	);
 
 	koto_cartographer_add_album(koto_maps, album); // Add the album to our global cartographer
 	koto_artist_add_album(artist, album); // Add the album
+
+	int tracks_rc = sqlite3_exec(koto_db, g_strdup_printf("SELECT * FROM tracks WHERE album_id=\"%s\"", album_uuid), process_tracks, NULL, NULL); // Process all the tracks for this specific album
+
+	if (tracks_rc != SQLITE_OK) { // Failed to get our tracks
+		g_critical("Failed to read our tracks: %s", sqlite3_errmsg(koto_db));
+		return 1;
+	}
+
+	koto_album_mark_as_finalized(album); // Mark the album as finalized now that all tracks have been loaded, allowing our internal album playlist to re-sort itself
 
 	g_free(album_uuid);
 	g_free(artist_uuid);
@@ -156,26 +175,69 @@ int process_playlists(
 	(void) num_columns;
 	(void) column_names; // Don't need any of the params
 
-	gchar * playlist_uuid = g_strdup(koto_utils_unquote_string(fields[0])); // First column is UUID
-	gchar * playlist_name = g_strdup(koto_utils_unquote_string(fields[1])); // Second column is playlist name
-	gchar * playlist_art_path = g_strdup(koto_utils_unquote_string(fields[2])); // Third column is any art path
+	gchar * playlist_uuid = g_strdup(koto_utils_string_unquote(fields[0])); // First column is UUID
+	gchar * playlist_name = g_strdup(koto_utils_string_unquote(fields[1])); // Second column is playlist name
+	gchar * playlist_art_path = g_strdup(koto_utils_string_unquote(fields[2])); // Third column is any art path
+	guint64 playlist_preferred_sort = g_ascii_strtoull(koto_utils_string_unquote(fields[3]), NULL, 10); // Fourth column is preferred model which is an int
+	gchar * playlist_album_id = g_strdup(koto_utils_string_unquote(fields[4])); // Fifth column is any album ID
+	gchar * playlist_current_track_id = g_strdup(koto_utils_string_unquote(fields[5])); // Sixth column is any track ID
+	guint64 playlist_track_current_playback_pos = g_ascii_strtoull(koto_utils_string_unquote(fields[6]), NULL, 10); // Seventh column is any playback position for the track
 
-	KotoPlaylist * playlist = koto_playlist_new_with_uuid(playlist_uuid); // Create a playlist using the existing UUID
+	KotoPreferredPlaylistSortType sort_type = (KotoPreferredPlaylistSortType) playlist_preferred_sort;
 
-	koto_playlist_set_name(playlist, playlist_name); // Add the playlist name
-	koto_playlist_set_artwork(playlist, playlist_art_path); // Add the playlist art path
+	KotoPlaylist * playlist = NULL;
 
-	koto_cartographer_add_playlist(koto_maps, playlist); // Add to cartographer
+	gboolean for_album = FALSE;
 
-	int playlist_tracks_rc = sqlite3_exec(koto_db, g_strdup_printf("SELECT * FROM playlist_tracks WHERE playlist_id=\"%s\" ORDER BY position ASC", playlist_uuid), process_playlists_tracks, playlist, NULL); // Process our playlist tracks
+	if (koto_utils_string_is_valid(playlist_album_id)) { // Album UUID is set
+		KotoAlbum * album = koto_cartographer_get_album_by_uuid(koto_maps, playlist_album_id); // Get the album based on the album ID set for the playlist
 
-	if (playlist_tracks_rc != SQLITE_OK) { // Failed to get our playlist tracks
-		g_critical("Failed to read our playlist tracks: %s", sqlite3_errmsg(koto_db));
-		return 1;
+		if (KOTO_IS_ALBUM(album)) { // Is an album
+			playlist = koto_album_get_playlist(album); // Get the playlist
+			for_album = TRUE;
+		}
+	} else {
+		playlist = koto_playlist_new_with_uuid(playlist_uuid); // Create a playlist using the existing UUID
+		koto_playlist_apply_model(playlist, sort_type); // Set the model based on what is stored
+		koto_cartographer_add_playlist(koto_maps, playlist); // Add to cartographer
+	}
+
+	if (!KOTO_IS_PLAYLIST(playlist)) { // Not a playlist yet, in this scenario it is likely the album no longer exists
+		goto free;
+	}
+
+	g_object_set(
+		playlist,
+		"name",
+		playlist_name,
+		"art-path",
+		playlist_art_path,
+		"ephemeral",
+		for_album,
+		NULL
+	);
+
+	if (!for_album) { // Isn't for an album
+		int playlist_tracks_rc = sqlite3_exec(koto_db, g_strdup_printf("SELECT * FROM playlist_tracks WHERE playlist_id=\"%s\" ORDER BY position ASC", playlist_uuid), process_playlists_tracks, playlist, NULL); // Process our playlist tracks
+
+		if (playlist_tracks_rc != SQLITE_OK) { // Failed to get our playlist tracks
+			g_critical("Failed to read our playlist tracks: %s", sqlite3_errmsg(koto_db));
+			goto free;
+		}
+	}
+
+	if (koto_utils_string_is_valid(playlist_current_track_id)) { // If we have a track UUID (probably)
+		KotoTrack * track = koto_cartographer_get_track_by_uuid(koto_maps, playlist_current_track_id); // Get the track UUID
+
+		if (KOTO_IS_TRACK(track)) { // If this is a track
+			koto_track_set_playback_position(track, playlist_track_current_playback_pos); // Set the playback position of the track
+			koto_playlist_set_track_as_current(playlist, playlist_current_track_id); // Ensure we have this track set as the current one in the playlist
+		}
 	}
 
 	koto_playlist_mark_as_finalized(playlist); // Mark as finalized since loading should be complete
 
+free:
 	g_free(playlist_uuid);
 	g_free(playlist_name);
 	g_free(playlist_art_path);
@@ -193,9 +255,8 @@ int process_playlists_tracks(
 	(void) num_columns;
 	(void) column_names; // Don't need these
 
-	gchar * playlist_uuid = g_strdup(koto_utils_unquote_string(fields[1]));
-	gchar * track_uuid = g_strdup(koto_utils_unquote_string(fields[2]));
-	gboolean current = g_strcmp0(koto_utils_unquote_string(fields[3]), "0");
+	gchar * playlist_uuid = g_strdup(koto_utils_string_unquote(fields[1]));
+	gchar * track_uuid = g_strdup(koto_utils_string_unquote(fields[2]));
 
 	KotoPlaylist * playlist = koto_cartographer_get_playlist_by_uuid(koto_maps, playlist_uuid); // Get the playlist
 	KotoTrack * track = koto_cartographer_get_track_by_uuid(koto_maps, track_uuid); // Get the track
@@ -204,7 +265,7 @@ int process_playlists_tracks(
 		goto freeforret;
 	}
 
-	koto_playlist_add_track(playlist, track, current, FALSE); // Add the track to the playlist but don't re-commit to the table
+	koto_playlist_add_track(playlist, track, FALSE, FALSE); // Add the track to the playlist but don't re-commit to the table
 
 freeforret:
 	g_free(playlist_uuid);
@@ -223,14 +284,22 @@ int process_tracks(
 	(void) num_columns;
 	(void) column_names; // Don't need these
 
-	gchar * track_uuid = g_strdup(koto_utils_unquote_string(fields[0]));
-	gchar * artist_uuid = g_strdup(koto_utils_unquote_string(fields[1]));
-	gchar * album_uuid = g_strdup(koto_utils_unquote_string(fields[2]));
-	gchar * name = g_strdup(koto_utils_unquote_string(fields[3]));
+	gchar * track_uuid = g_strdup(koto_utils_string_unquote(fields[0]));
+
+	KotoTrack * existing_track = koto_cartographer_get_track_by_uuid(koto_maps, track_uuid);
+
+	if (KOTO_IS_TRACK(existing_track)) { // Already have track
+		g_free(track_uuid);
+		return 0;
+	}
+
+	gchar * artist_uuid = g_strdup(koto_utils_string_unquote(fields[1]));
+	gchar * album_uuid = g_strdup(koto_utils_string_unquote(fields[2]));
+	gchar * name = g_strdup(koto_utils_string_unquote(fields[3]));
 	guint * disc_num = (guint*) g_ascii_strtoull(fields[4], NULL, 10);
 	guint64 * position = (guint64*) g_ascii_strtoull(fields[5], NULL, 10);
 	guint64 * duration = (guint64*) g_ascii_strtoull(fields[6], NULL, 10);
-	gchar * genres = g_strdup(koto_utils_unquote_string(fields[7]));
+	gchar * genres = g_strdup(koto_utils_string_unquote(fields[7]));
 
 	KotoTrack * track = koto_track_new_with_uuid(track_uuid); // Create our file
 
@@ -265,10 +334,12 @@ int process_tracks(
 		return 1;
 	}
 
+	koto_cartographer_add_track(koto_maps, track); // Add the track to cartographer if necessary
+
 	KotoArtist * artist = koto_cartographer_get_artist_by_uuid(koto_maps, artist_uuid); // Get the artist
 	koto_artist_add_track(artist, track); // Add the track for the artist
 
-	if (koto_utils_is_string_valid(album_uuid)) { // If we have an album UUID
+	if (koto_utils_string_is_valid(album_uuid)) { // If we have an album UUID
 		KotoAlbum * album = koto_cartographer_get_album_by_uuid(koto_maps, album_uuid); // Attempt to get album
 
 		if (KOTO_IS_ALBUM(album)) { // This is an album
@@ -293,13 +364,13 @@ int process_track_paths(
 	(void) num_columns;
 	(void) column_names; // Don't need these
 
-	KotoLibrary * library = koto_cartographer_get_library_by_uuid(koto_maps, koto_utils_unquote_string(fields[0]));
+	KotoLibrary * library = koto_cartographer_get_library_by_uuid(koto_maps, koto_utils_string_unquote(fields[0]));
 
 	if (!KOTO_IS_LIBRARY(library)) { // Not a library
 		return 1;
 	}
 
-	koto_track_set_path(track, library, koto_utils_unquote_string(fields[1]));
+	koto_track_set_path(track, library, koto_utils_string_unquote(fields[1]));
 	return 0;
 }
 

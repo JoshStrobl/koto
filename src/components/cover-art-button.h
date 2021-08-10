@@ -1,4 +1,4 @@
-/* koto-cover-art-button.h
+/* cover-art-button.h
  *
  * Copyright 2021 Joshua Strobl
  *
@@ -17,7 +17,7 @@
 
 #include <glib-2.0/glib.h>
 #include <gtk-4.0/gtk/gtk.h>
-#include "../koto-button.h"
+#include "button.h"
 
 G_BEGIN_DECLS
 

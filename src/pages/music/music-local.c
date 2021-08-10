@@ -17,9 +17,9 @@
 
 #include <glib-2.0/glib.h>
 #include <gtk-4.0/gtk/gtk.h>
+#include "../../components/button.h"
 #include "../../db/cartographer.h"
 #include "../../indexer/structs.h"
-#include "koto-button.h"
 #include "config/config.h"
 #include "../../koto-utils.h"
 #include "music-local.h"
@@ -154,7 +154,7 @@ void koto_page_music_local_go_to_artist_by_uuid(
 		NULL
 	);
 
-	if (!koto_utils_is_string_valid(artist_name)) { // Failed to get the artist name
+	if (!koto_utils_string_is_valid(artist_name)) { // Failed to get the artist name
 		return;
 	}
 

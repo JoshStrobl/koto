@@ -205,7 +205,7 @@ void koto_create_modify_playlist_dialog_handle_create_click(
 	}
 
 	KotoPlaylist * playlist = NULL;
-	gboolean modify_existing_playlist = koto_utils_is_string_valid(self->playlist_uuid);
+	gboolean modify_existing_playlist = koto_utils_string_is_valid(self->playlist_uuid);
 
 	if (modify_existing_playlist) { // Modifying an existing playlist
 		playlist = koto_cartographer_get_playlist_by_uuid(koto_maps, self->playlist_uuid);
@@ -313,13 +313,14 @@ void koto_create_modify_playlist_dialog_reset(KotoCreateModifyPlaylistDialog * s
 	gtk_entry_set_placeholder_text(GTK_ENTRY(self->name_entry), "Name of playlist"); // Reset placeholder
 	gtk_image_set_from_icon_name(GTK_IMAGE(self->playlist_image), "insert-image-symbolic"); // Reset the image
 	gtk_button_set_label(GTK_BUTTON(self->create_button), "Create");
+	self->playlist_uuid = NULL; // Reset playlist UUID
 }
 
 void koto_create_modify_playlist_dialog_set_playlist_uuid(
 	KotoCreateModifyPlaylistDialog * self,
 	gchar * playlist_uuid
 ) {
-	if (!koto_utils_is_string_valid(playlist_uuid)) { // Not a valid playlist UUID string
+	if (!koto_utils_string_is_valid(playlist_uuid)) { // Not a valid playlist UUID string
 		return;
 	}
 
@@ -335,7 +336,7 @@ void koto_create_modify_playlist_dialog_set_playlist_uuid(
 
 	gchar * art = koto_playlist_get_artwork(playlist);
 
-	if (!koto_utils_is_string_valid(art)) { // If art is not defined
+	if (!koto_utils_string_is_valid(art)) { // If art is not defined
 		gtk_image_set_from_icon_name(GTK_IMAGE(self->playlist_image), "insert-image-symbolic"); // Reset the image
 	} else {
 		gtk_image_set_from_file(GTK_IMAGE(self->playlist_image), art);

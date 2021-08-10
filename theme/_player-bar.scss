@@ -46,4 +46,11 @@
 			}
 		}
 	}
+
+	.playerbar-secondary-controls { // Secondary controls
+		label { // Inner playback position label
+			font-size: large;
+			margin-right: $halvedpadding;
+		}
+	}
 }

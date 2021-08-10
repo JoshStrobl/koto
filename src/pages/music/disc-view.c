@@ -16,11 +16,11 @@
  */
 
 #include <gtk-4.0/gtk/gtk.h>
-#include "../../components/koto-action-bar.h"
+#include "../../components/action-bar.h"
+#include "../../components/track-item.h"
 #include "../../db/cartographer.h"
 #include "../../indexer/track-helpers.h"
 #include "../../indexer/structs.h"
-#include "../../koto-track-item.h"
 #include "../../koto-utils.h"
 #include "disc-view.h"
 
@@ -194,7 +194,6 @@ void koto_disc_view_add_track(
 	KotoTrackItem * track_item = koto_track_item_new(track); // Create our new track item
 
 	if (!KOTO_IS_TRACK_ITEM(track_item)) { // Failed to create a track item for this track
-		g_warning("Failed to build track item for track with UUID %s", track_uuid);
 		return;
 	}
 
@@ -212,9 +211,9 @@ void koto_disc_view_handle_selected_rows_changed(
 		return;
 	}
 
-	gchar * album_uuid = koto_album_get_album_uuid(self->album); // Get the UUID
+	gchar * album_uuid = koto_album_get_uuid(self->album); // Get the UUID
 
-	if (!koto_utils_is_string_valid(album_uuid)) { // Not set
+	if (!koto_utils_string_is_valid(album_uuid)) { // Not set
 		return;
 	}
 
@@ -247,7 +246,7 @@ void koto_disc_view_remove_track(
 		return;
 	}
 
-	if (!koto_utils_is_string_valid(track_uuid)) { // If our UUID is not a valid
+	if (!koto_utils_string_is_valid(track_uuid)) { // If our UUID is not a valid
 		return;
 	}
 

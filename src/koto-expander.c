@@ -17,8 +17,8 @@
 
 #include <glib/gi18n.h>
 #include <gtk-4.0/gtk/gtk.h>
+#include "components/button.h"
 #include "config/config.h"
-#include "koto-button.h"
 #include "koto-expander.h"
 #include "koto-utils.h"
 
@@ -212,7 +212,7 @@ void koto_expander_set_icon_name(
 		return;
 	}
 
-	if (!koto_utils_is_string_valid(icon)) { // Not a valid string
+	if (!koto_utils_string_is_valid(icon)) { // Not a valid string
 		return;
 	}
 

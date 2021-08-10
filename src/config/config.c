@@ -37,6 +37,11 @@ enum {
 	PROP_PLAYBACK_CONTINUE_ON_PLAYLIST,
 	PROP_PLAYBACK_LAST_USED_VOLUME,
 	PROP_PLAYBACK_MAINTAIN_SHUFFLE,
+	PROP_PREFERRED_ALBUM_SORT_TYPE,
+	PROP_UI_ALBUM_INFO_SHOW_DESCRIPTION,
+	PROP_UI_ALBUM_INFO_SHOW_GENRES,
+	PROP_UI_ALBUM_INFO_SHOW_NARRATOR,
+	PROP_UI_ALBUM_INFO_SHOW_YEAR,
 	PROP_UI_THEME_DESIRED,
 	PROP_UI_THEME_OVERRIDE,
 	N_PROPS,
@@ -69,7 +74,16 @@ struct _KotoConfig {
 	gdouble playback_last_used_volume;
 	gboolean playback_maintain_shuffle;
 
+	/* Misc Prefs */
+
+	KotoPreferredAlbumSortType preferred_album_sort_type;
+
 	/* UI Settings */
+
+	gboolean ui_album_info_show_description;
+	gboolean ui_album_info_show_genres;
+	gboolean ui_album_info_show_narrator;
+	gboolean ui_album_info_show_year;
 
 	gchar * ui_theme_desired;
 	gboolean ui_theme_override;
@@ -132,6 +146,46 @@ static void koto_config_class_init(KotoConfigClass * c) {
 		G_PARAM_CONSTRUCT | G_PARAM_EXPLICIT_NOTIFY | G_PARAM_READWRITE
 	);
 
+	config_props[PROP_PREFERRED_ALBUM_SORT_TYPE] = g_param_spec_string(
+		"artist-preferred-album-sort-type",
+		"Preferred album sort type (chronological or alphabetical-only)",
+		"Preferred album sort type (chronological or alphabetical-only)",
+		"default",
+		G_PARAM_CONSTRUCT | G_PARAM_EXPLICIT_NOTIFY | G_PARAM_READWRITE
+	);
+
+	config_props[PROP_UI_ALBUM_INFO_SHOW_DESCRIPTION] = g_param_spec_boolean(
+		"ui-album-info-show-description",
+		"Show Description in Album Info",
+		"Show Description in Album Info",
+		TRUE,
+		G_PARAM_CONSTRUCT | G_PARAM_EXPLICIT_NOTIFY | G_PARAM_READWRITE
+	);
+
+	config_props[PROP_UI_ALBUM_INFO_SHOW_GENRES] = g_param_spec_boolean(
+		"ui-album-info-show-genres",
+		"Show Genres in Album Info",
+		"Show Genres in Album Info",
+		TRUE,
+		G_PARAM_CONSTRUCT | G_PARAM_EXPLICIT_NOTIFY | G_PARAM_READWRITE
+	);
+
+	config_props[PROP_UI_ALBUM_INFO_SHOW_NARRATOR] = g_param_spec_boolean(
+		"ui-album-info-show-narrator",
+		"Show Narrator in Album Info",
+		"Show Narrator in Album Info",
+		TRUE,
+		G_PARAM_CONSTRUCT | G_PARAM_EXPLICIT_NOTIFY | G_PARAM_READWRITE
+	);
+
+	config_props[PROP_UI_ALBUM_INFO_SHOW_YEAR] = g_param_spec_boolean(
+		"ui-album-info-show-year",
+		"Show Year in Album Info",
+		"Show Year in Album Info",
+		TRUE,
+		G_PARAM_CONSTRUCT | G_PARAM_EXPLICIT_NOTIFY | G_PARAM_READWRITE
+	);
+
 	config_props[PROP_UI_THEME_DESIRED] = g_param_spec_string(
 		"ui-theme-desired",
 		"Desired Theme",
@@ -181,6 +235,18 @@ static void koto_config_get_property(
 		case PROP_PLAYBACK_MAINTAIN_SHUFFLE:
 			g_value_set_boolean(val, self->playback_maintain_shuffle);
 			break;
+		case PROP_UI_ALBUM_INFO_SHOW_DESCRIPTION:
+			g_value_set_boolean(val, self->ui_album_info_show_description);
+			break;
+		case PROP_UI_ALBUM_INFO_SHOW_GENRES:
+			g_value_set_boolean(val, self->ui_album_info_show_genres);
+			break;
+		case PROP_UI_ALBUM_INFO_SHOW_NARRATOR:
+			g_value_set_boolean(val, self->ui_album_info_show_narrator);
+			break;
+		case PROP_UI_ALBUM_INFO_SHOW_YEAR:
+			g_value_set_boolean(val, self->ui_album_info_show_year);
+			break;
 		case PROP_UI_THEME_DESIRED:
 			g_value_set_string(val, g_strdup(self->ui_theme_desired));
 			break;
@@ -211,6 +277,21 @@ static void koto_config_set_property(
 		case PROP_PLAYBACK_MAINTAIN_SHUFFLE:
 			self->playback_maintain_shuffle = g_value_get_boolean(val);
 			break;
+		case PROP_PREFERRED_ALBUM_SORT_TYPE:
+			self->preferred_album_sort_type = g_strcmp0(g_value_get_string(val), "alphabetical") ? KOTO_PREFERRED_ALBUM_ALWAYS_ALPHABETICAL : KOTO_PREFERRED_ALBUM_SORT_TYPE_DEFAULT;
+			break;
+		case PROP_UI_ALBUM_INFO_SHOW_DESCRIPTION:
+			self->ui_album_info_show_description = g_value_get_boolean(val);
+			break;
+		case PROP_UI_ALBUM_INFO_SHOW_GENRES:
+			self->ui_album_info_show_genres = g_value_get_boolean(val);
+			break;
+		case PROP_UI_ALBUM_INFO_SHOW_NARRATOR:
+			self->ui_album_info_show_narrator = g_value_get_boolean(val);
+			break;
+		case PROP_UI_ALBUM_INFO_SHOW_YEAR:
+			self->ui_album_info_show_year = g_value_get_boolean(val);
+			break;
 		case PROP_UI_THEME_DESIRED:
 			self->ui_theme_desired = g_strdup(g_value_get_string(val));
 			break;
@@ -238,7 +319,7 @@ toml_table_t * koto_config_get_library(
 
 		gchar * lib_uuid = (uuid_datum.ok) ? (gchar*) uuid_datum.u.s : NULL;
 
-		if (koto_utils_is_string_valid(lib_uuid) && (g_strcmp0(library_uuid, lib_uuid) == 0)) { // Is a valid string and the libraries match
+		if (koto_utils_string_is_valid(lib_uuid) && (g_strcmp0(library_uuid, lib_uuid) == 0)) { // Is a valid string and the libraries match
 			return library;
 		}
 	}
@@ -253,7 +334,7 @@ void koto_config_load(
 	KotoConfig * self,
 	gchar * path
 ) {
-	if (!koto_utils_is_string_valid(path)) { // Path is not valid
+	if (!koto_utils_string_is_valid(path)) { // Path is not valid
 		return;
 	}
 
@@ -374,6 +455,30 @@ void koto_config_load(
 	toml_table_t * ui_section = toml_table_in(conf, "ui");
 
 	if (ui_section) { // Have UI section
+		toml_datum_t album_info_show_description = toml_bool_in(ui_section, "album-info-show-description");
+
+		if (album_info_show_description.ok && (album_info_show_description.u.b != self->ui_album_info_show_description)) { // Changed if we are disabling description
+			g_object_set(self, "ui-album-info-show-description", album_info_show_description.u.b, NULL);
+		}
+
+		toml_datum_t album_info_show_genres = toml_bool_in(ui_section, "album-info-show-genres");
+
+		if (album_info_show_genres.ok && (album_info_show_genres.u.b != self->ui_album_info_show_genres)) { // Changed if we are disabling description
+			g_object_set(self, "ui-album-info-show-genres", album_info_show_genres.u.b, NULL);
+		}
+
+		toml_datum_t album_info_show_narrator = toml_bool_in(ui_section, "album-info-show-narrator");
+
+		if (album_info_show_narrator.ok && (album_info_show_narrator.u.b != self->ui_album_info_show_narrator)) { // Changed if we are disabling description
+			g_object_set(self, "ui-album-info-show-narrator", album_info_show_description.u.b, NULL);
+		}
+
+		toml_datum_t album_info_show_year = toml_bool_in(ui_section, "album-info-show-year");
+
+		if (album_info_show_year.ok && (album_info_show_year.u.b != self->ui_album_info_show_year)) { // Changed if we are disabling description
+			g_object_set(self, "ui-album-info-show-year", album_info_show_year.u.b, NULL);
+		}
+
 		toml_datum_t name = toml_string_in(ui_section, "theme-desired");
 
 		if (name.ok && (g_strcmp0(name.u.s, self->ui_theme_desired) != 0)) { // Have a name specified and they are different
@@ -472,6 +577,10 @@ void koto_config_monitor_handle_changed(
 	}
 }
 
+KotoPreferredAlbumSortType koto_config_get_preferred_album_sort_type(KotoConfig * self) {
+	return self->preferred_album_sort_type;
+}
+
 /**
  * Refresh will handle any FS notify change on our Koto config file and call load
  **/
@@ -568,7 +677,7 @@ void koto_config_save(KotoConfig * self) {
 			}
 
 			gchar * key_name = g_strdup(current_section_keyname->data);
-			gchar * key_name_replaced = koto_utils_replace_string_all(key_name, g_strdup_printf("%s-", (gchar*) section_name), ""); // Remove SECTIONNAME-
+			gchar * key_name_replaced = koto_utils_string_replace_all(key_name, g_strdup_printf("%s-", (gchar*) section_name), ""); // Remove SECTIONNAME-
 
 			const gchar * line = g_strdup_printf("\t%s = %s", key_name_replaced, prop_val);
 

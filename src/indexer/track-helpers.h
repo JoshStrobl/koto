@@ -19,6 +19,8 @@
 
 void koto_track_helpers_init();
 
+guint64 koto_track_helpers_get_cd_based_on_file_name(const gchar * file_name);
+
 gchar * koto_track_helpers_get_corrected_genre(gchar * original_genre);
 
 gchar * koto_track_helpers_get_name_for_file(

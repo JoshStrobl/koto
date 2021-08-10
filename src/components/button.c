@@ -16,9 +16,12 @@
  */
 
 #include <gtk-4.0/gtk/gtk.h>
-#include "koto-button.h"
 #include "config/config.h"
-#include "koto-utils.h"
+#include "button.h"
+#include "../koto-window.h"
+#include "../koto-utils.h"
+
+extern KotoWindow * main_window;
 
 struct _PixbufSize {
 	guint size;
@@ -69,6 +72,8 @@ static GParamSpec * btn_props[N_BTN_PROPERTIES] = {
 struct _KotoButton {
 	GtkBox parent_instance;
 	guint pix_size;
+
+	gpointer arbitrary_data;
 
 	GtkWidget * button_pic;
 	GtkWidget * badge_label;
@@ -313,6 +318,37 @@ void koto_button_flip(KotoButton * self) {
 	koto_button_show_image(self, !self->currently_showing_alt);
 }
 
+gpointer koto_button_get_data(KotoButton * self) {
+	return self->arbitrary_data;
+}
+
+void koto_button_global_page_nav_callback(
+	GtkGestureClick * gesture,
+	int n_press,
+	double x,
+	double y,
+	gpointer user_data
+) {
+	(void) gesture;
+	(void) n_press;
+	(void) x;
+	(void) y;
+
+	KotoButton * btn = KOTO_BUTTON(user_data); // Cast our user data as a button
+
+	if (!KOTO_IS_BUTTON(btn)) { // Not a button
+		return;
+	}
+
+	gchar * btn_nav_uuid = (gchar*) koto_button_get_data(btn); // Get the data
+
+	if (!koto_utils_string_is_valid(btn_nav_uuid)) { // Not a valid string
+		return;
+	}
+
+	koto_window_go_to_page(main_window, btn_nav_uuid);
+}
+
 void koto_button_handle_mouse_enter(
 	GtkEventControllerMotion * controller,
 	double x,
@@ -355,6 +391,17 @@ void koto_button_hide_image(KotoButton * self) {
 	if (GTK_IS_WIDGET(self->button_pic)) { // Is a widget
 		gtk_widget_hide(self->button_pic);
 	}
+}
+
+void koto_button_set_data(
+	KotoButton * self,
+	gpointer data
+) {
+	if (!KOTO_IS_BUTTON(self)) { // Not a button
+		return;
+	}
+
+	self->arbitrary_data = data;
 }
 
 void koto_button_set_pseudoactive_styling(KotoButton * self) {
@@ -408,14 +455,19 @@ void koto_button_set_file_path(
 		return;
 	}
 
-	if (!koto_utils_is_string_valid(file_path)) { // file path is invalid
+	if (!koto_utils_string_is_valid(file_path)) { // file path is invalid
 		return;
 	}
 
-	if (koto_utils_is_string_valid(self->image_file_path)) { // image file path is valid
+	if (g_strcmp0(self->image_file_path, file_path) == 0) { // Request setting as same file
+		return;
+	}
+
+	if (koto_utils_string_is_valid(self->image_file_path)) { // image file path is valid
 		g_free(self->image_file_path);
 	}
 
+	self->use_from_file = TRUE;
 	self->image_file_path = g_strdup(file_path);
 	koto_button_show_image(self, FALSE);
 }
@@ -429,7 +481,7 @@ void koto_button_set_icon_name(
 		return;
 	}
 
-	if (!koto_utils_is_string_valid(icon_name)) { // Not a valid icon
+	if (!koto_utils_string_is_valid(icon_name)) { // Not a valid icon
 		return;
 	}
 
@@ -517,18 +569,18 @@ void koto_button_set_text(
 		return;
 	}
 
-	if (!koto_utils_is_string_valid(text)) { // Invalid text
+	if (!koto_utils_string_is_valid(text)) { // Invalid text
 		return;
 	}
 
-	if (koto_utils_is_string_valid(self->text)) { // Text defined
+	if (koto_utils_string_is_valid(self->text)) { // Text defined
 		g_free(self->text); // Free existing text
 	}
 
 	self->text = g_strdup(text);
 
 	if (GTK_IS_LABEL(self->button_label)) { // If we have a button label
-		if (koto_utils_is_string_valid(self->text)) { // Have text set
+		if (koto_utils_string_is_valid(self->text)) { // Have text set
 			gtk_label_set_text(GTK_LABEL(self->button_label), self->text);
 			gtk_widget_show(self->button_label); // Show the label
 		} else { // Have a label but no longer text
@@ -536,8 +588,9 @@ void koto_button_set_text(
 			g_free(self->button_label);
 		}
 	} else { // If we do not have a button label
-		if (koto_utils_is_string_valid(self->text)) { // If we have text
+		if (koto_utils_string_is_valid(self->text)) { // If we have text
 			self->button_label = gtk_label_new(self->text); // Create our label
+			gtk_widget_set_hexpand(self->button_label, TRUE);
 			gtk_label_set_xalign(GTK_LABEL(self->button_label), 0);
 
 			if (GTK_IS_IMAGE(self->button_pic)) { // If we have an image
@@ -551,6 +604,45 @@ void koto_button_set_text(
 	g_object_notify_by_pspec(G_OBJECT(self), btn_props[PROP_TEXT]);
 }
 
+void koto_button_set_text_justify(
+	KotoButton * self,
+	GtkJustification j
+) {
+	if (!KOTO_IS_BUTTON(self)) {
+		return;
+	}
+
+	if (!GTK_IS_LABEL(self->button_label)) { // If we do not have a button label
+		return;
+	}
+
+	if (j == GTK_JUSTIFY_CENTER) { // Center text
+		gtk_label_set_xalign(GTK_LABEL(self->button_label), 0.5);
+	} else if (j == GTK_JUSTIFY_RIGHT) { // Right align
+		gtk_label_set_xalign(GTK_LABEL(self->button_label), 1.0);
+	} else {
+		gtk_label_set_xalign(GTK_LABEL(self->button_label), 0);
+	}
+
+	gtk_label_set_justify(GTK_LABEL(self->button_label), j);
+}
+
+void koto_button_set_text_wrap(
+	KotoButton * self,
+	gboolean wrap
+) {
+	if (!KOTO_IS_BUTTON(self)) {
+		return;
+	}
+
+	if (!GTK_IS_LABEL(self->button_label)) { // If we do not have a button label
+		return;
+	}
+
+	gtk_label_set_single_line_mode(GTK_LABEL(self->button_label), !wrap);
+	gtk_label_set_wrap(GTK_LABEL(self->button_label), wrap);
+}
+
 void koto_button_show_image(
 	KotoButton * self,
 	gboolean use_alt
@@ -560,7 +652,7 @@ void koto_button_show_image(
 	}
 
 	if (self->use_from_file) { // Use from a file instead of icon name
-		if (!koto_utils_is_string_valid(self->image_file_path)) { // Not set
+		if (!koto_utils_string_is_valid(self->image_file_path)) { // Not set
 			return;
 		}
 

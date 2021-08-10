@@ -60,14 +60,6 @@ void koto_nav_handle_playlist_removed(
 	gpointer user_data
 );
 
-void koto_nav_handle_local_music_click(
-	GtkGestureClick * gesture,
-	int n_press,
-	double x,
-	double y,
-	gpointer user_data
-);
-
 GtkWidget * koto_nav_get_nav(KotoNav * self);
 
 G_END_DECLS

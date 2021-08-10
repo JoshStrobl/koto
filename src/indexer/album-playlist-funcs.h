@@ -20,6 +20,6 @@
 
 G_BEGIN_DECLS
 
-KotoPlaylist * koto_album_create_playlist(KotoAlbum * self);
+KotoPlaylist * koto_album_get_playlist(KotoAlbum * self);
 
 G_END_DECLS

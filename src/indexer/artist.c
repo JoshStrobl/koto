@@ -17,6 +17,7 @@
 
 #include <glib-2.0/glib.h>
 #include <sqlite3.h>
+#include "../config/config.h"
 #include "../db/db.h"
 #include "../db/cartographer.h"
 #include "../playlist/playlist.h"
@@ -26,6 +27,7 @@
 #include "track-helpers.h"
 
 extern KotoCartographer * koto_maps;
+extern KotoConfig * config;
 
 enum {
 	PROP_0,
@@ -60,10 +62,12 @@ struct _KotoArtist {
 	gboolean finalized;
 	gboolean has_artist_art;
 	gchar * artist_name;
-	GList * albums;
 	GList * tracks;
 	GHashTable * paths;
 	KotoLibraryType type;
+
+	GQueue * albums;
+	GListStore * albums_store;
 };
 
 struct _KotoArtistClass {
@@ -195,7 +199,8 @@ static void koto_artist_class_init(KotoArtistClass * c) {
 }
 
 static void koto_artist_init(KotoArtist * self) {
-	self->albums = NULL; // Create a new GList
+	self->albums = g_queue_new(); // Create a new GQueue
+	self->albums_store = g_list_store_new(KOTO_TYPE_ALBUM); // Create our GListStore of type KotoAlbum
 
 	self->content_playlist = koto_playlist_new(); // Create our playlist
 	g_object_set(
@@ -223,7 +228,7 @@ void koto_artist_commit(KotoArtist * self) {
 		"VALUES ('%s', quote(\"%s\"), NULL)"
 		"ON CONFLICT(id) DO UPDATE SET name=excluded.name, art_path=excluded.art_path;",
 		self->uuid,
-		self->artist_name
+		koto_utils_string_get_valid(self->artist_name)
 	);
 
 	new_transaction(commit_op, "Failed to write our artist to the database", FALSE);
@@ -246,14 +251,6 @@ void koto_artist_commit(KotoArtist * self) {
 
 		new_transaction(commit_op, "Failed to add this path for the artist", FALSE);
 	}
-}
-
-KotoPlaylist * koto_artist_get_playlist(KotoArtist * self) {
-	if (!KOTO_IS_ARTIST(self)) {
-		return NULL;
-	}
-
-	return self->content_playlist;
 }
 
 static void koto_artist_get_property(
@@ -311,13 +308,21 @@ void koto_artist_add_album(
 		return;
 	}
 
-	gchar * album_uuid = koto_album_get_uuid(album);
+	GList * found_albums = g_queue_find(self->albums, album); // Try finding the album
 
-	if (g_list_index(self->albums, album_uuid) != -1) { // If we have already added the album
+	if (found_albums != NULL) { // Already has been added
+		g_list_free(found_albums);
 		return;
 	}
 
-	self->albums = g_list_append(self->albums, album_uuid); // Push to our album's UUID to the end of the list
+	g_list_free(found_albums);
+
+	g_queue_push_tail(self->albums, album); // Add the album to end of albums GQueue
+	g_list_store_append(self->albums_store, album); // Add the album to th estore as well
+
+	if (self->finalized) { // Is already finalized
+		koto_artist_apply_model(self, koto_config_get_preferred_album_sort_type(config)); // Apply our model to sort our albums gqueue and store
+	}
 
 	g_signal_emit(
 		self,
@@ -358,12 +363,32 @@ void koto_artist_add_track(
 	);
 }
 
-GList * koto_artist_get_albums(KotoArtist * self) {
+void koto_artist_apply_model(
+	KotoArtist * self,
+	KotoPreferredAlbumSortType model
+) {
+	if (!KOTO_IS_ARTIST(self)) {
+		return;
+	}
+
+	g_queue_sort(self->albums, koto_artist_model_sort_albums, &model);
+	g_list_store_sort(self->albums_store, koto_artist_model_sort_albums, &model);
+}
+
+GQueue * koto_artist_get_albums(KotoArtist * self) {
 	if (!KOTO_IS_ARTIST(self)) { // Not an artist
 		return NULL;
 	}
 
-	return g_list_copy(self->albums);
+	return self->albums;
+}
+
+GListStore * koto_artist_get_albums_store(KotoArtist * self) {
+	if (!KOTO_IS_ARTIST(self)) { // Not an artist
+		return NULL;
+	}
+
+	return self->albums_store;
 }
 
 KotoAlbum * koto_artist_get_album_by_name(
@@ -377,15 +402,15 @@ KotoAlbum * koto_artist_get_album_by_name(
 	KotoAlbum * album = NULL;
 
 	GList * cur_list_iter;
-	for (cur_list_iter = self->albums; cur_list_iter != NULL; cur_list_iter = cur_list_iter->next) { // Iterate through our albums by their UUIDs
-		KotoAlbum * album_for_uuid = koto_cartographer_get_album_by_uuid(koto_maps, cur_list_iter->data); // Get the album
+	for (cur_list_iter = self->albums->head; cur_list_iter != NULL; cur_list_iter = cur_list_iter->next) { // Iterate through our albums by their UUIDs
+		KotoAlbum * this_album = cur_list_iter->data;
 
-		if (!KOTO_IS_ALBUM(album_for_uuid)) { // Not an album
+		if (!KOTO_IS_ALBUM(this_album)) { // Not an album
 			continue;
 		}
 
-		if (g_strcmp0(koto_album_get_name(album_for_uuid), album_name) == 0) { // These album names match
-			album = album_for_uuid;
+		if (g_strcmp0(koto_album_get_name(this_album), album_name) == 0) { // These album names match
+			album = this_album;
 			break;
 		}
 	}
@@ -398,7 +423,15 @@ gchar * koto_artist_get_name(KotoArtist * self) {
 		return g_strdup("");
 	}
 
-	return g_strdup(koto_utils_is_string_valid(self->artist_name) ? self->artist_name : ""); // Return artist name if set
+	return g_strdup(koto_utils_string_is_valid(self->artist_name) ? self->artist_name : ""); // Return artist name if set
+}
+
+KotoPlaylist * koto_artist_get_playlist(KotoArtist * self) {
+	if (!KOTO_IS_ARTIST(self)) {
+		return NULL;
+	}
+
+	return self->content_playlist;
 }
 
 GList * koto_artist_get_tracks(KotoArtist * self) {
@@ -425,7 +458,12 @@ void koto_artist_remove_album(
 		return;
 	}
 
-	self->albums = g_list_remove(self->albums, koto_album_get_uuid(album));
+	g_queue_remove(self->albums, album); // Remove the album
+
+	guint position = 0;
+	if (g_list_store_find(self->albums_store, album, &position)) { // Found the album in the list store
+		g_list_store_remove(self->albums_store, position); // Remove from the list store
+	}
 
 	g_signal_emit(
 		self,
@@ -468,11 +506,11 @@ void koto_artist_set_artist_name(
 		return;
 	}
 
-	if (!koto_utils_is_string_valid(artist_name)) { // No artist name
+	if (!koto_utils_string_is_valid(artist_name)) { // No artist name
 		return;
 	}
 
-	if (koto_utils_is_string_valid(self->artist_name)) { // Has artist name
+	if (koto_utils_string_is_valid(self->artist_name)) { // Has artist name
 		g_free(self->artist_name);
 	}
 
@@ -487,7 +525,7 @@ void koto_artist_set_as_finalized(KotoArtist * self) {
 
 	self->finalized = TRUE;
 
-	if (g_list_length(self->albums) == 0) { // Have no albums
+	if (g_queue_get_length(self->albums) == 0) { // Have no albums
 		g_signal_emit_by_name(self, "has-no-albums");
 	}
 }
@@ -513,6 +551,36 @@ void koto_artist_set_path(
 	}
 
 	self->type = koto_library_get_lib_type(lib); // Define our artist type as the type from the library
+}
+
+gint koto_artist_model_sort_albums(
+	gconstpointer first_item,
+	gconstpointer second_item,
+	gpointer user_data
+) {
+	KotoPreferredAlbumSortType * preferred_model = (KotoPreferredAlbumSortType*) user_data;
+
+	KotoAlbum * first_album = KOTO_ALBUM(first_item);
+	KotoAlbum * second_album = KOTO_ALBUM(second_item);
+
+	if (KOTO_IS_ALBUM(first_album) && !KOTO_IS_ALBUM(second_album)) { // First album is valid, second isn't
+		return -1;
+	} else if (!KOTO_IS_ALBUM(first_album) && KOTO_IS_ALBUM(second_album)) { // Second album is valid, first isn't
+		return 1;
+	}
+
+	if (preferred_model == KOTO_PREFERRED_ALBUM_SORT_TYPE_DEFAULT) { // Sort chronological before alphabetical
+		guint64 fa_year = koto_album_get_year(first_album);
+		guint64 sa_year = koto_album_get_year(second_album);
+
+		if (fa_year > sa_year) { // First album is newer than second
+			return -1;
+		} else if (fa_year < sa_year) { // Second album is newer than first
+			return 1;
+		}
+	}
+
+	return g_utf8_collate(koto_album_get_name(first_album), koto_album_get_name(second_album));
 }
 
 KotoArtist * koto_artist_new(gchar * artist_name) {

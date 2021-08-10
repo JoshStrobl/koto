@@ -27,7 +27,7 @@ G_DECLARE_FINAL_TYPE(KotoPlayerBar, koto_playerbar, KOTO, PLAYERBAR, GObject)
 #define KOTO_IS_PLAYERBAR(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), KOTO_TYPE_PLAYERBAR))
 
 KotoPlayerBar * koto_playerbar_new(void);
-GtkWidget * koto_playerbar_get_main(KotoPlayerBar * bar);
+GtkWidget * koto_playerbar_get_main(KotoPlayerBar * self);
 
 void koto_playerbar_apply_configuration_state(
 	KotoConfig * config,
@@ -35,11 +35,11 @@ void koto_playerbar_apply_configuration_state(
 	KotoPlayerBar * self
 );
 
-void koto_playerbar_create_playback_details(KotoPlayerBar * bar);
+void koto_playerbar_create_playback_details(KotoPlayerBar * self);
 
-void koto_playerbar_create_primary_controls(KotoPlayerBar * bar);
+void koto_playerbar_create_primary_controls(KotoPlayerBar * self);
 
-void koto_playerbar_create_secondary_controls(KotoPlayerBar * bar);
+void koto_playerbar_create_secondary_controls(KotoPlayerBar * self);
 
 void koto_playerbar_go_backwards(
 	GtkGestureClick * gesture,
@@ -131,15 +131,15 @@ void koto_playerbar_handle_volume_button_change(
 	gpointer user_data
 );
 
-void koto_playerbar_reset_progressbar(KotoPlayerBar * bar);
+void koto_playerbar_reset_progressbar(KotoPlayerBar * self);
 
 void koto_playerbar_set_progressbar_duration(
-	KotoPlayerBar * bar,
+	KotoPlayerBar * self,
 	gint64 duration
 );
 
 void koto_playerbar_set_progressbar_value(
-	KotoPlayerBar * bar,
+	KotoPlayerBar * self,
 	gdouble progress
 );
 

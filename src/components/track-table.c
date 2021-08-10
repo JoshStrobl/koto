@@ -21,10 +21,10 @@
 #include "../playback/engine.h"
 #include "../playlist/current.h"
 #include "../playlist/playlist.h"
-#include "../koto-button.h"
 #include "../koto-utils.h"
 #include "../koto-window.h"
-#include "koto-action-bar.h"
+#include "action-bar.h"
+#include "button.h"
 #include "track-table.h"
 
 extern KotoActionBar * action_bar;
@@ -122,14 +122,12 @@ void koto_track_table_bind_track_item(
 		return;
 	}
 
-	gchar * track_name = NULL;
+	gchar * track_name = koto_track_get_name(track);
 	gchar * album_uuid = NULL;
 	gchar * artist_uuid = NULL;
 
 	g_object_get(
 		track,
-		"parsed-name",
-		&track_name,
 		"album-uuid",
 		&album_uuid,
 		"artist-uuid",
@@ -142,7 +140,7 @@ void koto_track_table_bind_track_item(
 	gtk_label_set_label(GTK_LABEL(track_position_label), g_strdup_printf("%u", track_position)); // Set the track position
 	gtk_label_set_label(GTK_LABEL(track_name_label), track_name); // Set our track name
 
-	if (koto_utils_is_string_valid(album_uuid)) { // Is associated with an album
+	if (koto_utils_string_is_valid(album_uuid)) { // Is associated with an album
 		KotoAlbum * album = koto_cartographer_get_album_by_uuid(koto_maps, album_uuid);
 
 		if (KOTO_IS_ALBUM(album)) {
@@ -150,10 +148,12 @@ void koto_track_table_bind_track_item(
 		}
 	}
 
-	KotoArtist * artist = koto_cartographer_get_artist_by_uuid(koto_maps, artist_uuid);
+	if (koto_utils_string_is_valid(artist_uuid)) { // Is associated with an artist
+		KotoArtist * artist = koto_cartographer_get_artist_by_uuid(koto_maps, artist_uuid);
 
-	if (KOTO_IS_ARTIST(artist)) {
-		gtk_label_set_label(GTK_LABEL(track_artist_label), koto_artist_get_name(artist)); // Get the name of the artist and set it to the label
+		if (KOTO_IS_ARTIST(artist)) {
+			gtk_label_set_label(GTK_LABEL(track_artist_label), koto_artist_get_name(artist)); // Get the name of the artist and set it to the label
+		}
 	}
 
 	GList * data = NULL;
@@ -229,7 +229,7 @@ void koto_track_table_handle_track_album_clicked (
 
 	gtk_widget_add_css_class(GTK_WIDGET(self->track_album_button), "active");
 	koto_button_hide_image(self->track_num_button); // Go back to hiding the image
-	koto_track_table_set_playlist_model(self, KOTO_PREFERRED_MODEL_TYPE_SORT_BY_ALBUM);
+	koto_track_table_set_playlist_model(self, KOTO_PREFERRED_PLAYLIST_SORT_TYPE_SORT_BY_ALBUM);
 }
 
 void koto_track_table_handle_track_artist_clicked(
@@ -247,7 +247,7 @@ void koto_track_table_handle_track_artist_clicked(
 
 	gtk_widget_add_css_class(GTK_WIDGET(self->track_artist_button), "active");
 	koto_button_hide_image(self->track_num_button); // Go back to hiding the image
-	koto_track_table_set_playlist_model(self, KOTO_PREFERRED_MODEL_TYPE_SORT_BY_ARTIST);
+	koto_track_table_set_playlist_model(self, KOTO_PREFERRED_PLAYLIST_SORT_TYPE_SORT_BY_ARTIST);
 }
 
 void koto_track_table_item_handle_clicked(
@@ -276,7 +276,7 @@ void koto_track_table_item_handle_clicked(
 	KotoTrackTable * self = g_list_nth_data(data, 0);
 	gchar * track_uuid = g_list_nth_data(data, 1);
 
-	if (!koto_utils_is_string_valid(track_uuid)) { // Not a valid string
+	if (!koto_utils_string_is_valid(track_uuid)) { // Not a valid string
 		return;
 	}
 
@@ -284,7 +284,7 @@ void koto_track_table_item_handle_clicked(
 	gtk_widget_grab_focus(GTK_WIDGET(main_window)); // Focus on the window
 	koto_action_bar_toggle_reveal(action_bar, FALSE);
 	koto_action_bar_close(action_bar); // Close the action bar
-	koto_current_playlist_set_playlist(current_playlist, self->playlist, FALSE); // Set the current playlist to the artist's playlist but do not play immediately
+	koto_current_playlist_set_playlist(current_playlist, self->playlist, FALSE, FALSE); // Set the current playlist to the artist's playlist but do not play immediately
 	koto_playlist_set_track_as_current(self->playlist, track_uuid); // Set this track as the current one for the playlist
 	koto_playback_engine_set_track_by_uuid(playback_engine, track_uuid, FALSE); // Tell our playback engine to start playing at this track
 }
@@ -304,7 +304,7 @@ void koto_track_table_handle_track_name_clicked(
 
 	gtk_widget_add_css_class(GTK_WIDGET(self->track_title_button), "active");
 	koto_button_hide_image(self->track_num_button); // Go back to hiding the image
-	koto_track_table_set_playlist_model(self, KOTO_PREFERRED_MODEL_TYPE_SORT_BY_TRACK_NAME);
+	koto_track_table_set_playlist_model(self, KOTO_PREFERRED_PLAYLIST_SORT_TYPE_SORT_BY_TRACK_NAME);
 }
 
 void koto_track_table_handle_track_num_clicked(
@@ -320,13 +320,13 @@ void koto_track_table_handle_track_num_clicked(
 	(void) y;
 	KotoTrackTable * self = user_data;
 
-	KotoPreferredModelType current_model = koto_playlist_get_current_model(self->playlist);
+	KotoPreferredPlaylistSortType current_model = koto_playlist_get_current_model(self->playlist);
 
-	if (current_model == KOTO_PREFERRED_MODEL_TYPE_DEFAULT) { // Set to newest currently
-		koto_track_table_set_playlist_model(self, KOTO_PREFERRED_MODEL_TYPE_OLDEST_FIRST); // Sort reversed (oldest)
+	if (current_model == KOTO_PREFERRED_PLAYLIST_SORT_TYPE_DEFAULT) { // Set to newest currently
+		koto_track_table_set_playlist_model(self, KOTO_PREFERRED_PLAYLIST_SORT_TYPE_OLDEST_FIRST); // Sort reversed (oldest)
 		koto_button_show_image(self->track_num_button, TRUE); // Use inverted value (pan-up-symbolic)
 	} else {
-		koto_track_table_set_playlist_model(self, KOTO_PREFERRED_MODEL_TYPE_DEFAULT); // Sort newest
+		koto_track_table_set_playlist_model(self, KOTO_PREFERRED_PLAYLIST_SORT_TYPE_DEFAULT); // Sort newest
 		koto_button_show_image(self->track_num_button, FALSE); // Use pan down default
 	}
 }
@@ -385,7 +385,7 @@ void koto_track_table_handle_tracks_selected(
 
 void koto_track_table_set_model(
 	KotoTrackTable * self,
-	KotoPreferredModelType model
+	KotoPreferredPlaylistSortType model
 ) {
 	if (!KOTO_IS_TRACK_TABLE(self)) {
 		return;
@@ -394,15 +394,15 @@ void koto_track_table_set_model(
 	koto_playlist_apply_model(self->playlist, model); // Apply our new model
 	self->model = G_LIST_MODEL(koto_playlist_get_store(self->playlist)); // Get the latest generated model / store and cast it as a GListModel
 
-	if (model != KOTO_PREFERRED_MODEL_TYPE_SORT_BY_ALBUM) { // Not sorting by album currently
+	if (model != KOTO_PREFERRED_PLAYLIST_SORT_TYPE_SORT_BY_ALBUM) { // Not sorting by album currently
 		gtk_widget_remove_css_class(GTK_WIDGET(self->track_album_button), "active");
 	}
 
-	if (model != KOTO_PREFERRED_MODEL_TYPE_SORT_BY_ARTIST) { // Not sorting by artist currently
+	if (model != KOTO_PREFERRED_PLAYLIST_SORT_TYPE_SORT_BY_ARTIST) { // Not sorting by artist currently
 		gtk_widget_remove_css_class(GTK_WIDGET(self->track_artist_button), "active");
 	}
 
-	if (model != KOTO_PREFERRED_MODEL_TYPE_SORT_BY_TRACK_NAME) { // Not sorting by track name
+	if (model != KOTO_PREFERRED_PLAYLIST_SORT_TYPE_SORT_BY_TRACK_NAME) { // Not sorting by track name
 		gtk_widget_remove_css_class(GTK_WIDGET(self->track_title_button), "active");
 	}
 
@@ -414,7 +414,7 @@ void koto_track_table_set_model(
 
 void koto_track_table_set_playlist_model (
 	KotoTrackTable * self,
-	KotoPreferredModelType model
+	KotoPreferredPlaylistSortType model
 ) {
 	if (!KOTO_IS_TRACK_TABLE(self)) { // Not a track table
 		return;
@@ -427,15 +427,15 @@ void koto_track_table_set_playlist_model (
 	koto_playlist_apply_model(self->playlist, model); // Apply our new model
 	self->model = G_LIST_MODEL(koto_playlist_get_store(self->playlist)); // Get the latest generated model / store and cast it as a GListModel
 
-	if (model != KOTO_PREFERRED_MODEL_TYPE_SORT_BY_ALBUM) { // Not sorting by album currently
+	if (model != KOTO_PREFERRED_PLAYLIST_SORT_TYPE_SORT_BY_ALBUM) { // Not sorting by album currently
 		gtk_widget_remove_css_class(GTK_WIDGET(self->track_album_button), "active");
 	}
 
-	if (model != KOTO_PREFERRED_MODEL_TYPE_SORT_BY_ARTIST) { // Not sorting by artist currently
+	if (model != KOTO_PREFERRED_PLAYLIST_SORT_TYPE_SORT_BY_ARTIST) { // Not sorting by artist currently
 		gtk_widget_remove_css_class(GTK_WIDGET(self->track_artist_button), "active");
 	}
 
-	if (model != KOTO_PREFERRED_MODEL_TYPE_SORT_BY_TRACK_NAME) { // Not sorting by track name
+	if (model != KOTO_PREFERRED_PLAYLIST_SORT_TYPE_SORT_BY_TRACK_NAME) { // Not sorting by track name
 		gtk_widget_remove_css_class(GTK_WIDGET(self->track_title_button), "active");
 	}
 
@@ -444,9 +444,9 @@ void koto_track_table_set_playlist_model (
 
 	gtk_list_view_set_model(GTK_LIST_VIEW(self->track_list_view), self->selection_model); // Set our multi selection model to our provided model
 
-	KotoPreferredModelType current_model = koto_playlist_get_current_model(self->playlist); // Get the current model
+	KotoPreferredPlaylistSortType current_model = koto_playlist_get_current_model(self->playlist); // Get the current model
 
-	if (current_model == KOTO_PREFERRED_MODEL_TYPE_OLDEST_FIRST) {
+	if (current_model == KOTO_PREFERRED_PLAYLIST_SORT_TYPE_OLDEST_FIRST) {
 		koto_button_show_image(self->track_num_button, TRUE); // Immediately use pan-up-symbolic
 	}
 }
@@ -464,7 +464,7 @@ void koto_track_table_set_playlist(
 	}
 
 	self->playlist = playlist;
-	koto_track_table_set_playlist_model(self, KOTO_PREFERRED_MODEL_TYPE_DEFAULT); // TODO: Enable this to be changed
+	koto_track_table_set_playlist_model(self, KOTO_PREFERRED_PLAYLIST_SORT_TYPE_DEFAULT); // TODO: Enable this to be changed
 }
 
 void koto_track_table_setup_track_item(

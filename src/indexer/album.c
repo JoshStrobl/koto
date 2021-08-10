@@ -36,10 +36,13 @@ enum {
 	PROP_0,
 	PROP_UUID,
 	PROP_DO_INITIAL_INDEX,
-	PROP_ALBUM_NAME,
+	PROP_NAME,
 	PROP_ART_PATH,
 	PROP_ARTIST_UUID,
 	PROP_ALBUM_PREPARED_GENRES,
+	PROP_DESCRIPTION,
+	PROP_NARRATOR,
+	PROP_YEAR,
 	N_PROPERTIES
 };
 
@@ -62,16 +65,20 @@ struct _KotoAlbum {
 	gchar * uuid;
 
 	gchar * name;
+	guint64 year;
+	gchar * description;
+	gchar * narrator;
 	gchar * art_path;
 	gchar * artist_uuid;
 
 	GList * genres;
 
-	GList * tracks;
+	KotoPlaylist * playlist;
 	GHashTable * paths;
 
 	gboolean has_album_art;
 	gboolean do_initial_index;
+	gboolean finalized;
 };
 
 struct _KotoAlbumClass {
@@ -126,7 +133,7 @@ static void koto_album_class_init(KotoAlbumClass * c) {
 		G_PARAM_CONSTRUCT_ONLY | G_PARAM_EXPLICIT_NOTIFY | G_PARAM_READWRITE
 	);
 
-	props[PROP_ALBUM_NAME] = g_param_spec_string(
+	props[PROP_NAME] = g_param_spec_string(
 		"name",
 		"Name",
 		"Name of Album",
@@ -155,6 +162,32 @@ static void koto_album_class_init(KotoAlbumClass * c) {
 		"Preparsed Genres",
 		"Preparsed Genres",
 		NULL,
+		G_PARAM_CONSTRUCT | G_PARAM_EXPLICIT_NOTIFY | G_PARAM_WRITABLE
+	);
+
+	props[PROP_DESCRIPTION] = g_param_spec_string(
+		"description",
+		"Description of Album, typically for an audiobook or podcast",
+		"Description of Album, typically for an audiobook or podcast",
+		NULL,
+		G_PARAM_CONSTRUCT | G_PARAM_EXPLICIT_NOTIFY | G_PARAM_WRITABLE
+	);
+
+	props[PROP_NARRATOR] = g_param_spec_string(
+		"narrator",
+		"Narrator of audiobook",
+		"Narrator of audiobook",
+		NULL,
+		G_PARAM_CONSTRUCT | G_PARAM_EXPLICIT_NOTIFY | G_PARAM_WRITABLE
+	);
+
+	props[PROP_YEAR] = g_param_spec_uint64(
+		"year",
+		"Year",
+		"Year of release",
+		0,
+		G_MAXSHORT,
+		0,
 		G_PARAM_CONSTRUCT | G_PARAM_EXPLICIT_NOTIFY | G_PARAM_WRITABLE
 	);
 
@@ -188,10 +221,19 @@ static void koto_album_class_init(KotoAlbumClass * c) {
 }
 
 static void koto_album_init(KotoAlbum * self) {
-	self->has_album_art = FALSE;
+	self->description = NULL;
 	self->genres = NULL;
-	self->tracks = NULL;
+	self->has_album_art = FALSE;
+	self->narrator = NULL;
 	self->paths = g_hash_table_new(g_str_hash, g_str_equal);
+
+	self->playlist = koto_playlist_new_with_uuid(NULL); // Create a playlist, with UUID set to NULL temporarily (until we know the album UUID)
+	koto_playlist_apply_model(self->playlist, KOTO_PREFERRED_PLAYLIST_SORT_TYPE_SORT_BY_TRACK_POS); // Sort by track position
+	koto_playlist_set_album_uuid(self->playlist, self->uuid); // Set the playlist UUID to be the same as the album
+	g_object_set(self->playlist, "ephemeral", TRUE, NULL); // Set as ephemeral / temporary
+	koto_cartographer_add_playlist(koto_maps, self->playlist); // Add to cartographer
+
+	self->year = 0;
 }
 
 void koto_album_add_track(
@@ -206,14 +248,11 @@ void koto_album_add_track(
 		return;
 	}
 
-	gchar * track_uuid = koto_track_get_uuid(track);
-
-	if (g_list_index(self->tracks, track_uuid) != -1) { // Have added it already
+	if (koto_playlist_get_position_of_track(self->playlist, track) != -1) { // Have added it already
 		return;
 	}
 
 	koto_cartographer_add_track(koto_maps, track); // Add the track to cartographer if necessary
-	self->tracks = g_list_insert_sorted_with_data(self->tracks, track_uuid, koto_track_helpers_sort_tracks_by_uuid, NULL);
 
 	GList * track_genres = koto_track_get_genres(track); // Get the genres for the track
 	GList * current_genre_list;
@@ -234,6 +273,25 @@ void koto_album_add_track(
 		self->genres = g_list_append(self->genres, g_strdup(track_genre)); // Duplicate the genre and add it to our list
 	}
 
+	if (self->year == 0) { // Don't have a year set yet
+		guint64 track_year = koto_track_get_year(track); // Get the year from this track
+
+		if (track_year > 0) { // Have a probably valid year set
+			self->year = track_year; // Set our track
+		}
+	}
+
+	if (!koto_utils_string_is_valid(self->narrator)) { // No narrator set yet
+		gchar * track_narrator = koto_track_get_narrator(track); // Get the narrator for the track
+
+		if (koto_utils_string_is_valid(track_narrator)) { // If this track has a narrator
+			self->narrator = g_strdup(track_narrator);
+			g_free(track_narrator);
+		}
+	}
+
+	koto_playlist_add_track(self->playlist, track, FALSE, FALSE); // Add the track to our internal playlist
+
 	g_signal_emit(
 		self,
 		album_signals[SIGNAL_TRACK_ADDED],
@@ -250,14 +308,17 @@ void koto_album_commit(KotoAlbum * self) {
 	gchar * genres_string = koto_utils_join_string_list(self->genres, ";");
 
 	gchar * commit_op = g_strdup_printf(
-		"INSERT INTO albums(id, artist_id, name, art_path, genres)"
-		"VALUES('%s', '%s', quote(\"%s\"), quote(\"%s\"), '%s')"
-		"ON CONFLICT(id) DO UPDATE SET artist_id=excluded.artist_id, name=excluded.name, art_path=excluded.art_path, genres=excluded.genres;",
+		"INSERT INTO albums(id, artist_id, name, description, narrator, art_path, genres, year)"
+		"VALUES('%s', '%s', quote(\"%s\"), quote(\"%s\"), quote(\"%s\"), quote(\"%s\"), '%s', %ld)"
+		"ON CONFLICT(id) DO UPDATE SET artist_id=excluded.artist_id, name=excluded.name, description=excluded.description, narrator=excluded.narrator, art_path=excluded.art_path, genres=excluded.genres, year=excluded.year;",
 		self->uuid,
 		self->artist_uuid,
-		self->name,
-		self->art_path,
-		genres_string
+		koto_utils_string_get_valid(self->name),
+		koto_utils_string_get_valid(self->description),
+		koto_utils_string_get_valid(self->narrator),
+		koto_utils_string_get_valid(self->art_path),
+		koto_utils_string_get_valid(genres_string),
+		self->year
 	);
 
 	new_transaction(commit_op, "Failed to write our album to the database", FALSE);
@@ -282,42 +343,6 @@ void koto_album_commit(KotoAlbum * self) {
 
 		new_transaction(commit_op, "Failed to add this path for the album", FALSE);
 	}
-}
-
-KotoPlaylist * koto_album_create_playlist(KotoAlbum * self) {
-	if (!KOTO_IS_ALBUM(self)) { // Not an album
-		return NULL;
-	}
-
-	if (self->tracks == NULL) { // No files to add to the playlist
-		return NULL;
-	}
-
-	KotoPlaylist * new_album_playlist = koto_playlist_new(); // Create a new playlist
-
-	g_object_set(new_album_playlist, "ephemeral", TRUE, NULL); // Set as ephemeral / temporary
-
-	// The following section effectively reverses our tracks, so the first is now last.
-	// It then adds them in reverse order, since our playlist add function will prepend to our queue
-	// This enables the preservation and defaulting of "newest" first everywhere else, while in albums preserving the rightful order of the album
-	// e.g. first track (0) being added last is actually first in the playlist's tracks
-	GList * reversed_tracks = g_list_copy(self->tracks); // Copy our tracks so we can reverse the order
-
-	reversed_tracks = g_list_reverse(reversed_tracks); // Actually reverse it
-
-	GList * t;
-
-	for (t = reversed_tracks; t != NULL; t = t->next) { // For each of the tracks
-		gchar * track_uuid = t->data;
-		koto_playlist_add_track_by_uuid(new_album_playlist, track_uuid, FALSE, FALSE); // Add the UUID, skip commit to table since it is temporary
-	}
-
-	g_list_free(t);
-	g_list_free(reversed_tracks);
-
-	koto_playlist_apply_model(new_album_playlist, KOTO_PREFERRED_MODEL_TYPE_DEFAULT); // Ensure we are using our default model
-
-	return new_album_playlist;
 }
 
 void koto_album_find_album_art(KotoAlbum * self) {
@@ -376,14 +401,6 @@ void koto_album_find_album_art(KotoAlbum * self) {
 	closedir(dir);
 }
 
-GList * koto_album_get_genres(KotoAlbum * self) {
-	if (!KOTO_IS_ALBUM(self)) { // Not an album
-		return NULL;
-	}
-
-	return self->genres;
-}
-
 static void koto_album_get_property(
 	GObject * obj,
 	guint prop_id,
@@ -399,7 +416,7 @@ static void koto_album_get_property(
 		case PROP_DO_INITIAL_INDEX:
 			g_value_set_boolean(val, self->do_initial_index);
 			break;
-		case PROP_ALBUM_NAME:
+		case PROP_NAME:
 			g_value_set_string(val, self->name);
 			break;
 		case PROP_ART_PATH:
@@ -424,13 +441,12 @@ static void koto_album_set_property(
 
 	switch (prop_id) {
 		case PROP_UUID:
-			self->uuid = g_strdup(g_value_get_string(val));
-			g_object_notify_by_pspec(G_OBJECT(self), props[PROP_UUID]);
+			koto_album_set_uuid(self, g_value_get_string(val));
 			break;
 		case PROP_DO_INITIAL_INDEX:
 			self->do_initial_index = g_value_get_boolean(val);
 			break;
-		case PROP_ALBUM_NAME: // Name of album
+		case PROP_NAME: // Name of album
 			koto_album_set_album_name(self, g_value_get_string(val));
 			break;
 		case PROP_ART_PATH: // Path to art
@@ -441,6 +457,15 @@ static void koto_album_set_property(
 			break;
 		case PROP_ALBUM_PREPARED_GENRES:
 			koto_album_set_preparsed_genres(self, g_strdup(g_value_get_string(val)));
+			break;
+		case PROP_DESCRIPTION:
+			koto_album_set_description(self, g_value_get_string(val));
+			break;
+		case PROP_NARRATOR:
+			koto_album_set_narrator(self, g_value_get_string(val));
+			break;
+		case PROP_YEAR:
+			koto_album_set_year(self, g_value_get_uint64(val));
 			break;
 		default:
 			G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, prop_id, spec);
@@ -453,7 +478,27 @@ gchar * koto_album_get_art(KotoAlbum * self) {
 		return g_strdup("");
 	}
 
-	return g_strdup((self->has_album_art && koto_utils_is_string_valid(self->art_path)) ? self->art_path : "");
+	return g_strdup((self->has_album_art && koto_utils_string_is_valid(self->art_path)) ? self->art_path : "");
+}
+
+gchar * koto_album_get_artist_uuid(KotoAlbum * self) {
+	return KOTO_IS_ALBUM(self) ? self->artist_uuid : NULL;
+}
+
+gchar * koto_album_get_description(KotoAlbum * self) {
+	return KOTO_IS_ALBUM(self) ? self->description : NULL;
+}
+
+GList * koto_album_get_genres(KotoAlbum * self) {
+	return KOTO_IS_ALBUM(self) ? self->genres : NULL;
+}
+
+KotoLibraryType koto_album_get_lib_type(KotoAlbum * self) {
+	if (!KOTO_IS_ALBUM(self)) { // Not an album
+		return KOTO_LIBRARY_TYPE_UNKNOWN;
+	}
+
+	return koto_artist_get_lib_type(koto_cartographer_get_artist_by_uuid(koto_maps, self->artist_uuid)); // Get the lib type for the artist. If artist isn't valid, we just return UNKNOWN
 }
 
 gchar * koto_album_get_name(KotoAlbum * self) {
@@ -461,23 +506,15 @@ gchar * koto_album_get_name(KotoAlbum * self) {
 		return NULL;
 	}
 
-	if (!koto_utils_is_string_valid(self->name)) { // Not set
+	if (!koto_utils_string_is_valid(self->name)) { // Not set
 		return NULL;
 	}
 
-	return g_strdup(self->name); // Return duplicate of the name
+	return self->name; // Return name of the album
 }
 
-gchar * koto_album_get_album_uuid(KotoAlbum * self) {
-	if (!KOTO_IS_ALBUM(self)) { // Not an album
-		return NULL;
-	}
-
-	if (!koto_utils_is_string_valid(self->uuid)) { // Not set
-		return NULL;
-	}
-
-	return g_strdup(self->uuid); // Return a duplicate of the UUID
+gchar * koto_album_get_narrator(KotoAlbum * self) {
+	return KOTO_IS_ALBUM(self) ? self->narrator : NULL;
 }
 
 gchar * koto_album_get_path(KotoAlbum * self) {
@@ -492,7 +529,7 @@ gchar * koto_album_get_path(KotoAlbum * self) {
 		KotoLibrary * cur_library = libs->data; // Get this as a KotoLibrary
 		gchar * library_relative_path = g_hash_table_lookup(self->paths, koto_library_get_uuid(cur_library)); // Get any relative path in our paths based on the current UUID
 
-		if (!koto_utils_is_string_valid(library_relative_path)) { // Not a valid path
+		if (!koto_utils_string_is_valid(library_relative_path)) { // Not a valid path
 			continue;
 		}
 
@@ -502,12 +539,26 @@ gchar * koto_album_get_path(KotoAlbum * self) {
 	return NULL;
 }
 
-GList * koto_album_get_tracks(KotoAlbum * self) {
+KotoPlaylist * koto_album_get_playlist(KotoAlbum * self) {
 	if (!KOTO_IS_ALBUM(self)) { // Not an album
 		return NULL;
 	}
 
-	return self->tracks; // Return the tracks
+	if (!KOTO_IS_PLAYLIST(self->playlist)) { // Not a playlist
+		return NULL;
+	}
+
+	return self->playlist;
+}
+
+GListStore * koto_album_get_store(KotoAlbum * self) {
+	KotoPlaylist * playlist = koto_album_get_playlist(self);
+
+	if (!KOTO_IS_PLAYLIST(playlist)) { // Not a playlist
+		return NULL;
+	}
+
+	return koto_playlist_get_store(playlist); // Return the store from the playlist
 }
 
 gchar * koto_album_get_uuid(KotoAlbum * self) {
@@ -516,6 +567,89 @@ gchar * koto_album_get_uuid(KotoAlbum * self) {
 	}
 
 	return self->uuid; // Return the UUID
+}
+
+guint64 koto_album_get_year(KotoAlbum * self) {
+	return KOTO_IS_ALBUM(self) ? self->year : 0;
+}
+
+void koto_album_mark_as_finalized(KotoAlbum * self) {
+	if (!KOTO_IS_ALBUM(self)) { // Not an album
+		return;
+	}
+
+	if (self->finalized) { // Already finalized
+		return;
+	}
+
+	self->finalized = TRUE;
+	koto_playlist_mark_as_finalized(self->playlist);
+	//koto_playlist_apply_model(self->playlist, self->model); // Resort our playlist
+}
+
+void koto_album_remove_track(
+	KotoAlbum * self,
+	KotoTrack * track
+) {
+	if (!KOTO_IS_ALBUM(self)) { // Not an album
+		return;
+	}
+
+	if (!KOTO_IS_TRACK(track)) { // Not a track
+		return;
+	}
+
+	koto_playlist_remove_track_by_uuid(
+		self->playlist,
+		koto_track_get_uuid(track)
+	);
+
+	g_signal_emit(
+		self,
+		album_signals[SIGNAL_TRACK_REMOVED],
+		0,
+		track
+	);
+}
+
+void koto_album_set_album_name(
+	KotoAlbum * self,
+	const gchar * album_name
+) {
+	if (!KOTO_IS_ALBUM(self)) { // Not an album
+		return;
+	}
+
+	if (album_name == NULL) { // Not valid album name
+		return;
+	}
+
+	if (self->name != NULL) {
+		g_free(self->name);
+	}
+
+	self->name = g_strdup(album_name);
+	g_object_notify_by_pspec(G_OBJECT(self), props[PROP_NAME]);
+}
+
+void koto_album_set_artist_uuid(
+	KotoAlbum * self,
+	const gchar * artist_uuid
+) {
+	if (!KOTO_IS_ALBUM(self)) { // Not an album
+		return;
+	}
+
+	if (artist_uuid == NULL) {
+		return;
+	}
+
+	if (self->artist_uuid != NULL) {
+		g_free(self->artist_uuid);
+	}
+
+	self->artist_uuid = g_strdup(artist_uuid);
+	g_object_notify_by_pspec(G_OBJECT(self), props[PROP_ARTIST_UUID]);
 }
 
 void koto_album_set_album_art(
@@ -537,6 +671,56 @@ void koto_album_set_album_art(
 	self->art_path = g_strdup(album_art);
 
 	self->has_album_art = TRUE;
+
+	g_object_notify_by_pspec(G_OBJECT(self), props[PROP_ART_PATH]);
+}
+
+void koto_album_set_as_current_playlist(KotoAlbum * self) {
+	if (!KOTO_IS_ALBUM(self)) {
+		return;
+	}
+
+	if (!KOTO_IS_CURRENT_PLAYLIST(current_playlist)) {
+		return;
+	}
+
+	if (!KOTO_IS_PLAYLIST(self->playlist)) { // Don't have a playlist for the album for some reason
+		return;
+	}
+
+	koto_current_playlist_set_playlist(current_playlist, self->playlist, TRUE, FALSE); // Set our new current playlist and start playing immediately
+}
+
+void koto_album_set_description(
+	KotoAlbum * self,
+	const gchar * description
+) {
+	if (!KOTO_IS_ALBUM(self)) { // Not an album
+		return;
+	}
+
+	if (!koto_utils_string_is_valid(description)) {
+		return;
+	}
+
+	self->description = g_strdup(description);
+	g_object_notify_by_pspec(G_OBJECT(self), props[PROP_DESCRIPTION]);
+}
+
+void koto_album_set_narrator(
+	KotoAlbum * self,
+	const gchar * narrator
+) {
+	if (!KOTO_IS_ALBUM(self)) { // Not an album
+		return;
+	}
+
+	if (!koto_utils_string_is_valid(narrator)) {
+		return;
+	}
+
+	self->narrator = g_strdup(narrator);
+	g_object_notify_by_pspec(G_OBJECT(self), props[PROP_NARRATOR]);
 }
 
 void koto_album_set_path(
@@ -564,83 +748,6 @@ void koto_album_set_path(
 	self->do_initial_index = FALSE;
 }
 
-void koto_album_remove_track(
-	KotoAlbum * self,
-	KotoTrack * track
-) {
-	if (!KOTO_IS_ALBUM(self)) { // Not an album
-		return;
-	}
-
-	if (!KOTO_IS_TRACK(track)) { // Not a track
-		return;
-	}
-
-	self->tracks = g_list_remove(self->tracks, koto_track_get_uuid(track));
-	g_signal_emit(
-		self,
-		album_signals[SIGNAL_TRACK_REMOVED],
-		0,
-		track
-	);
-}
-
-void koto_album_set_album_name(
-	KotoAlbum * self,
-	const gchar * album_name
-) {
-	if (!KOTO_IS_ALBUM(self)) { // Not an album
-		return;
-	}
-
-	if (album_name == NULL) { // Not valid album name
-		return;
-	}
-
-	if (self->name != NULL) {
-		g_free(self->name);
-	}
-
-	self->name = g_strdup(album_name);
-}
-
-void koto_album_set_artist_uuid(
-	KotoAlbum * self,
-	const gchar * artist_uuid
-) {
-	if (!KOTO_IS_ALBUM(self)) { // Not an album
-		return;
-	}
-
-	if (artist_uuid == NULL) {
-		return;
-	}
-
-	if (self->artist_uuid != NULL) {
-		g_free(self->artist_uuid);
-	}
-
-	self->artist_uuid = g_strdup(artist_uuid);
-}
-
-void koto_album_set_as_current_playlist(KotoAlbum * self) {
-	if (!KOTO_IS_ALBUM(self)) {
-		return;
-	}
-
-	if (!KOTO_IS_CURRENT_PLAYLIST(current_playlist)) {
-		return;
-	}
-
-	KotoPlaylist * album_playlist = koto_album_create_playlist(self);
-
-	if (!KOTO_IS_PLAYLIST(album_playlist)) {
-		return;
-	}
-
-	koto_current_playlist_set_playlist(current_playlist, album_playlist, TRUE); // Set our new current playlist and start playing immediately
-}
-
 void koto_album_set_preparsed_genres(
 	KotoAlbum * self,
 	gchar * genrelist
@@ -649,7 +756,7 @@ void koto_album_set_preparsed_genres(
 		return;
 	}
 
-	if (!koto_utils_is_string_valid(genrelist)) { // If it is an empty string
+	if (!koto_utils_string_is_valid(genrelist)) { // If it is an empty string
 		return;
 	}
 
@@ -665,8 +772,49 @@ void koto_album_set_preparsed_genres(
 	self->genres = preparsed_genres_list;
 };
 
+void koto_album_set_uuid(
+	KotoAlbum * self,
+	const gchar * uuid
+) {
+	if (!KOTO_IS_ALBUM(self)) { // Not an album
+		return;
+	}
+
+	if (!koto_utils_string_is_valid(uuid)) {
+		return;
+	}
+
+	self->uuid = g_strdup(uuid);
+	g_object_set(
+		self->playlist,
+		"album-uuid",
+		self->uuid,
+		"uuid",
+		self->uuid, // Ensure the playlist has the same UUID as the album
+		NULL
+	);
+
+	g_object_notify_by_pspec(G_OBJECT(self), props[PROP_UUID]);
+}
+
+void koto_album_set_year(
+	KotoAlbum * self,
+	guint64 year
+) {
+	if (!KOTO_IS_ALBUM(self)) { // Not an album
+		return;
+	}
+
+	if (year <= 0) {
+		return;
+	}
+
+	self->year = year;
+	g_object_notify_by_pspec(G_OBJECT(self), props[PROP_YEAR]);
+}
+
 KotoAlbum * koto_album_new(gchar * artist_uuid) {
-	if (!koto_utils_is_string_valid(artist_uuid)) { // Invalid artist UUID provided
+	if (!koto_utils_string_is_valid(artist_uuid)) { // Invalid artist UUID provided
 		return NULL;
 	}
 
@@ -688,14 +836,12 @@ KotoAlbum * koto_album_new_with_uuid(
 	KotoArtist * artist,
 	const gchar * uuid
 ) {
-	gchar * artist_uuid = NULL;
-
-	g_object_get(artist, "uuid", &artist_uuid, NULL);
+	gchar * artist_uuid = koto_artist_get_uuid(artist);
 
 	return g_object_new(
 		KOTO_TYPE_ALBUM,
 		"artist-uuid",
-		artist,
+		artist_uuid,
 		"uuid",
 		g_strdup(uuid),
 		"do-initial-index",

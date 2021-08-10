@@ -1,0 +1,30 @@
+// This file contain the styling for the Album Info section
+
+.album-info {
+	.album-description,
+	.album-narrator,
+	.album-title-year-combo,
+	.genres-tag-list {
+		margin-bottom: $quarterpadding
+	}
+
+	.album-title-year-combo {
+		padding-top: $halvedpadding;
+	}
+
+	.album-title { // Title of album
+		color: $text-color-faded;
+		font-size: 2.5em;
+		font-weight: bold;
+	}
+
+	.album-year {
+		margin-left: $halvedpadding;
+	}
+
+	.genres-tag-list { // Genres Tag List
+		& .label-badge:not(:last-child) {
+			margin-right: $halvedpadding;
+		}
+	}
+}

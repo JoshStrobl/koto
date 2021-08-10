@@ -17,7 +17,7 @@
 
 #include <glib-2.0/glib.h>
 #include <gtk-4.0/gtk/gtk.h>
-#include "../../components/koto-cover-art-button.h"
+#include "../../components/cover-art-button.h"
 #include "../../components/track-table.h"
 #include "../../db/cartographer.h"
 #include "../../indexer/artist-playlist-funcs.h"
@@ -323,7 +323,7 @@ void koto_artist_view_toggle_playback(
 		return;
 	}
 
-	koto_current_playlist_set_playlist(current_playlist, artist_playlist, TRUE); // Set our playlist to the one associated with the Artist and start playback immediately
+	koto_current_playlist_set_playlist(current_playlist, artist_playlist, TRUE, FALSE); // Set our playlist to the one associated with the Artist and start playback immediately
 }
 
 KotoArtistView * koto_artist_view_new(KotoArtist * artist) {

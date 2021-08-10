@@ -1,4 +1,4 @@
-/* koto-action-bar.h
+/* action-bar.h
  *
  * Copyright 2021 Joshua Strobl
  *

@@ -1,0 +1,12 @@
+// This is the styling for the writer page
+
+@import '../vars';
+
+.writer-page {
+	.writer-header { // Our writer / artist header label
+		color: $text-color-faded;
+		font-size: 4em;
+		font-weight: bold;
+		padding-bottom: $itempadding;
+	}
+}

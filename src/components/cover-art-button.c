@@ -1,4 +1,4 @@
-/* koto-cover-art-button.c
+/* cover-art-button.c
  *
  * Copyright 2021 Joshua Strobl
  *
@@ -17,9 +17,9 @@
 
 #include <glib-2.0/glib.h>
 #include <gtk-4.0/gtk/gtk.h>
-#include "koto-cover-art-button.h"
-#include "../koto-button.h"
 #include "../koto-utils.h"
+#include "button.h"
+#include "cover-art-button.h"
 
 struct _KotoCoverArtButton {
 	GObject parent_instance;
@@ -28,6 +28,8 @@ struct _KotoCoverArtButton {
 	GtkWidget * main;
 	GtkWidget * revealer;
 	KotoButton * play_button;
+
+	gchar * art_path;
 
 	guint height;
 	guint width;
@@ -119,6 +121,8 @@ static void koto_cover_art_button_init(KotoCoverArtButton * self) {
 	g_signal_connect(motion_controller, "enter", G_CALLBACK(koto_cover_art_button_show_overlay_controls), self);
 	g_signal_connect(motion_controller, "leave", G_CALLBACK(koto_cover_art_button_hide_overlay_controls), self);
 	gtk_widget_add_controller(self->main, motion_controller);
+
+	self->art_path = NULL;
 }
 
 static void koto_cover_art_button_get_property(
@@ -194,13 +198,16 @@ void koto_cover_art_button_set_art_path(
 		return;
 	}
 
-	gboolean defined_artwork = koto_utils_is_string_valid(art_path);
+	gboolean defined_artwork = koto_utils_string_is_valid(art_path);
 
 	if (GTK_IS_IMAGE(self->art)) { // Already have an image
 		if (!defined_artwork) { // No art path or empty string
 			gtk_image_set_from_icon_name(GTK_IMAGE(self->art), "audio-x-generic-symbolic");
 		} else { // Have an art path
-			gtk_image_set_from_file(GTK_IMAGE(self->art), g_strdup(art_path)); // Set from the file
+			if (g_strcmp0(self->art_path, art_path) != 0) {
+				self->art_path = g_strdup(art_path); // Set our art path
+				gtk_image_set_from_file(GTK_IMAGE(self->art), self->art_path); // Set from the file
+			}
 		}
 	} else { // If we don't have an image
 		self->art = koto_utils_create_image_from_filepath(defined_artwork ? g_strdup(art_path) : NULL, "audio-x-generic-symbolic", self->width, self->height);

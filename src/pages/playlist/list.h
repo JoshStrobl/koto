@@ -19,7 +19,7 @@
 
 #include <glib-2.0/glib-object.h>
 #include <gtk-4.0/gtk/gtk.h>
-#include "../../components/koto-action-bar.h"
+#include "../../components/action-bar.h"
 #include "../../playlist/playlist.h"
 #include "../../koto-utils.h"
 

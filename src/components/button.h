@@ -1,4 +1,4 @@
-/* koto-button.h
+/* button.h
  *
  * Copyright 2021 Joshua Strobl
  *
@@ -75,6 +75,16 @@ void koto_button_add_click_handler(
 
 void koto_button_flip(KotoButton * self);
 
+gpointer koto_button_get_data(KotoButton * self);
+
+void koto_button_global_page_nav_callback(
+	GtkGestureClick * gesture,
+	int n_press,
+	double x,
+	double y,
+	gpointer user_data
+);
+
 void koto_button_handle_mouse_enter(
 	GtkEventControllerMotion * controller,
 	double x,
@@ -88,6 +98,11 @@ void koto_button_handle_mouse_leave(
 );
 
 void koto_button_hide_image(KotoButton * self);
+
+void koto_button_set_data(
+	KotoButton * self,
+	gpointer data
+);
 
 void koto_button_set_pseudoactive_styling(KotoButton * self);
 
@@ -125,6 +140,16 @@ void koto_button_set_pixbuf_size(
 void koto_button_set_text(
 	KotoButton * self,
 	gchar * text
+);
+
+void koto_button_set_text_justify(
+	KotoButton * self,
+	GtkJustification j
+);
+
+void koto_button_set_text_wrap(
+	KotoButton * self,
+	gboolean wrap
 );
 
 void koto_button_show_image(

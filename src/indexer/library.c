@@ -245,7 +245,7 @@ gchar * koto_library_get_relative_path_to_file(
 	}
 
 	gchar * appended_slash_to_library_path = g_str_has_suffix(self->path, G_DIR_SEPARATOR_S) ? g_strdup(self->path) : g_strdup_printf("%s%s", g_strdup(self->path), G_DIR_SEPARATOR_S);
-	gchar * cleaned_path = koto_utils_replace_string_all(full_path, appended_slash_to_library_path, ""); // Replace the full path
+	gchar * cleaned_path = koto_utils_string_replace_all(full_path, appended_slash_to_library_path, ""); // Replace the full path
 
 	g_free(appended_slash_to_library_path);
 	return cleaned_path;
@@ -299,11 +299,11 @@ void koto_library_set_name(
 		return;
 	}
 
-	if (!koto_utils_is_string_valid(library_name)) { // Not a string
+	if (!koto_utils_string_is_valid(library_name)) { // Not a string
 		return;
 	}
 
-	if (koto_utils_is_string_valid(self->name)) { // Name already set
+	if (koto_utils_string_is_valid(self->name)) { // Name already set
 		g_free(self->name); // Free the existing value
 	}
 
@@ -319,15 +319,15 @@ void koto_library_set_path(
 		return;
 	}
 
-	if (!koto_utils_is_string_valid(path)) { // Not a valid string
+	if (!koto_utils_string_is_valid(path)) { // Not a valid string
 		return;
 	}
 
-	if (koto_utils_is_string_valid(self->path)) {
+	if (koto_utils_string_is_valid(self->path)) {
 		g_free(self->path);
 	}
 
-	self->relative_path = g_path_is_absolute(path) ? koto_utils_replace_string_all(path, self->mount_path, "") : path; // Ensure path is relative to our mount, even if the mount is really our own system partition
+	self->relative_path = g_path_is_absolute(path) ? koto_utils_string_replace_all(path, self->mount_path, "") : path; // Ensure path is relative to our mount, even if the mount is really our own system partition
 	self->path = g_build_path(G_DIR_SEPARATOR_S, self->mount_path, self->relative_path, NULL); // Ensure our path is to whatever the current path of the mount + relative path is
 }
 
@@ -345,7 +345,7 @@ void koto_library_set_storage_uuid(
 		g_free(self->mount_path);
 	}
 
-	if (!koto_utils_is_string_valid(storage_uuid)) { // Not a valid string, which actually is allowed for built-ins
+	if (!koto_utils_string_is_valid(storage_uuid)) { // Not a valid string, which actually is allowed for built-ins
 		self->mount = NULL;
 		self->mount_path = g_strdup_printf("%s%s", g_get_home_dir(), G_DIR_SEPARATOR_S); // Set mount path to user's home directory
 		self->storage_uuid = NULL;
@@ -378,11 +378,11 @@ gchar * koto_library_to_config_string(KotoLibrary * self) {
 
 	g_strv_builder_add(lib_builder, g_strdup_printf("\tdirectory=\"%s\"", self->relative_path)); // Add the directory
 
-	if (koto_utils_is_string_valid(self->name)) { // Have a library name
+	if (koto_utils_string_is_valid(self->name)) { // Have a library name
 		g_strv_builder_add(lib_builder, g_strdup_printf("\tname=\"%s\"", self->name)); // Add the name
 	}
 
-	if (koto_utils_is_string_valid(self->storage_uuid)) { // Have a storage UUID (not applicable to built-ins)
+	if (koto_utils_string_is_valid(self->storage_uuid)) { // Have a storage UUID (not applicable to built-ins)
 		g_strv_builder_add(lib_builder, g_strdup_printf("\tstorage_uuid=\"%s\"", self->storage_uuid)); // Add the storage UUID
 	}
 

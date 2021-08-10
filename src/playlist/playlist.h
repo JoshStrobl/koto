@@ -23,12 +23,13 @@
 G_BEGIN_DECLS
 
 typedef enum {
-	KOTO_PREFERRED_MODEL_TYPE_DEFAULT, // Considered to be newest first
-	KOTO_PREFERRED_MODEL_TYPE_OLDEST_FIRST,
-	KOTO_PREFERRED_MODEL_TYPE_SORT_BY_ALBUM,
-	KOTO_PREFERRED_MODEL_TYPE_SORT_BY_ARTIST,
-	KOTO_PREFERRED_MODEL_TYPE_SORT_BY_TRACK_NAME
-} KotoPreferredModelType;
+	KOTO_PREFERRED_PLAYLIST_SORT_TYPE_DEFAULT, // Considered to be newest first
+	KOTO_PREFERRED_PLAYLIST_SORT_TYPE_OLDEST_FIRST,
+	KOTO_PREFERRED_PLAYLIST_SORT_TYPE_SORT_BY_ALBUM,
+	KOTO_PREFERRED_PLAYLIST_SORT_TYPE_SORT_BY_ARTIST,
+	KOTO_PREFERRED_PLAYLIST_SORT_TYPE_SORT_BY_TRACK_NAME,
+	KOTO_PREFERRED_PLAYLIST_SORT_TYPE_SORT_BY_TRACK_POS
+} KotoPreferredPlaylistSortType;
 
 /**
  * Type Definition
@@ -64,39 +65,28 @@ void koto_playlist_add_track(
 	gboolean commit_to_table
 );
 
-void koto_playlist_add_track_by_uuid(
-	KotoPlaylist * self,
-	gchar * uuid,
-	gboolean current,
-	gboolean commit_to_table
-);
-
 void koto_playlist_apply_model(
 	KotoPlaylist * self,
-	KotoPreferredModelType preferred_model
+	KotoPreferredPlaylistSortType preferred_model
 );
 
 void koto_playlist_commit(KotoPlaylist * self);
 
-void koto_playlist_commit_tracks(
-	gpointer data,
-	gpointer user_data
-);
-
-gint koto_playlist_compare_track_uuids(
-	gconstpointer a,
-	gconstpointer b
-);
+void koto_playlist_emit_modified(KotoPlaylist * self);
 
 gchar * koto_playlist_get_artwork(KotoPlaylist * self);
 
-KotoPreferredModelType koto_playlist_get_current_model(KotoPlaylist * self);
+KotoPreferredPlaylistSortType koto_playlist_get_current_model(KotoPlaylist * self);
 
-guint koto_playlist_get_current_position(KotoPlaylist * self);
+gint koto_playlist_get_current_position(KotoPlaylist * self);
+
+KotoTrack * koto_playlist_get_current_track(KotoPlaylist * self);
 
 guint koto_playlist_get_length(KotoPlaylist * self);
 
 gboolean koto_playlist_get_is_finalized(KotoPlaylist * self);
+
+gboolean koto_playlist_get_is_hidden(KotoPlaylist * self);
 
 gchar * koto_playlist_get_name(KotoPlaylist * self);
 
@@ -139,12 +129,17 @@ void koto_playlist_remove_track_by_uuid(
 	gchar * uuid
 );
 
+void koto_playlist_set_album_uuid(
+	KotoPlaylist * self,
+	const gchar * album_uuid
+);
+
 void koto_playlist_set_artwork(
 	KotoPlaylist * self,
 	const gchar * path
 );
 
-void koto_playlist_save_state(KotoPlaylist * self);
+void koto_playlist_save_current_playback_state(KotoPlaylist * self);
 
 void koto_playlist_set_name(
 	KotoPlaylist * self,

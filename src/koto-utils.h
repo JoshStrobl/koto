@@ -39,8 +39,6 @@ gchar * koto_utils_join_string_list(
 	gchar * sep
 );
 
-gboolean koto_utils_is_string_valid(gchar * str);
-
 void koto_utils_mkdir(gchar * path);
 
 void koto_utils_push_queue_element_to_store(
@@ -48,15 +46,21 @@ void koto_utils_push_queue_element_to_store(
 	gpointer user_data
 );
 
-gchar * koto_utils_replace_string_all(
-	gchar * str,
-	gchar * find,
-	gchar * repl
-);
+gchar * koto_utils_seconds_to_time_format(guint64 seconds);
 
 gboolean koto_utils_string_contains_substring(
 	gchar * s,
 	gchar * sub
+);
+
+gchar * koto_utils_string_get_valid(gchar * str);
+
+gboolean koto_utils_string_is_valid(const gchar * str);
+
+gchar * koto_utils_string_replace_all(
+	gchar * str,
+	gchar * find,
+	gchar * repl
 );
 
 GList * koto_utils_string_to_string_list(
@@ -64,6 +68,8 @@ GList * koto_utils_string_to_string_list(
 	gchar * sep
 );
 
-gchar * koto_utils_unquote_string(gchar * s);
+gchar * koto_utils_string_title(const gchar * s);
+
+gchar * koto_utils_string_unquote(gchar * s);
 
 G_END_DECLS

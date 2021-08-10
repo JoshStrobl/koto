@@ -1,0 +1,36 @@
+// This file contains the styling for our Audiobook Library
+
+@import '../vars';
+
+.audiobook-library { // Library page
+	.genres-banner { // Banner for genres list
+		.large-banner { // Large banner with art for each genre
+			padding: $itempadding;
+
+			.audiobook-genre-button { // Genre buttons
+				.koto-button {
+					font-size: 2em;
+					margin: 0.5em;
+				}
+			}
+		}
+	}
+
+	.writers-button-flow { // Flowbox of buttons for writers
+		padding: 0 $itempadding; // Horizontal padding of our standard item padding
+
+		flowboxchild {
+			padding: 0;
+
+			&:nth-child(even) {
+				margin: 0 0.5em;
+			}
+
+			.writer-button { // Writer button
+				color: $text-color-bright;
+				font-size: 1.4em;
+				background-color: $bg-secondary;
+			}
+		}
+	}
+}

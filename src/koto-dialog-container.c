@@ -17,7 +17,7 @@
 
 #include <glib-2.0/glib-object.h>
 #include <gtk-4.0/gtk/gtk.h>
-#include "koto-button.h"
+#include "components/button.h"
 #include "koto-dialog-container.h"
 
 struct _KotoDialogContainer {

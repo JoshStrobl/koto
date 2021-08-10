@@ -100,6 +100,7 @@ gchar * koto_utils_get_filename_without_extension(gchar * filename) {
 	gchar * stripped_file_name = g_strstrip(g_strdup(trimmed_file_name)); // Strip leading and trailing whitespace
 
 	g_free(trimmed_file_name);
+	g_strfreev(split);
 	return stripped_file_name;
 }
 
@@ -111,13 +112,13 @@ gchar * koto_utils_join_string_list (
 	GList * cur_list;
 	for (cur_list = list; cur_list != NULL; cur_list = cur_list->next) { // For each item in the list
 		gchar * current_item = cur_list->data;
-		if (!koto_utils_is_string_valid(current_item)) { // Not a valid string
+		if (!koto_utils_string_is_valid(current_item)) { // Not a valid string
 			continue;
 		}
 
 		gchar * item_plus_sep = g_strdup_printf("%s%s", current_item, sep);
 
-		if (koto_utils_is_string_valid(liststring)) { // Is a valid string
+		if (koto_utils_string_is_valid(liststring)) { // Is a valid string
 			gchar * new_string = g_strconcat(liststring, item_plus_sep, NULL);
 			g_free(liststring);
 			liststring = new_string;
@@ -128,11 +129,6 @@ gchar * koto_utils_join_string_list (
 
 	return (liststring == NULL) ? g_strdup("") : liststring;
 }
-
-gboolean koto_utils_is_string_valid(gchar * str) {
-	return ((str != NULL) && (g_strcmp0(str, "") != 0));
-}
-
 void koto_utils_mkdir(gchar * path) {
 	mkdir(path, 0755);
 	chown(path, getuid(), getgid());
@@ -145,12 +141,37 @@ void koto_utils_push_queue_element_to_store(
 	g_list_store_append(G_LIST_STORE(user_data), data);
 }
 
-gchar * koto_utils_replace_string_all(
+gchar * koto_utils_seconds_to_time_format(guint64 seconds) {
+	GDateTime * date = g_date_time_new_from_unix_utc(seconds); // Add our seconds after UTC
+	gchar * date_string = g_date_time_format(date, (g_date_time_get_hour(date) != 0) ? "%H:%M:%S" : "%M:%S");
+	g_date_time_unref(date);
+	return date_string;
+}
+
+gboolean koto_utils_string_contains_substring(
+	gchar * s,
+	gchar * sub
+) {
+	gchar ** separated_string = g_strsplit(s, sub, -1); // Split on our substring
+	gboolean contains = (g_strv_length(separated_string) > 1);
+	g_strfreev(separated_string);
+	return contains;
+}
+
+gchar * koto_utils_string_get_valid(gchar * str) {
+	return koto_utils_string_is_valid(str) ? str : g_strdup(""); // Return string if a string, otherwise return an empty string
+}
+
+gboolean koto_utils_string_is_valid(const gchar * str) {
+	return ((str != NULL) && (g_strcmp0(str, "") != 0));
+}
+
+gchar * koto_utils_string_replace_all(
 	gchar * str,
 	gchar * find,
 	gchar * repl
 ) {
-	if (!koto_utils_is_string_valid(str)) { // Not a valid string
+	if (!koto_utils_string_is_valid(str)) { // Not a valid string
 		return g_strdup("");
 	}
 
@@ -166,22 +187,12 @@ gchar * koto_utils_replace_string_all(
 	return g_strdup(g_strjoinv(repl, split));
 }
 
-gboolean koto_utils_string_contains_substring(
-	gchar * s,
-	gchar * sub
-) {
-	gchar ** separated_string = g_strsplit(s, sub, -1); // Split on our substring
-	gboolean contains = (g_strv_length(separated_string) > 1);
-	g_strfreev(separated_string);
-	return contains;
-}
-
 GList * koto_utils_string_to_string_list(
 	gchar * s,
 	gchar * sep
 ) {
 	GList * list = NULL;
-	if (!koto_utils_is_string_valid(s)) { // Provided string is not valid
+	if (!koto_utils_string_is_valid(s)) { // Provided string is not valid
 		return list;
 	}
 
@@ -189,17 +200,41 @@ GList * koto_utils_string_to_string_list(
 
 	for (guint i = 0; i < g_strv_length(separated_strings); i++) { // Iterate over each item
 		gchar * item = separated_strings[i];
-		list = g_list_append(list, g_strdup(item));
+		if (g_strcmp0(item, "") != 0) { // Not an empty string
+			list = g_list_append(list, g_strdup(item));
+		}
 	}
 
 	g_strfreev(separated_strings); // Free our strings
 	return list;
 }
 
-gchar * koto_utils_unquote_string(gchar * s) {
+gchar * koto_utils_string_title(const gchar * s) {
+	if (!koto_utils_string_is_valid(s)) { // Not a valid string
+		return NULL;
+	}
+
+	glong len = g_utf8_strlen(s, -1);
+
+	if (len == 0) { // Empty string
+		return g_strdup(s); // Just duplicate itself
+	} else if (len == 1) { // One char
+		return g_utf8_strup(s, -1); // Uppercase all relevant cases
+	} else {
+		gchar * first_char = g_utf8_substring(s, 0, 1);
+		gchar * rest_of_string = g_utf8_substring(s, 1, len); // Rest of string
+		gchar * titled_string = g_strdup_printf("%s%s", g_utf8_strup(first_char, -1), rest_of_string);
+
+		g_free(first_char);
+		g_free(rest_of_string);
+		return titled_string;
+	}
+}
+
+gchar * koto_utils_string_unquote(gchar * s) {
 	gchar * new_s = NULL;
 
-	if (!koto_utils_is_string_valid(s)) { // Not a valid string
+	if (!koto_utils_string_is_valid(s)) { // Not a valid string
 		new_s = g_strdup("");
 		return new_s;
 	}

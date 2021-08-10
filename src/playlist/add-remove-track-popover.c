@@ -150,11 +150,10 @@ void koto_add_remove_track_popover_handle_checkbutton_toggle(
 			continue; // Skip this
 		}
 
-		gchar * track_uuid = koto_track_get_uuid(track); // Get the track
-
 		if (should_add) { // Should be adding
-			koto_playlist_add_track_by_uuid(playlist, track_uuid, FALSE, TRUE); // Add the track to the playlist
+			koto_playlist_add_track(playlist, track, FALSE, TRUE); // Add the track to the playlist
 		} else { // Should be removing
+			gchar * track_uuid = koto_track_get_uuid(track); // Get the track
 			koto_playlist_remove_track_by_uuid(playlist, track_uuid); // Remove the track from the playlist
 		}
 	}

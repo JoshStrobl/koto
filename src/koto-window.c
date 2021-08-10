@@ -16,9 +16,10 @@
  */
 
 #include <gtk-4.0/gdk/x11/gdkx.h>
-#include "components/koto-action-bar.h"
+#include "components/action-bar.h"
 #include "db/cartographer.h"
 #include "indexer/structs.h"
+#include "pages/audiobooks/library.h"
 #include "pages/music/music-local.h"
 #include "pages/playlist/list.h"
 #include "playback/engine.h"
@@ -33,6 +34,7 @@
 
 extern KotoActionBar * action_bar;
 extern KotoAddRemoveTrackPopover * koto_add_remove_track_popup;
+extern KotoAudiobooksLibraryPage * audiobooks_library_page;
 extern KotoCartographer * koto_maps;
 extern KotoCreateModifyPlaylistDialog * playlist_create_modify_dialog;
 extern KotoConfig * config;
@@ -138,11 +140,13 @@ static void koto_window_init (KotoWindow * self) {
 
 	gtk_widget_queue_draw(self->content_layout);
 
+	audiobooks_library_page = koto_audiobooks_library_page_new(); // Create our audiobooks library page
 	music_local_page = koto_page_music_local_new();
 
 	// TODO: Remove and do some fancy state loading
-	koto_window_add_page(self, "music.local", GTK_WIDGET(music_local_page));
-	koto_window_go_to_page(self, "music.local");
+	koto_window_add_page(self, "audiobooks.library", GTK_WIDGET(koto_audiobooks_library_page_get_main(audiobooks_library_page)));
+	koto_window_add_page(self, "music.library", GTK_WIDGET(music_local_page));
+	koto_window_go_to_page(self, "audiobooks.library");
 	gtk_widget_show(self->pages); // Do not remove this. Will cause sporadic hiding of the local page content otherwise.
 }
 
@@ -174,7 +178,7 @@ void koto_window_manage_style(
 	(void) prop_id;
 
 	if (!KOTO_IS_WINDOW(self)) { // Not a Koto Window
-		g_warning("Not a window");
+		return;
 	}
 
 	gchar * desired_theme = NULL;
@@ -188,7 +192,7 @@ void koto_window_manage_style(
 		NULL
 	);
 
-	if (!koto_utils_is_string_valid(desired_theme)) { // Theme not valid
+	if (!koto_utils_string_is_valid(desired_theme)) { // Theme not valid
 		desired_theme = "dark";
 	}
 

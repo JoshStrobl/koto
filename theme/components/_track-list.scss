@@ -1,0 +1,19 @@
+// Track List styling
+
+@import '../vars';
+
+.track-list {
+	& > row {
+		&:not(:active):not(:selected) { // Neither active nor selected, see gtk overrides
+			color: $text-color-bright;
+
+			&:nth-child(odd):not(:hover) {
+				background-color: $bg-primary;
+			}
+
+			&:nth-child(even), &:hover {
+				background-color: $bg-secondary;
+			}
+		}
+	}
+}

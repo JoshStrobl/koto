@@ -18,7 +18,7 @@
 #pragma once
 
 #include <gtk-4.0/gtk/gtk.h>
-#include "koto-button.h"
+#include "components/button.h"
 
 G_BEGIN_DECLS
 

@@ -1,6 +1,12 @@
+@import 'components/album-info';
+@import 'components/audiobook-view';
+@import 'components/badge';
 @import 'components/cover-art-button';
 @import 'components/gtk-overrides';
+@import 'components/track-list';
 @import 'components/track-table';
+@import 'components/writer-page';
+@import 'pages/audiobook-library';
 @import 'pages/artist-view';
 @import 'pages/music-local';
 @import 'pages/playlist-page';
@@ -39,7 +45,8 @@ window {
 
 	// All the classes we want consistent padding applied to for its primary content
 	.artist-view-content, // Has the albums
-	.playlist-page { // Individual playlists
+	.playlist-page, // Individual playlists
+	.writer-page { // Writer page in Audiobook
 		padding: $itempadding;
 	}
 }

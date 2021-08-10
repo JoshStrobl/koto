@@ -39,13 +39,13 @@ void close_db() {
 
 int create_db_tables() {
 	gchar * tables_creation_queries = "CREATE TABLE IF NOT EXISTS artists(id string UNIQUE PRIMARY KEY, name string, art_path string);"
-									  "CREATE TABLE IF NOT EXISTS albums(id string UNIQUE PRIMARY KEY, artist_id string, name string, art_path string, genres string, FOREIGN KEY(artist_id) REFERENCES artists(id) ON DELETE CASCADE);"
+									  "CREATE TABLE IF NOT EXISTS albums(id string UNIQUE PRIMARY KEY, artist_id string, name string, description string, narrator string, art_path string, genres string, year int, FOREIGN KEY(artist_id) REFERENCES artists(id) ON DELETE CASCADE);"
 									  "CREATE TABLE IF NOT EXISTS tracks(id string UNIQUE PRIMARY KEY, artist_id string, album_id string, name string, disc int, position int, duration int, genres string, FOREIGN KEY(artist_id) REFERENCES artists(id) ON DELETE CASCADE);"
 									  "CREATE TABLE IF NOT EXISTS libraries_albums(id string, album_id string, path string, PRIMARY KEY (id, album_id) FOREIGN KEY(album_id) REFERENCES albums(id) ON DELETE CASCADE);"
 									  "CREATE TABLE IF NOT EXISTS libraries_artists(id string, artist_id string, path string, PRIMARY KEY(id, artist_id) FOREIGN KEY(artist_id) REFERENCES artists(id) ON DELETE CASCADE);"
 									  "CREATE TABLE IF NOT EXISTS libraries_tracks(id string, track_id string, path string, PRIMARY KEY(id, track_id) FOREIGN KEY(track_id) REFERENCES tracks(id) ON DELETE CASCADE);"
-									  "CREATE TABLE IF NOT EXISTS playlist_meta(id string UNIQUE PRIMARY KEY, name string, art_path string, preferred_model int);"
-									  "CREATE TABLE IF NOT EXISTS playlist_tracks(position INTEGER PRIMARY KEY AUTOINCREMENT, playlist_id string, track_id string, current int, FOREIGN KEY(playlist_id) REFERENCES playlist_meta(id), FOREIGN KEY(track_id) REFERENCES tracks(id) ON DELETE CASCADE);";
+									  "CREATE TABLE IF NOT EXISTS playlist_meta(id string UNIQUE PRIMARY KEY, name string, art_path string, preferred_model int, album_id string, track_id string, playback_position_of_track int);"
+									  "CREATE TABLE IF NOT EXISTS playlist_tracks(position INTEGER PRIMARY KEY AUTOINCREMENT, playlist_id string, track_id string, FOREIGN KEY(playlist_id) REFERENCES playlist_meta(id), FOREIGN KEY(track_id) REFERENCES tracks(id) ON DELETE CASCADE);";
 
 	return (new_transaction(tables_creation_queries, "Failed to create required tables", TRUE) == SQLITE_OK) ? KOTO_DB_SUCCESS : KOTO_DB_FAIL;
 }

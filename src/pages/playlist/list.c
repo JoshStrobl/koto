@@ -17,14 +17,14 @@
 
 #include <glib-2.0/glib.h>
 #include <gtk-4.0/gtk/gtk.h>
-#include "../../components/koto-action-bar.h"
-#include "../../components/koto-cover-art-button.h"
+#include "../../components/action-bar.h"
+#include "../../components/button.h"
+#include "../../components/cover-art-button.h"
 #include "../../components/track-table.h"
 #include "../../db/cartographer.h"
 #include "../../indexer/structs.h"
 #include "../../playlist/current.h"
 #include "../../playlist/playlist.h"
-#include "../../koto-button.h"
 #include "../../koto-window.h"
 #include "../../playlist/create-modify-dialog.h"
 #include "list.h"
@@ -209,7 +209,7 @@ void koto_playlist_page_handle_cover_art_clicked(
 		return;
 	}
 
-	koto_current_playlist_set_playlist(current_playlist, self->playlist, TRUE); // Switch to this playlist and start playing immediately
+	koto_current_playlist_set_playlist(current_playlist, self->playlist, TRUE, FALSE); // Switch to this playlist and start playing immediately
 }
 
 void koto_playlist_page_handle_edit_button_clicked(
@@ -245,13 +245,13 @@ void koto_playlist_page_handle_playlist_modified(
 
 	gchar * artwork = koto_playlist_get_artwork(playlist); // Get the artwork
 
-	if (koto_utils_is_string_valid(artwork)) { // Have valid artwork
+	if (koto_utils_string_is_valid(artwork)) { // Have valid artwork
 		koto_cover_art_button_set_art_path(self->playlist_image, artwork); // Update our Koto Cover Art Button
 	}
 
 	gchar * name = koto_playlist_get_name(playlist); // Get the name
 
-	if (koto_utils_is_string_valid(name)) { // Have valid name
+	if (koto_utils_string_is_valid(name)) { // Have valid name
 		gtk_label_set_label(GTK_LABEL(self->name_label), name); // Update the name label
 	}
 }
@@ -264,7 +264,7 @@ void koto_playlist_page_set_playlist_uuid(
 		return;
 	}
 
-	if (!koto_utils_is_string_valid(playlist_uuid)) { // Provided UUID string is not valid
+	if (!koto_utils_string_is_valid(playlist_uuid)) { // Provided UUID string is not valid
 		return;
 	}
 
@@ -309,7 +309,7 @@ void koto_playlist_page_update_header(KotoPlaylistPage * self) {
 
 	gchar * artwork = koto_playlist_get_artwork(self->playlist);
 
-	if (koto_utils_is_string_valid(artwork)) { // Have artwork
+	if (koto_utils_string_is_valid(artwork)) { // Have artwork
 		koto_cover_art_button_set_art_path(self->playlist_image, artwork); // Update our artwork
 	}
 }

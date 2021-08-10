@@ -1,0 +1,34 @@
+// This is the styling for the Audiobook VIew
+
+@import '../vars';
+
+.audiobook-view {
+	.side-info { // Side Info
+		margin-right: $halvedpadding;
+
+		button,
+		image {
+			margin-bottom: $halvedpadding;
+		}
+
+		button { // Play / Continue Playback button
+			font-size: large;
+			font-weight: bold;
+		}
+
+		& > label {
+			font-size: large;
+			
+			&:last-child {
+				margin-bottom: $halvedpadding;
+			}
+		}
+	}
+
+	.chapters-label { // Chapters label after album info
+		color: $text-color-faded;
+		font-size: x-large;
+		font-weight: bold;
+		padding: $halvedpadding 0; // Top / bottom padding
+	}
+}

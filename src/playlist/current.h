@@ -43,10 +43,13 @@ KotoCurrentPlaylist * koto_current_playlist_new();
 
 KotoPlaylist * koto_current_playlist_get_playlist(KotoCurrentPlaylist * self);
 
+void koto_current_playlist_save_playlist_state(KotoCurrentPlaylist * self);
+
 void koto_current_playlist_set_playlist(
 	KotoCurrentPlaylist * self,
 	KotoPlaylist * playlist,
-	gboolean play_immediately
+	gboolean play_immediately,
+	gboolean play_current
 );
 
 G_END_DECLS

@@ -56,6 +56,7 @@ void koto_playback_engine_handle_current_playlist_changed(
 	KotoCurrentPlaylist * current_pl,
 	KotoPlaylist * playlist,
 	gboolean play_immediately,
+	gboolean play_current,
 	gpointer user_data
 );
 
@@ -94,6 +95,11 @@ void koto_playback_engine_set_position(
 	int position
 );
 
+void koto_playback_engine_set_track_playback_position(
+	KotoPlaybackEngine * self,
+	guint64 pos
+);
+
 void koto_playback_engine_set_track_repeat(
 	KotoPlaybackEngine * self,
 	gboolean enable_repeat
@@ -123,6 +129,10 @@ void koto_playback_engine_toggle_track_shuffle(KotoPlaybackEngine * self);
 
 void koto_playback_engine_update_duration(KotoPlaybackEngine * self);
 
+void koto_playback_engine_update_track_position(KotoPlaybackEngine * self);
+
 gboolean koto_playback_engine_tick_duration(gpointer user_data);
 
 gboolean koto_playback_engine_tick_track(gpointer user_data);
+
+gboolean koto_playback_engine_tick_update_playlist_state(gpointer user_data);

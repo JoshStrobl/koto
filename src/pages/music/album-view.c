@@ -17,10 +17,11 @@
 
 #include <glib-2.0/glib.h>
 #include <gtk-4.0/gtk/gtk.h>
-#include "../../components/koto-cover-art-button.h"
+#include "../../components/album-info.h"
+#include "../../components/button.h"
+#include "../../components/cover-art-button.h"
 #include "../../db/cartographer.h"
 #include "../../indexer/structs.h"
-#include "../../koto-button.h"
 #include "album-view.h"
 #include "disc-view.h"
 #include "config/config.h"
@@ -37,7 +38,7 @@ struct _KotoAlbumView {
 
 	KotoCoverArtButton * album_cover;
 
-	GtkWidget * album_label;
+	KotoAlbumInfo * album_info;
 	GHashTable * cd_to_disc_views;
 };
 
@@ -90,6 +91,8 @@ static void koto_album_view_init(KotoAlbumView * self) {
 	gtk_widget_add_css_class(self->main, "album-view");
 	gtk_widget_set_can_focus(self->main, FALSE);
 	self->album_tracks_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+	self->album_info = koto_album_info_new(KOTO_ALBUM_INFO_TYPE_ALBUM); // Create an Album-type Album Info
+	gtk_box_prepend(GTK_BOX(self->album_tracks_box), GTK_WIDGET(self->album_info)); // Add our Album Info to the album_tracks box
 
 	self->discs = gtk_list_box_new(); // Create our list of our tracks
 	gtk_list_box_set_selection_mode(GTK_LIST_BOX(self->discs), GTK_SELECTION_NONE);
@@ -228,11 +231,7 @@ void koto_album_view_set_album(
 
 	gchar * album_art = koto_album_get_art(self->album); // Get the art for the album
 	koto_cover_art_button_set_art_path(self->album_cover, album_art);
-
-	self->album_label = gtk_label_new(koto_album_get_name(album));
-	gtk_widget_set_halign(self->album_label, GTK_ALIGN_START);
-	gtk_box_prepend(GTK_BOX(self->album_tracks_box), self->album_label); // Prepend our new label to the album + tracks box
-
+	koto_album_info_set_album_uuid(self->album_info, koto_album_get_uuid(album)); // Set the album we should be displaying info about on the Album Info
 	g_signal_connect(self->album, "track-added", G_CALLBACK(koto_album_view_handle_track_added), self); // Handle track added on our album
 }
 

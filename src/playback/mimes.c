@@ -41,7 +41,7 @@ gboolean koto_playback_engine_gst_caps_iter(
 
 	g_hash_table_add(supported_mimes_hash, g_strdup(caps_name));
 	supported_mimes = g_list_prepend(supported_mimes, g_strdup(caps_name));
-	supported_mimes = g_list_prepend(supported_mimes, g_strdup(koto_utils_replace_string_all(caps_name, "x-", "")));
+	supported_mimes = g_list_prepend(supported_mimes, g_strdup(koto_utils_string_replace_all(caps_name, "x-", "")));
 
 	return TRUE;
 }

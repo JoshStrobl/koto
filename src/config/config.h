@@ -18,6 +18,7 @@
 #pragma once
 #include <glib-2.0/glib.h>
 #include <glib-2.0/gio/gio.h>
+#include "../indexer/misc-types.h"
 
 G_BEGIN_DECLS
 
@@ -44,6 +45,8 @@ void koto_config_monitor_handle_changed(
 	GFileMonitorEvent ev,
 	gpointer user_data
 );
+
+KotoPreferredAlbumSortType koto_config_get_preferred_album_sort_type(KotoConfig * self);
 
 void koto_config_refresh(KotoConfig * self);
 

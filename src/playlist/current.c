@@ -58,8 +58,9 @@ static void koto_current_playlist_class_init(KotoCurrentPlaylistClass * c) {
 		NULL,
 		NULL,
 		G_TYPE_NONE,
-		2,
+		3,
 		KOTO_TYPE_PLAYLIST,
+		G_TYPE_BOOLEAN,
 		G_TYPE_BOOLEAN
 	);
 }
@@ -71,13 +72,26 @@ static void koto_current_playlist_init(KotoCurrentPlaylist * self) {
 }
 
 KotoPlaylist * koto_current_playlist_get_playlist(KotoCurrentPlaylist * self) {
-	return self->current_playlist;
+	return KOTO_IS_CURRENT_PLAYLIST(self) ? self->current_playlist : NULL;
+}
+
+void koto_current_playlist_save_playlist_state(KotoCurrentPlaylist * self) {
+	if (!KOTO_IS_CURRENT_PLAYLIST(self)) { // Not a CurrentPlaylist
+		return;
+	}
+
+	if (!KOTO_IS_PLAYLIST(self->current_playlist)) { // No playlist
+		return;
+	}
+
+	koto_playlist_save_current_playback_state(self->current_playlist); // Save the current playlist state
 }
 
 void koto_current_playlist_set_playlist(
 	KotoCurrentPlaylist * self,
 	KotoPlaylist * playlist,
-	gboolean play_immediately
+	gboolean play_immediately,
+	gboolean play_current
 ) {
 	if (!KOTO_IS_CURRENT_PLAYLIST(self)) {
 		return;
@@ -88,6 +102,8 @@ void koto_current_playlist_set_playlist(
 	}
 
 	if (KOTO_IS_PLAYLIST(self->current_playlist)) {
+		koto_current_playlist_save_playlist_state(self); // Save the current playlist state if needed
+
 		gboolean * is_temp = FALSE;
 		g_object_get(self->current_playlist, "ephemeral", &is_temp, NULL); // Get the current ephemeral value
 
@@ -101,15 +117,14 @@ void koto_current_playlist_set_playlist(
 	}
 
 	self->current_playlist = playlist;
-	// TODO: Saved state
-	koto_playlist_set_position(self->current_playlist, -1); // Reset our position, use -1 since "next" song is then 0
 	g_object_ref(playlist); // Increment the reference
 	g_signal_emit(
 		self,
 		signals[SIGNAL_PLAYLIST_CHANGED],
 		0,
 		playlist,
-		play_immediately
+		play_immediately,
+		play_current
 	);
 }
 

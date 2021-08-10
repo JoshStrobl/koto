@@ -92,12 +92,12 @@ void index_folder(
 				gchar * artist_name = g_strdup(split[split_len - 3]);
 				g_strfreev(split);
 
-				if (!koto_utils_is_string_valid(album_name)) {
+				if (!koto_utils_string_is_valid(album_name)) {
 					g_free(album_name);
 					continue;
 				}
 
-				if (!koto_utils_is_string_valid(artist_name)) {
+				if (!koto_utils_string_is_valid(artist_name)) {
 					g_free(album_name);
 					g_free(artist_name);
 					continue;
@@ -143,14 +143,17 @@ void index_file(
 		return;
 	}
 
+	gboolean for_audiobook = (koto_library_get_lib_type(lib) == KOTO_LIBRARY_TYPE_AUDIOBOOK);
+
 	gchar * relative_path_to_file = koto_library_get_relative_path_to_file(lib, g_strdup(path)); // Strip out library path so we have a relative path to the file
+	gchar * file_basename = g_path_get_basename(relative_path_to_file);
+
 	gchar ** split_on_relative_slashes = g_strsplit(relative_path_to_file, G_DIR_SEPARATOR_S, -1); // Split based on separator (e.g. / )
 	guint slash_sep_count = g_strv_length(split_on_relative_slashes);
 
 	gchar * artist_author_podcast_name = g_strdup(split_on_relative_slashes[0]); // No matter what, artist should be first
 	gchar * album_or_audiobook_name = NULL;
-	gchar * file_name = koto_track_helpers_get_name_for_file(path, artist_author_podcast_name); // Get the name of the file
-	guint cd = (guint) 1;
+	guint cd = (guint) 0;
 
 	if (slash_sep_count >= 3) { // If this it is at least "artist" + "album" + "file" (or with CD)
 		album_or_audiobook_name = g_strdup(split_on_relative_slashes[1]); // Duplicate the second item as the album or audiobook name
@@ -159,22 +162,41 @@ void index_file(
 	// #region CD parsing logic
 
 	if ((slash_sep_count == 4)) { // If is at least "artist" + "album" + "cd" + "file"
-		gchar * cd_str = g_strdup(g_strstrip(koto_utils_replace_string_all(g_utf8_strdown(split_on_relative_slashes[2], -1), "cd", ""))); // Replace a lowercased version of our CD ("cd") and trim any whitespace
+		gchar * cd_str = g_strdup(g_strstrip(koto_utils_string_replace_all(g_utf8_strdown(split_on_relative_slashes[2], -1), "cd", ""))); // Replace a lowercased version of our CD ("cd") and trim any whitespace
 
-		cd = (guint) g_ascii_strtoull(cd_str, NULL, 10); // Attempt to convert
+		cd = (guint) g_ascii_strtoull(cd_str, NULL, 10); // Attempt to convert}
+	}
 
-		if (cd == 0) { // Had an error during conversion
-			cd = 1; // Set back to 1
-		}
+	if (for_audiobook && (cd == 0)) { // No CD yet and is for an audiobook
+		cd = koto_track_helpers_get_cd_based_on_file_name(file_basename); // Base on file name
+	} else {
+		cd = 1;
 	}
 
 	// #endregion
 
+	gchar * file_name = NULL;
+
+	if (for_audiobook) { // If this is for an audiobook library
+		guint64 pos = koto_track_helpers_get_position_based_on_file_name(file_basename);
+
+		if (cd != 1) { // On a non "Part 1" audiobook
+			file_name = g_strdup_printf("%s - Part %u - %lu", album_or_audiobook_name, cd, pos);
+		} else { // Part 1 / CD 1
+			file_name = g_strdup_printf("%s - %lu", album_or_audiobook_name, pos);
+		}
+	}
+
+	if (!koto_utils_string_is_valid(file_name)) { // No valid file name yet
+		file_name = koto_track_helpers_get_name_for_file(path, artist_author_podcast_name); // Get the name of the file
+	}
+
 	g_strfreev(split_on_relative_slashes);
+	g_free(file_basename);
 
 	gchar * sorta_uniqueish_key = NULL;
 
-	if (koto_utils_is_string_valid(album_or_audiobook_name)) { // Have audiobook or album name
+	if (koto_utils_string_is_valid(album_or_audiobook_name)) { // Have audiobook or album name
 		sorta_uniqueish_key = g_strdup_printf("%s-%s-%s", artist_author_podcast_name, album_or_audiobook_name, file_name);
 	} else { // No audiobook or album name
 		sorta_uniqueish_key = g_strdup_printf("%s-%s", artist_author_podcast_name, file_name);
@@ -193,7 +215,7 @@ void index_file(
 
 		KotoAlbum * album = NULL;
 
-		if (koto_utils_is_string_valid(album_or_audiobook_name)) { // Have an album or audiobook name
+		if (koto_utils_string_is_valid(album_or_audiobook_name)) { // Have an album or audiobook name
 			KotoAlbum * possible_album = koto_artist_get_album_by_name(artist, album_or_audiobook_name);
 			album = KOTO_IS_ALBUM(possible_album) ? possible_album : NULL;
 		}

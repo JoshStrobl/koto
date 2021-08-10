@@ -1,4 +1,4 @@
-/* koto-track-item.h
+/* writers-page.h
  *
  * Copyright 2021 Joshua Strobl
  *
@@ -16,31 +16,26 @@
  */
 
 #pragma once
-
-#include <glib-2.0/glib-object.h>
+#include <glib-2.0/glib.h>
 #include <gtk-4.0/gtk/gtk.h>
-#include "indexer/structs.h"
 
 G_BEGIN_DECLS
 
-#define KOTO_TYPE_TRACK_ITEM (koto_track_item_get_type())
+#define KOTO_TYPE_WRITER_PAGE (koto_writer_page_get_type())
+G_DECLARE_FINAL_TYPE(KotoWriterPage, koto_writer_page, KOTO, WRITER_PAGE, GObject)
 
-G_DECLARE_FINAL_TYPE(KotoTrackItem, koto_track_item, KOTO, TRACK_ITEM, GtkBox)
-
-KotoTrackItem* koto_track_item_new(KotoTrack * track);
-void koto_track_item_handle_add_to_playlist_button_click(
-	GtkGestureClick * gesture,
-	int n_press,
-	double x,
-	double y,
+GtkWidget* koto_writer_page_create_item(
+	gpointer item,
 	gpointer user_data
 );
 
-KotoTrack * koto_track_item_get_track(KotoTrackItem * self);
+GtkWidget * koto_writer_page_get_main(KotoWriterPage * self);
 
-void koto_track_item_set_track(
-	KotoTrackItem * self,
-	KotoTrack * track
+void koto_writer_page_set_artist(
+	KotoWriterPage * self,
+	KotoArtist * artist
 );
+
+KotoWriterPage * koto_writer_page_new(KotoArtist * artist);
 
 G_END_DECLS
