@@ -402,7 +402,7 @@ gdouble koto_playback_engine_get_progress(KotoPlaybackEngine * self) {
 			return 0.0;
 		}
 
-		progress = gstprog / GST_SECOND; // Devide by NS to get seconds
+		progress = gstprog / GST_SECOND; // Divide by GST_SECOND
 	}
 
 	return progress;
