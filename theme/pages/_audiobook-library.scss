@@ -5,7 +5,7 @@
 .audiobook-library { // Library page
 	.genres-banner { // Banner for genres list
 		.large-banner { // Large banner with art for each genre
-			padding: $itempadding;
+			padding: $padding;
 
 			.audiobook-genre-button { // Genre buttons
 				.koto-button {
@@ -17,7 +17,7 @@
 	}
 
 	.writers-button-flow { // Flowbox of buttons for writers
-		padding: 0 $itempadding; // Horizontal padding of our standard item padding
+		padding: 0 $padding; // Horizontal padding of our standard item padding
 
 		flowboxchild {
 			padding: 0;

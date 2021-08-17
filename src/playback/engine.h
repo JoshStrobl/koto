@@ -66,15 +66,23 @@ KotoTrack * koto_playback_engine_get_current_track(KotoPlaybackEngine * self);
 
 gint64 koto_playback_engine_get_duration(KotoPlaybackEngine * self);
 
-GstState koto_playback_engine_get_state(KotoPlaybackEngine * self);
-
 gdouble koto_playback_engine_get_progress(KotoPlaybackEngine * self);
+
+;
+
+gdouble koto_playback_engine_get_sane_playback_rate(gdouble rate);
+
+GstState koto_playback_engine_get_state(KotoPlaybackEngine * self);
 
 gboolean koto_playback_engine_get_track_repeat(KotoPlaybackEngine * self);
 
 gboolean koto_playback_engine_get_track_shuffle(KotoPlaybackEngine * self);
 
 gdouble koto_playback_engine_get_volume(KotoPlaybackEngine * self);
+
+void koto_playback_engine_jump_backwards(KotoPlaybackEngine * self);
+
+void koto_playback_engine_jump_forwards(KotoPlaybackEngine * self);
 
 void koto_playback_engine_mute(KotoPlaybackEngine * self);
 
@@ -89,6 +97,11 @@ void koto_playback_engine_pause(KotoPlaybackEngine * self);
 void koto_playback_engine_play(KotoPlaybackEngine * self);
 
 void koto_playback_engine_toggle(KotoPlaybackEngine * self);
+
+void koto_playback_engine_set_playback_rate(
+	KotoPlaybackEngine * self,
+	gdouble rate
+);
 
 void koto_playback_engine_set_position(
 	KotoPlaybackEngine * self,

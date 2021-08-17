@@ -64,6 +64,12 @@ struct _KotoPlayerBar {
 	GtkWidget * playback_album;
 	GtkWidget * playback_artist;
 
+	/* Advanced Controls (Jump Back / Forwards, Speed) */
+	GtkWidget * advanced_controls_section;
+	KotoButton * backwards_jump_button;
+	KotoButton * forwards_jump_button;
+	GtkWidget * playback_speed_input;
+
 	/* Misc Widgets */
 	GtkWidget * playback_position_label;
 
@@ -236,6 +242,40 @@ void koto_playerbar_create_primary_controls(KotoPlayerBar * self) {
 		gtk_box_append(GTK_BOX(self->primary_controls_section), GTK_WIDGET(self->forward_button));
 		koto_button_add_click_handler(self->forward_button, KOTO_BUTTON_CLICK_TYPE_PRIMARY, G_CALLBACK(koto_playerbar_go_forwards), self);
 	}
+
+	self->advanced_controls_section = gtk_center_box_new();
+	gtk_widget_add_css_class(self->advanced_controls_section, "playerbar-advanced-controls");
+
+	self->backwards_jump_button = koto_button_new_with_resource("/com/github/joshstrobl/koto/multimedia-backwards-jump", KOTO_BUTTON_PIXBUF_SIZE_NORMAL);
+	koto_button_add_click_handler(self->backwards_jump_button, KOTO_BUTTON_CLICK_TYPE_PRIMARY, G_CALLBACK(koto_playerbar_jump_backwards), self);
+
+	self->forwards_jump_button = koto_button_new_with_resource("/com/github/joshstrobl/koto/multimedia-forwards-jump", KOTO_BUTTON_PIXBUF_SIZE_NORMAL);
+	koto_button_add_click_handler(self->forwards_jump_button, KOTO_BUTTON_CLICK_TYPE_PRIMARY, G_CALLBACK(koto_playerbar_jump_forwards), self);
+
+	self->playback_speed_input = gtk_entry_new_with_buffer(gtk_entry_buffer_new("1.0", -1)); // Create an input that defaults to 1.0
+	gtk_entry_set_max_length(GTK_ENTRY(self->playback_speed_input), 4); // Max of 4 characters (e.g. "0.25" but allow for "2" or "2.0")
+	gtk_editable_set_max_width_chars(GTK_EDITABLE(self->playback_speed_input), 4); // Set to be as wide as 4 characters
+	gtk_widget_set_valign(self->playback_speed_input, GTK_ALIGN_CENTER); // Only align center, don't vexpand
+
+	gtk_center_box_set_start_widget(GTK_CENTER_BOX(self->advanced_controls_section), GTK_WIDGET(self->backwards_jump_button));
+	gtk_center_box_set_center_widget(GTK_CENTER_BOX(self->advanced_controls_section), GTK_WIDGET(self->playback_speed_input));
+	gtk_center_box_set_end_widget(GTK_CENTER_BOX(self->advanced_controls_section), GTK_WIDGET(self->forwards_jump_button));
+
+	gtk_box_append(GTK_BOX(self->primary_controls_section), self->advanced_controls_section);
+
+	gtk_entry_set_input_hints(
+		GTK_ENTRY(self->playback_speed_input),
+		GTK_INPUT_HINT_NONE | GTK_INPUT_HINT_NO_SPELLCHECK | GTK_INPUT_HINT_NO_EMOJI // No fanciness please
+	);
+
+	gtk_entry_set_input_purpose(
+		GTK_ENTRY(self->playback_speed_input),
+		GTK_INPUT_PURPOSE_NUMBER // Numbers allow . so use that
+	);
+
+	gtk_entry_set_placeholder_text(GTK_ENTRY(self->playback_speed_input), "1.0");
+
+	g_signal_connect(self->playback_speed_input, "activate", G_CALLBACK(koto_playerbar_handle_speed_input_activate), self); // Handle our activate (enter key on entry)
 }
 
 void koto_playerbar_create_secondary_controls(KotoPlayerBar * self) {
@@ -311,6 +351,29 @@ void koto_playerbar_go_forwards(
 	(void) data;
 
 	koto_playback_engine_forwards(playback_engine);
+}
+
+void koto_playerbar_handle_speed_input_activate(
+	GtkEntry * playback_speed_input,
+	gpointer user_data
+) {
+	KotoPlayerBar * self = user_data;
+
+	if (!KOTO_IS_PLAYERBAR(self)) {
+		return;
+	}
+
+	GtkEntryBuffer * entry_buffer = gtk_entry_get_buffer(playback_speed_input); // Get the entry buffer
+	const gchar * text = gtk_entry_buffer_get_text(entry_buffer); // Get the text for the buffer
+
+	gdouble rate = g_strtod(text, NULL); // Attempt to convert
+	gdouble fixed_rate = koto_playback_engine_get_sane_playback_rate(rate);
+
+	gchar * conv = g_strdup_printf("%f", fixed_rate);
+	gtk_entry_buffer_set_text(entry_buffer, g_utf8_substring(conv, 0, 4), -1); // Set our entry value to the converted string of the new rate, or if it is something like 2 then it sets it to 2.0
+	g_free(conv);
+
+	koto_playback_engine_set_playback_rate(playback_engine, fixed_rate);
 }
 
 void koto_playerbar_handle_is_playing(
@@ -536,6 +599,38 @@ void koto_playerbar_handle_volume_button_change(
 	(void) button;
 	(void) user_data;
 	koto_playback_engine_set_volume(playback_engine, (double) value / 100);
+}
+
+void koto_playerbar_jump_backwards(
+	GtkGestureClick * gesture,
+	int n_press,
+	double x,
+	double y,
+	gpointer data
+) {
+	(void) gesture;
+	(void) n_press;
+	(void) x;
+	(void) y;
+	(void) data;
+
+	koto_playback_engine_jump_backwards(playback_engine);
+}
+
+void koto_playerbar_jump_forwards(
+	GtkGestureClick * gesture,
+	int n_press,
+	double x,
+	double y,
+	gpointer data
+) {
+	(void) gesture;
+	(void) n_press;
+	(void) x;
+	(void) y;
+	(void) data;
+
+	koto_playback_engine_jump_forwards(playback_engine);
 }
 
 void koto_playerbar_reset_progressbar(KotoPlayerBar * self) {

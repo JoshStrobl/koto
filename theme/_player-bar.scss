@@ -15,6 +15,23 @@
 		}
 	}
 
+	.playerbar-primary-controls, // Primary
+	.playerbar-secondary-controls { // Secondary
+		& > .koto-button { // Direct descendents
+			margin: 0 $quarterpadding;
+		}
+	}
+
+	.playerbar-primary-controls { // Primary Controls
+		.playerbar-advanced-controls { // Advanced controls
+			margin-left: $padding;
+
+			& > entry { // Inner GtkEntry
+				margin: 0 $halvedpadding;
+			}
+		}
+	}
+
 	.playerbar-info { // Central info section
 		& > box { // Info labels
 			margin-left: 2ex;

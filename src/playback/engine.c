@@ -81,6 +81,7 @@ struct _KotoPlaybackEngine {
 	guint playback_position;
 	gint requested_playback_position;
 
+	gdouble rate;
 	gdouble volume;
 };
 
@@ -210,6 +211,7 @@ static void koto_playback_engine_init(KotoPlaybackEngine * self) {
 	self->suppress_video = gst_element_factory_make("fakesink", "suppress-video");
 
 	g_object_set(self->playbin, "video-sink", self->suppress_video, NULL);
+	self->rate = 1.0;
 	self->volume = 0.5;
 	koto_playback_engine_set_volume(self, 0.5);
 
@@ -408,6 +410,18 @@ gdouble koto_playback_engine_get_progress(KotoPlaybackEngine * self) {
 	return progress;
 }
 
+gdouble koto_playback_engine_get_sane_playback_rate(gdouble rate) {
+	if ((rate < 0.25) && (rate != 0)) { // 0.25 is probably the most reasonable limit
+		return 0.25;
+	} else if (rate > 2.5) { // Anything greater than 2.5
+		return 2.5;
+	} else if (rate == 0) { // Possible conversion failure
+		return 1.0;
+	} else {
+		return rate;
+	}
+}
+
 GstState koto_playback_engine_get_state(KotoPlaybackEngine * self) {
 	return GST_STATE(self->player);
 }
@@ -422,6 +436,55 @@ gboolean koto_playback_engine_get_track_shuffle(KotoPlaybackEngine * self) {
 
 gdouble koto_playback_engine_get_volume(KotoPlaybackEngine * self) {
 	return KOTO_IS_PLAYBACK_ENGINE(self) ? self->volume : 0;
+}
+
+void koto_playback_engine_jump_backwards(KotoPlaybackEngine * self) {
+	if (!KOTO_IS_PLAYBACK_ENGINE(self)) { // Not an engine
+		return;
+	}
+
+	if (!self->is_playing) { // Is not playing
+		return;
+	}
+
+	gdouble cur_pos = koto_playback_engine_get_progress(self); // Get the current position
+	guint backwards_increment = 10;
+	g_object_get(
+		config,
+		"playback-jump-backwards-increment", // Get our backwards increment from our settings
+		&backwards_increment,
+		NULL
+	);
+
+	gint new_pos = (gint) cur_pos - backwards_increment;
+
+	if (new_pos < 0) { // Before the beginning of time
+		new_pos = 0;
+	}
+
+	koto_playback_engine_set_position(self, new_pos);
+}
+
+void koto_playback_engine_jump_forwards(KotoPlaybackEngine * self) {
+	if (!KOTO_IS_PLAYBACK_ENGINE(self)) { // Not an engine
+		return;
+	}
+
+	if (!self->is_playing) { // Is not playing
+		return;
+	}
+
+	gdouble cur_pos = koto_playback_engine_get_progress(self); // Get the current position
+	guint forwards_increment = 30;
+	g_object_get(
+		config,
+		"playback-jump-forwards-increment", // Get our forward increment from our settings
+		&forwards_increment,
+		NULL
+	);
+
+	gint new_pos = (gint) cur_pos + forwards_increment;
+	koto_playback_engine_set_position(self, new_pos);
 }
 
 gboolean koto_playback_engine_monitor_changed(
@@ -516,6 +579,20 @@ void koto_playback_engine_pause(KotoPlaybackEngine * self) {
 	koto_update_mpris_playback_state(GST_STATE_PAUSED);
 }
 
+void koto_playback_engine_set_playback_rate(
+	KotoPlaybackEngine * self,
+	gdouble rate
+) {
+	if (!KOTO_IS_PLAYBACK_ENGINE(self)) { // Not a playback engine
+		return;
+	}
+
+	self->rate = koto_playback_engine_get_sane_playback_rate(rate); // Get a fixed rate and set our current rate to it
+	gst_element_set_state(self->player, GST_STATE_PAUSED); // Set our state to paused
+	koto_playback_engine_set_position(self, koto_playback_engine_get_progress(self)); // Basically creates a new seek event
+	gst_element_set_state(self->player, GST_STATE_PLAYING); // Set our state to play
+}
+
 void koto_playback_engine_set_position(
 	KotoPlaybackEngine * self,
 	int position
@@ -526,7 +603,7 @@ void koto_playback_engine_set_position(
 
 	gst_element_seek(
 		self->playbin,
-		1.0,
+		self->rate,
 		GST_FORMAT_TIME,
 		GST_SEEK_FLAG_FLUSH | GST_SEEK_FLAG_ACCURATE,
 		GST_SEEK_TYPE_SET,

@@ -3,8 +3,8 @@
 .koto-button {
 	border-width: 0;
 
-	& > image {
-		margin-right: 10px;
+	& > .button-label {
+		margin-left: 10px;
 	}
 
 	&:not(.active) {

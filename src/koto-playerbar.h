@@ -105,6 +105,11 @@ void koto_playerbar_handle_progressbar_value_changed(
 	gpointer data
 );
 
+void koto_playerbar_handle_speed_input_activate(
+	GtkEntry * playback_speed_input,
+	gpointer user_data
+);
+
 void koto_playerbar_handle_tick_duration(
 	KotoPlaybackEngine * engine,
 	gpointer user_data
@@ -129,6 +134,22 @@ void koto_playerbar_handle_volume_button_change(
 	GtkScaleButton * button,
 	double value,
 	gpointer user_data
+);
+
+void koto_playerbar_jump_backwards(
+	GtkGestureClick * gesture,
+	int n_press,
+	double x,
+	double y,
+	gpointer data
+);
+
+void koto_playerbar_jump_forwards(
+	GtkGestureClick * gesture,
+	int n_press,
+	double x,
+	double y,
+	gpointer data
 );
 
 void koto_playerbar_reset_progressbar(KotoPlayerBar * self);

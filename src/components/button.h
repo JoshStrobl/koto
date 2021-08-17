@@ -66,6 +66,11 @@ KotoButton * koto_button_new_with_file(
 	KotoButtonPixbufSize size
 );
 
+KotoButton * koto_button_new_with_resource(
+	gchar * resource_path,
+	KotoButtonPixbufSize size
+);
+
 void koto_button_add_click_handler(
 	KotoButton * self,
 	KotoButtonClickType button,
@@ -125,6 +130,11 @@ void koto_button_set_icon_name(
 void koto_button_set_image_position(
 	KotoButton * self,
 	KotoButtonImagePosition pos
+);
+
+void koto_button_set_resource_path(
+	KotoButton * self,
+	gchar * resource_path
 );
 
 void koto_button_set_pixbuf(

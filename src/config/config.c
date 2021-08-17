@@ -37,6 +37,8 @@ enum {
 	PROP_PLAYBACK_CONTINUE_ON_PLAYLIST,
 	PROP_PLAYBACK_LAST_USED_VOLUME,
 	PROP_PLAYBACK_MAINTAIN_SHUFFLE,
+	PROP_PLAYBACK_JUMP_BACKWARDS_INCREMENT,
+	PROP_PLAYBACK_JUMP_FORWARDS_INCREMENT,
 	PROP_PREFERRED_ALBUM_SORT_TYPE,
 	PROP_UI_ALBUM_INFO_SHOW_DESCRIPTION,
 	PROP_UI_ALBUM_INFO_SHOW_GENRES,
@@ -73,6 +75,8 @@ struct _KotoConfig {
 	gboolean playback_continue_on_playlist;
 	gdouble playback_last_used_volume;
 	gboolean playback_maintain_shuffle;
+	guint playback_jump_backwards_increment;
+	guint playback_jump_forwards_increment;
 
 	/* Misc Prefs */
 
@@ -143,6 +147,26 @@ static void koto_config_class_init(KotoConfigClass * c) {
 		"Maintain Shuffle on Playlist Change",
 		"Maintain shuffle setting when changing playlists",
 		TRUE,
+		G_PARAM_CONSTRUCT | G_PARAM_EXPLICIT_NOTIFY | G_PARAM_READWRITE
+	);
+
+	config_props[PROP_PLAYBACK_JUMP_BACKWARDS_INCREMENT] = g_param_spec_uint(
+		"playback-jump-backwards-increment",
+		"Jump Backwards Increment",
+		"Jump Backwards Increment",
+		5, // 5s
+		90, // 1min30s
+		10, // 10s
+		G_PARAM_CONSTRUCT | G_PARAM_EXPLICIT_NOTIFY | G_PARAM_READWRITE
+	);
+
+	config_props[PROP_PLAYBACK_JUMP_FORWARDS_INCREMENT] = g_param_spec_uint(
+		"playback-jump-forwards-increment",
+		"Jump Forwards Increment",
+		"Jump Forwards Increment",
+		5, // 5s
+		90, // 1min30s
+		30, // 30s
 		G_PARAM_CONSTRUCT | G_PARAM_EXPLICIT_NOTIFY | G_PARAM_READWRITE
 	);
 
@@ -235,6 +259,12 @@ static void koto_config_get_property(
 		case PROP_PLAYBACK_MAINTAIN_SHUFFLE:
 			g_value_set_boolean(val, self->playback_maintain_shuffle);
 			break;
+		case PROP_PLAYBACK_JUMP_BACKWARDS_INCREMENT:
+			g_value_set_uint(val, self->playback_jump_backwards_increment);
+			break;
+		case PROP_PLAYBACK_JUMP_FORWARDS_INCREMENT:
+			g_value_set_uint(val, self->playback_jump_forwards_increment);
+			break;
 		case PROP_UI_ALBUM_INFO_SHOW_DESCRIPTION:
 			g_value_set_boolean(val, self->ui_album_info_show_description);
 			break;
@@ -276,6 +306,12 @@ static void koto_config_set_property(
 			break;
 		case PROP_PLAYBACK_MAINTAIN_SHUFFLE:
 			self->playback_maintain_shuffle = g_value_get_boolean(val);
+			break;
+		case PROP_PLAYBACK_JUMP_BACKWARDS_INCREMENT:
+			self->playback_jump_backwards_increment = g_value_get_uint(val);
+			break;
+		case PROP_PLAYBACK_JUMP_FORWARDS_INCREMENT:
+			self->playback_jump_forwards_increment = g_value_get_uint(val);
 			break;
 		case PROP_PREFERRED_ALBUM_SORT_TYPE:
 			self->preferred_album_sort_type = g_strcmp0(g_value_get_string(val), "alphabetical") ? KOTO_PREFERRED_ALBUM_ALWAYS_ALPHABETICAL : KOTO_PREFERRED_ALBUM_SORT_TYPE_DEFAULT;
@@ -434,11 +470,21 @@ void koto_config_load(
 
 	if (playback_section) { // Have playback section
 		toml_datum_t continue_on_playlist = toml_bool_in(playback_section, "continue-on-playlist");
+		toml_datum_t jump_backwards_increment = toml_int_in(playback_section, "jump-backwards-increment");
+		toml_datum_t jump_forwards_increment = toml_int_in(playback_section, "jump-forwards-increment");
 		toml_datum_t last_used_volume = toml_double_in(playback_section, "last-used-volume");
 		toml_datum_t maintain_shuffle = toml_bool_in(playback_section, "maintain-shuffle");
 
 		if (continue_on_playlist.ok && (self->playback_continue_on_playlist != continue_on_playlist.u.b)) { // If we have a continue-on-playlist set and they are different
 			g_object_set(self, "playback-continue-on-playlist", continue_on_playlist.u.b, NULL);
+		}
+
+		if (jump_backwards_increment.ok && (self->playback_jump_backwards_increment != jump_backwards_increment.u.i)) { // If we have a jump-backwards-increment set and it is different
+			g_object_set(self, "playback-jump-backwards-increment", (guint) jump_backwards_increment.u.i, NULL);
+		}
+
+		if (jump_forwards_increment.ok && (self->playback_jump_forwards_increment != jump_forwards_increment.u.i)) { // If we have a jump-backwards-increment set and it is different
+			g_object_set(self, "playback-jump-forwards-increment", (guint) jump_forwards_increment.u.i, NULL);
 		}
 
 		if (last_used_volume.ok && (self->playback_last_used_volume != last_used_volume.u.d)) { // If we have last-used-volume set and they are different

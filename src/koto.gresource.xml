@@ -3,6 +3,8 @@
 	<gresource prefix="/com/github/joshstrobl/koto">
 		<file alias="business-and-personal-finance.png">../data/genres/business-and-personal-finance.png</file>
 		<file alias="foreign-languages.png">../data/genres/foreign-languages.png</file>
+		<file alias="multimedia-backwards-jump">../data/vectors/multimedia-backwards-jump.svg</file>
+		<file alias="multimedia-forwards-jump">../data/vectors/multimedia-forwards-jump.svg</file>
 		<file alias="mystery-and-thriller.png">../data/genres/mystery-and-thriller.png</file>
 		<file alias="sci-fi.png">../data/genres/sci-fi.png</file>
 		<file alias="travel.png">../data/genres/travel.png</file>
