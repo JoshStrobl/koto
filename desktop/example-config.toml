@@ -1,0 +1,26 @@
+[preferences.ui]
+album_info_show_description = true
+album_info_show_genre = true
+album_info_show_narrator = true
+album_info_show_year = true
+last_used_volume = 0.5
+
+[preferences.podcasts]
+jump_backwards_seconds = 30
+jump_forward_seconds = 30
+
+[[libraries]]
+name = "Audiobooks"
+path = "/home/joshua/Audiobooks"
+
+[[libraries]]
+name = "Music"
+path = "/home/joshua/Music"
+
+[[libraries]]
+name = "Streaming"
+path = "/home/joshua/StreamingMusic"
+
+[[libraries]]
+name = "Podcasts"
+path = "/home/joshua/Podcasts"

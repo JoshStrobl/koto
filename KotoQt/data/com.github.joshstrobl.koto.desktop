@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Koto
+Exec=com.github.joshstrobl.koto
+Icon=audio-headphones
+Terminal=false
+Type=Application
+Categories=AudioVideo;Audio;GTK;Music;Player;
+StartupNotify=true
