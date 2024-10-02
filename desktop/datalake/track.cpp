@@ -45,7 +45,6 @@ KotoTrack* KotoTrack::fromMetadata(const KFileMetaData::SimpleExtractionResult& 
   auto albumResult = props.value(KFileMetaData::Property::Album);
   if (albumResult.isValid() && artistOptional.has_value()) {
     auto artist = artistOptional.value();
-    std::cout << "Album: " << albumResult.toString().toStdString() << std::endl;
 
     auto albumMetaName = albumResult.toString();
     auto albumOptional = artist->getAlbumByName(albumMetaName);

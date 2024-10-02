@@ -20,8 +20,6 @@ void FileIndexer::index() {
 
   QDirIterator it {this->i_root, QDir::Dirs | QDir::Files | QDir::NoDotAndDotDot, QDirIterator::Subdirectories};
 
-  // std::cout << "Indexing " << this->i_root.toStdString();
-
   while (it.hasNext()) {
     QString   path = it.next();
     QFileInfo info {path};
