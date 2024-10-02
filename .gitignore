@@ -72,10 +72,12 @@ CMakeLists.txt.user*
 *.dll
 *.exe
 
+.ccls-cache/
 .qt/
 .rcc/
 bin/
-build/
+build*/
+cmake-build-debug/
 **/qmldir
 **/meta_types
 **/qmltypes

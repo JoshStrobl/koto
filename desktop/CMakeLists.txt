@@ -11,25 +11,29 @@ include(ECMQmlModule)
 qt_standard_project_setup()
 
 qt_add_executable(koto
-    main.cpp
-    config/config.cpp
-    config/library.cpp
-    config/ui_prefs.cpp
-    datalake/indexer.cpp
-    datalake/track.cpp
+        main.cpp
+        config/config.cpp
+        config/library.cpp
+        config/ui_prefs.cpp
+        datalake/indexer.cpp
+        datalake/track.cpp
+        datalake/album.cpp
+        datalake/artist.cpp
+        datalake/cartographer.cpp
+        datalake/cartographer.hpp
 )
 
 ecm_add_qml_module(koto URI "com.github.joshstrobl.koto" GENERATE_PLUGIN_SOURCE)
 
 ecm_target_qml_sources(koto
-    SOURCES
-    qml/PrimaryNavigation.qml
-    qml/HomePage.qml
-    qml/Main.qml
+        SOURCES
+        qml/PrimaryNavigation.qml
+        qml/HomePage.qml
+        qml/Main.qml
 )
 
 target_link_libraries(koto
-    PRIVATE KF6::Baloo KF6::FileMetaData Qt6::Quick Qt6::QuickControls2
+        PRIVATE KF6::Baloo KF6::FileMetaData Qt6::Quick Qt6::QuickControls2
 )
 
 install(FILES com.github.joshstrobl.koto.desktop DESTINATION ${KDE_INSTALL_APPDIR})

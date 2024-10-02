@@ -10,17 +10,5 @@ jump_backwards_seconds = 30
 jump_forward_seconds = 30
 
 [[libraries]]
-name = "Audiobooks"
-path = "/home/joshua/Audiobooks"
-
-[[libraries]]
 name = "Music"
 path = "/home/joshua/Music"
-
-[[libraries]]
-name = "Streaming"
-path = "/home/joshua/StreamingMusic"
-
-[[libraries]]
-name = "Podcasts"
-path = "/home/joshua/Podcasts"
