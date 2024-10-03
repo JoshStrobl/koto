@@ -3,9 +3,6 @@
 #include <QList>
 #include <QString>
 #include <QUuid>
-#include <filesystem>
-
-namespace fs = std::filesystem;
 
 class KotoArtist;
 class KotoAlbum;
