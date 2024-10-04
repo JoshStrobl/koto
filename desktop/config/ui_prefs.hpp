@@ -8,6 +8,7 @@
 
 class KotoUiPreferences {
   public:
+    KotoUiPreferences();
     KotoUiPreferences(std::optional<toml::value> v);
     ~KotoUiPreferences();
 
@@ -16,6 +17,8 @@ class KotoUiPreferences {
     bool  getAlbumInfoShowNarrator();
     bool  getAlbumInfoShowYear();
     float getLastUsedVolume();
+
+    toml::ordered_value serialize();
 
     void setAlbumInfoShowDescription(bool show);
     void setAlbumInfoShowGenre(bool show);

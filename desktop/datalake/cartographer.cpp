@@ -29,9 +29,17 @@ std::optional<KotoAlbum*> Cartographer::getAlbum(QUuid uuid) {
   return album ? std::optional {album} : std::nullopt;
 }
 
+QList<KotoAlbum*> Cartographer::getAlbums() {
+  return this->i_albums.values();
+}
+
 std::optional<KotoArtist*> Cartographer::getArtist(QUuid uuid) {
   auto artist = this->i_artists.value(uuid, nullptr);
   return artist ? std::optional {artist} : std::nullopt;
+}
+
+QList<KotoArtist*> Cartographer::getArtists() {
+  return this->i_artists.values();
 }
 
 std::optional<KotoArtist*> Cartographer::getArtist(QString name) {
@@ -42,4 +50,8 @@ std::optional<KotoArtist*> Cartographer::getArtist(QString name) {
 std::optional<KotoTrack*> Cartographer::getTrack(QUuid uuid) {
   auto track = this->i_tracks.value(uuid, nullptr);
   return track ? std::optional {track} : std::nullopt;
+}
+
+QList<KotoTrack*> Cartographer::getTracks() {
+  return this->i_tracks.values();
 }

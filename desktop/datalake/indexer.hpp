@@ -3,7 +3,7 @@
 #include <string>
 
 #include "cartographer.hpp"
-#include "config/library.hpp"
+#include "config/config.hpp"
 #include "structs.hpp"
 
 class FileIndexer {
@@ -18,8 +18,9 @@ class FileIndexer {
     void index();
 
   protected:
-    void               indexDirectory(QString path, int depth);
     QList<KotoArtist*> i_artists;
     QList<KotoTrack*>  i_tracks;
     QString            i_root;
 };
+
+void indexAllLibraries();

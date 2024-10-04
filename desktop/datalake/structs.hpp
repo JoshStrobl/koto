@@ -1,6 +1,9 @@
 #pragma once
 #include <KFileMetaData/SimpleExtractionResult>
+#include <QFileInfo>
 #include <QList>
+#include <QSqlQuery>
+#include <QSqlRecord>
 #include <QString>
 #include <QUuid>
 
@@ -11,13 +14,14 @@ class KotoTrack;
 class KotoArtist {
   public:
     KotoArtist();
-    static KotoArtist* fromDb();
+    static KotoArtist* fromDb(const QSqlQuery& query, const QSqlRecord& record);
     ~KotoArtist();
 
     QUuid uuid;
 
     void                      addAlbum(KotoAlbum* album);
     void                      addTrack(KotoTrack* track);
+    void                      commit();
     QList<KotoAlbum*>         getAlbums();
     std::optional<KotoAlbum*> getAlbumByName(QString name);
     QString                   getName();
@@ -39,20 +43,21 @@ class KotoArtist {
 class KotoAlbum {
   public:
     KotoAlbum();
-    static KotoAlbum* fromDb();
+    static KotoAlbum* fromDb(const QSqlQuery& query, const QSqlRecord& record);
     ~KotoAlbum();
 
     QUuid uuid;
     QUuid artist_uuid;
 
-    QString           getAlbumArtPath();
-    QString           getDescription();
-    QList<QString>    getGenres();
-    QString           getNarrator();
-    QString           getPath();
-    QString           getTitle();
-    QList<KotoTrack*> getTracks();
-    int               getYear();
+    void               commit();
+    QString            getAlbumArtPath();
+    QString            getDescription();
+    QList<QString>     getGenres();
+    QString            getNarrator();
+    QString            getPath();
+    QString            getTitle();
+    QList<KotoTrack*>  getTracks();
+    std::optional<int> getYear();
 
     void addTrack(KotoTrack* track);
     void removeTrack(KotoTrack* track);
@@ -65,10 +70,10 @@ class KotoAlbum {
     void setYear(int num);
 
   private:
-    QString title;
-    QString description;
-    QString narrator;
-    int     year;
+    QString            title;
+    QString            description;
+    QString            narrator;
+    std::optional<int> year;
 
     QList<QString>    genres;
     QList<KotoTrack*> tracks;
@@ -80,14 +85,15 @@ class KotoAlbum {
 class KotoTrack {
   public:
     KotoTrack();  // No-op constructor
-    static KotoTrack* fromDb();
-    static KotoTrack* fromMetadata(const KFileMetaData::SimpleExtractionResult& metadata);
+    static KotoTrack* fromDb(const QSqlQuery& query, const QSqlRecord& record);
+    static KotoTrack* fromMetadata(const KFileMetaData::SimpleExtractionResult& metadata, const QFileInfo& info);
     ~KotoTrack();
 
     std::optional<QUuid> album_uuid;
     QUuid                artist_uuid;
     QUuid                uuid;
 
+    void        commit();
     int         getDuration();
     QStringList getGenres();
     QString     getLyrics();

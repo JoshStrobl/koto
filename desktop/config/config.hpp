@@ -1,18 +1,28 @@
 #pragma once
 
-#include <vector>
+#include <QList>
+#include <QString>
+
 #include "library.hpp"
 #include "ui_prefs.hpp"
 
 class KotoConfig {
-    public:
-        KotoConfig();
-        ~KotoConfig();
-        std::vector<KotoLibraryConfig> getLibraries();
-        KotoUiPreferences * getUiPreferences();
+  public:
+    KotoConfig();
+    static KotoConfig& instance();
+    static KotoConfig* create() { return &instance(); }
+    void               save();
 
-    private:
-        std::vector<KotoLibraryConfig> i_libraries;
-        KotoUiPreferences * i_uiPreferences;
+    QString                   getConfigDirPath();
+    QList<KotoLibraryConfig*> getLibraries();
+    KotoUiPreferences*        getUiPreferences();
 
+  private:
+    void bootstrap();
+    void parseConfigFile(std::string filePath);
+
+    QString                   i_configDirPath;
+    QString                   i_configPath;
+    QList<KotoLibraryConfig*> i_libraries;
+    KotoUiPreferences*        i_uiPreferences;
 };

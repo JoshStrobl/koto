@@ -34,6 +34,7 @@ void FileIndexer::index() {
         auto artist = new KotoArtist();
         artist->setName(info.fileName());
         artist->setPath(path);
+        artist->commit();
         this->i_artists.append(artist);
         Cartographer::instance().addArtist(artist);
         continue;
@@ -51,6 +52,7 @@ void FileIndexer::index() {
           artist->addAlbum(album);
         }
 
+        album->commit();
         Cartographer::instance().addAlbum(album);
         continue;
       }
@@ -67,22 +69,20 @@ void FileIndexer::index() {
 
       if (!result.types().contains(KFileMetaData::Type::Audio)) { continue; }
 
-      auto track = KotoTrack::fromMetadata(result);
-      track->setPath(path);
+      auto track = KotoTrack::fromMetadata(result, info);
 
       this->i_tracks.append(track);
+      track->commit();
       Cartographer::instance().addTrack(track);
     } else if (mime.name().startsWith("image/")) {
       // This is an image, TODO add cover art to album
     }
   }
+}
 
-  std::cout << "===== Summary =====" << std::endl;
-  for (auto artist : this->i_artists) {
-    std::cout << "Artist: " << artist->getName().toStdString() << std::endl;
-    for (auto album : artist->getAlbums()) {
-      std::cout << "  Album: " << album->getTitle().toStdString() << std::endl;
-      for (auto track : album->getTracks()) { std::cout << "    Track: " << track->getTitle().toStdString() << std::endl; }
-    }
+void indexAllLibraries() {
+  for (auto library : KotoConfig::instance().getLibraries()) {
+    auto indexer = new FileIndexer(library);
+    indexer->index();
   }
 }

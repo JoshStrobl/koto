@@ -1,11 +1,18 @@
+#include <QSqlQuery>
+
+#include "database.hpp"
 #include "structs.hpp"
 
 KotoArtist::KotoArtist() {
   this->uuid = QUuid::createUuid();
 }
 
-KotoArtist* KotoArtist::fromDb() {
-  return new KotoArtist();
+KotoArtist* KotoArtist::fromDb(const QSqlQuery& query, const QSqlRecord& record) {
+  KotoArtist* artist = new KotoArtist();
+  artist->uuid       = QUuid {query.value(record.indexOf("id")).toString()};
+  artist->name       = QString {query.value(record.indexOf("name")).toString()};
+  artist->path       = QString {query.value(record.indexOf("art_path")).toString()};
+  return artist;
 }
 
 KotoArtist::~KotoArtist() {
@@ -21,6 +28,22 @@ void KotoArtist::addAlbum(KotoAlbum* album) {
 
 void KotoArtist::addTrack(KotoTrack* track) {
   this->tracks.append(track);
+  if (!track->album_uuid.has_value()) return;
+  for (auto album : this->albums) {
+    if (album->uuid == track->album_uuid.value()) {
+      album->addTrack(track);
+      return;
+    }
+  }
+}
+
+void KotoArtist::commit() {
+  QSqlQuery query(KotoDatabase::instance().getDatabase());
+  query.prepare("INSERT INTO artists(id, name, art_path) VALUES (:id, :name, :art_path) ON CONFLICT(id) DO UPDATE SET name = :name, art_path = :art_path");
+  query.bindValue(":id", this->uuid.toString());
+  query.bindValue(":name", this->name);
+  query.bindValue(":art_path", this->path);
+  query.exec();
 }
 
 QList<KotoAlbum*> KotoArtist::getAlbums() {

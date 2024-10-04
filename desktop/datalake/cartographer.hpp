@@ -13,14 +13,16 @@ class Cartographer {
     static Cartographer& instance();
     static Cartographer* create() { return &instance(); }
 
-    void                      addAlbum(KotoAlbum* album);
-    void                      addArtist(KotoArtist* artist);
-    void                      addTrack(KotoTrack* track);
-    std::optional<KotoAlbum*> getAlbum(QUuid uuid);
-    //.std::optional<KotoAlbum*>  getAlbum(QString name);
+    void                       addAlbum(KotoAlbum* album);
+    void                       addArtist(KotoArtist* artist);
+    void                       addTrack(KotoTrack* track);
+    std::optional<KotoAlbum*>  getAlbum(QUuid uuid);
+    QList<KotoAlbum*>          getAlbums();
     std::optional<KotoArtist*> getArtist(QUuid uuid);
+    QList<KotoArtist*>         getArtists();
     std::optional<KotoArtist*> getArtist(QString name);
     std::optional<KotoTrack*>  getTrack(QUuid uuid);
+    QList<KotoTrack*>          getTracks();
 
   private:
     QHash<QUuid, KotoAlbum*>    i_albums;
