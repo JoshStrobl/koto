@@ -72,9 +72,13 @@ CMakeLists.txt.user*
 *.dll
 *.exe
 
+.cache/
 .ccls-cache/
+.idea/
+.kdev4/
 .qt/
 .rcc/
+.zed/
 bin/
 build*/
 cmake-build-debug/
@@ -83,3 +87,4 @@ cmake-build-debug/
 **/qmltypes
 **/*.qrc
 CMakeCache.txt
+*.kdev4

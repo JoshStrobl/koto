@@ -1,17 +1,17 @@
 version: "3"
 
 tasks:
-    sdbus-gen-desktop:
-        cmds:
-            - sdbus-c++-xml2cpp desktop/dbus/schema.xml --adaptor=desktop/dbus/daemon-server.h --proxy=desktop/dbus/daemon-client.h
-    setup-desktop:
-        desc: "Run cmake configuration for desktop Koto"
-        cmds:
-            - cmake -S . -B build
-    build: cmake --build build --verbose
-    build-watch-desktop: watchman-make -p '**/*.cpp' '**/*.h' --run "task cook-desktop"
-    cook-desktop:
-        cmds:
-            - task setup-desktop
-            - task build
-    install: sudo make install -C build
+  sdbus-gen-desktop:
+    cmds:
+      - sdbus-c++-xml2cpp desktop/dbus/schema.xml --adaptor=desktop/dbus/daemon-server.h --proxy=desktop/dbus/daemon-client.h
+  setup-desktop:
+    desc: "Run cmake configuration for desktop Koto"
+    cmds:
+      - cmake -S . -B build
+  build: cmake --build build
+  build-watch-desktop: watchman-make -p '**/*.cpp' '**/*.h' --run "task cook-desktop"
+  cook-desktop:
+    cmds:
+      - task setup-desktop
+      - task build
+  install: sudo make install -C build
