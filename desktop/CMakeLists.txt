@@ -27,9 +27,11 @@ ecm_add_qml_module(com.github.joshstrobl.koto URI "com.github.joshstrobl.koto" G
 
 ecm_target_qml_sources(com.github.joshstrobl.koto
         SOURCES
+        qml/PlayerBar/PlayerBar.qml
         qml/PrimaryNavigation.qml
         qml/HomePage.qml
         qml/Main.qml
+        qml/Root.qml
 )
 
 target_link_libraries(com.github.joshstrobl.koto

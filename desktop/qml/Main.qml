@@ -8,11 +8,13 @@ Kirigami.ApplicationWindow {
     visible: true
     width: 1000
 
+    footer: PlayerBar {
+    }
     globalDrawer: PrimaryNavigation {
         windowRef: root
     }
 
     // TODO: Implement an onboarding page
-    pageStack.initialPage: HomePage {
+    pageStack.initialPage: Root {
     }
 }
