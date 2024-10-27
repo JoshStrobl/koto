@@ -20,7 +20,7 @@ Kirigami.GlobalDrawer {
     drawerOpen: !isMobile()
     edge: Qt.LeftEdge
     height: parent.height
-    modal: isMobile()
+    modal: false
 
     actions: [
         Kirigami.Action {

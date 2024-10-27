@@ -9,10 +9,13 @@ Kirigami.Page {
     ColumnLayout {
         id: rootLayout
 
-        Layout.fillWidth: true
+        anchors.fill: parent
 
         Controls.StackView {
             id: rootStack
+
+            Layout.fillHeight: true
+            Layout.fillWidth: true
 
             initialItem: HomePage {
             }

@@ -102,6 +102,19 @@ void KotoTrack::commit() {
   query.exec();
 }
 
+QString KotoTrack::getAlbumUuid() {
+  if (!this->album_uuid.has_value()) return this->album_uuid.value().toString();
+  return {};
+}
+
+QUuid KotoTrack::getArtistUuid() {
+  return this->artist_uuid;
+}
+
+int KotoTrack::getDiscNumber() {
+  return this->disc_number;
+}
+
 int KotoTrack::getDuration() {
   return this->duration;
 }
@@ -128,6 +141,10 @@ QString KotoTrack::getTitle() {
 
 int KotoTrack::getTrackNumber() {
   return this->track_number;
+}
+
+QUuid KotoTrack::getUuid() {
+  return this->uuid;
 }
 
 int KotoTrack::getYear() {

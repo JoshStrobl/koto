@@ -1,8 +1,11 @@
 #include "cartographer.hpp"
 
-Cartographer::Cartographer()
-    : i_albums(QHash<QUuid, KotoAlbum*>()),
-      i_artists(QHash<QUuid, KotoArtist*>()),
+#include <iostream>
+
+Cartographer::Cartographer(QObject* parent)
+    : QObject(parent),
+      i_albums(QHash<QUuid, KotoAlbum*>()),
+      i_artists_model(new KotoArtistModel(QList<KotoArtist*>())),
       i_artists_by_name(QHash<QString, KotoArtist*>()),
       i_tracks(QHash<QUuid, KotoTrack*>()) {}
 
@@ -16,7 +19,7 @@ void Cartographer::addAlbum(KotoAlbum* album) {
 }
 
 void Cartographer::addArtist(KotoArtist* artist) {
-  this->i_artists.insert(artist->uuid, artist);
+  this->i_artists_model->addArtist(artist);
   this->i_artists_by_name.insert(artist->getName(), artist);
 }
 
@@ -29,17 +32,20 @@ std::optional<KotoAlbum*> Cartographer::getAlbum(QUuid uuid) {
   return album ? std::optional {album} : std::nullopt;
 }
 
-QList<KotoAlbum*> Cartographer::getAlbums() {
-  return this->i_albums.values();
-}
-
 std::optional<KotoArtist*> Cartographer::getArtist(QUuid uuid) {
-  auto artist = this->i_artists.value(uuid, nullptr);
-  return artist ? std::optional {artist} : std::nullopt;
+  for (auto artist : this->i_artists_model->getArtists()) {
+    if (artist->uuid == uuid) { return std::optional {artist}; }
+  }
+  return std::nullopt;
 }
 
 QList<KotoArtist*> Cartographer::getArtists() {
-  return this->i_artists.values();
+  return this->i_artists_model->getArtists();
+}
+
+KotoArtistModel* Cartographer::getArtistsModel() {
+  // if (this->i_artists_model == nullptr) { this->i_artists_model = new KotoArtistModel(this->i_artists); }
+  return this->i_artists_model;
 }
 
 std::optional<KotoArtist*> Cartographer::getArtist(QString name) {

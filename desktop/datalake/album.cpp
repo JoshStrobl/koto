@@ -82,6 +82,10 @@ std::optional<int> KotoAlbum::getYear() {
   return this->year;
 }
 
+int KotoAlbum::getYearQml() {
+  return this->year.value_or(0);
+}
+
 void KotoAlbum::removeTrack(KotoTrack* track) {
   this->tracks.removeOne(track);
 }

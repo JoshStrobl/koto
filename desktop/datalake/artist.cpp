@@ -62,8 +62,16 @@ QString KotoArtist::getName() {
   return QString {this->name};
 }
 
+QString KotoArtist::getPath() {
+  return QString {this->path};
+}
+
 QList<KotoTrack*> KotoArtist::getTracks() {
   return QList {this->tracks};
+}
+
+QUuid KotoArtist::getUuid() {
+  return this->uuid;
 }
 
 void KotoArtist::removeAlbum(KotoAlbum* album) {

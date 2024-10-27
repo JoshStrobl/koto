@@ -1,21 +1,40 @@
 #pragma once
 
+#include <QtQml/qqmlregistration.h>
+
 #include <QHash>
+#include <QQmlEngine>
+#include <QQmlListProperty>
 #include <QString>
 #include <QUuid>
 #include <optional>
 
 #include "structs.hpp"
 
-class Cartographer {
-  public:
-    Cartographer();
-    static Cartographer& instance();
-    static Cartographer* create() { return &instance(); }
+class Cartographer : public QObject {
+    Q_OBJECT
+    QML_ELEMENT
+    QML_SINGLETON
+    // Q_PROPERTY(QQmlListProperty<KotoAlbum*> albums READ getAlbumsQml)
+    Q_PROPERTY(KotoArtistModel* artists READ getArtistsModel)
+    // Q_PROPERTY(QQmlListProperty<KotoTrack*> tracks READ getTracksQml)
 
-    void                       addAlbum(KotoAlbum* album);
-    void                       addArtist(KotoArtist* artist);
-    void                       addTrack(KotoTrack* track);
+  public:
+    Cartographer(QObject* parent = nullptr);
+    static Cartographer& instance();
+    //    static Cartographer* create(QQmlEngine* engine, QJSEngine*) {
+    //      engine->setObjectOwnership(&instance(), QQmlEngine::CppOwnership);
+    //      return &instance();
+    //    }
+
+    void addAlbum(KotoAlbum* album);
+    void addArtist(KotoArtist* artist);
+    void addTrack(KotoTrack* track);
+
+    // QQmlListProperty<KotoAlbum*> getAlbumsQml();
+    KotoArtistModel* getArtistsModel();
+    // QQmlListProperty<KotoTrack*> getTracksQml();
+
     std::optional<KotoAlbum*>  getAlbum(QUuid uuid);
     QList<KotoAlbum*>          getAlbums();
     std::optional<KotoArtist*> getArtist(QUuid uuid);
@@ -26,7 +45,7 @@ class Cartographer {
 
   private:
     QHash<QUuid, KotoAlbum*>    i_albums;
-    QHash<QUuid, KotoArtist*>   i_artists;
+    KotoArtistModel*            i_artists_model;
     QHash<QString, KotoArtist*> i_artists_by_name;
     QHash<QUuid, KotoTrack*>    i_tracks;
 };
