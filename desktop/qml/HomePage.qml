@@ -15,24 +15,10 @@ Kirigami.ScrollablePage {
             width: ListView.view.width
         }
     }
-    // ListModel {
-    //     id: blah
-    //
-    //     ListElement {
-    //         name: "blah1"
-    //     }
-    //     ListElement {
-    //         name: "blah2"
-    //     }
-    //     ListElement {
-    //         name: "blah3"
-    //     }
-    // }
     ListView {
         Layout.fillHeight: true
         Layout.fillWidth: true
         delegate: listDelegate
-        //model: blah
         model: Cartographer.artists
     }
 }

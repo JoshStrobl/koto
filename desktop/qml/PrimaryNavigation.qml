@@ -12,14 +12,16 @@ Kirigami.GlobalDrawer {
         return width < 800;
     }
     function onWindowSizeChanged(width) {
-        drawerOpen = !isMobile(width);
-        modal = isMobile(width);
+        const mobile = isMobile(width);
+        drawerOpen = !mobile;
+        modal = mobile;
+        height = mobile ? windowRef.height : windowRef.height - windowRef.footer.height;
     }
 
     collapseButtonVisible: false
     drawerOpen: !isMobile()
     edge: Qt.LeftEdge
-    height: parent.height
+    height: parent.height - windowRef.footer.height
     modal: false
 
     actions: [
