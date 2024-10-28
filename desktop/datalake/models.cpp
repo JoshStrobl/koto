@@ -1,5 +1,7 @@
 #include "structs.hpp"
 
+KotoArtistModel::KotoArtistModel(const QList<KotoArtist*>& artists, QObject* parent) : QAbstractListModel(parent), m_artists(artists) {}
+
 KotoArtistModel::~KotoArtistModel() {
   this->beginResetModel();
   this->m_artists.clear();
@@ -21,7 +23,9 @@ QVariant KotoArtistModel::data(const QModelIndex& index, int role) const {
 
   if (index.row() >= this->m_artists.size()) { return {}; }
 
-  if (role == KotoArtistRoles::NameRole) {
+  if (role == Qt::DisplayRole) {
+    return this->m_artists.at(index.row())->getName();
+  } else if (role == KotoArtistRoles::NameRole) {
     return this->m_artists.at(index.row())->getName();
   } else if (role == KotoArtistRoles::PathRole) {
     return this->m_artists.at(index.row())->getPath();

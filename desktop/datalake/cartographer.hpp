@@ -16,16 +16,16 @@ class Cartographer : public QObject {
     QML_ELEMENT
     QML_SINGLETON
     // Q_PROPERTY(QQmlListProperty<KotoAlbum*> albums READ getAlbumsQml)
-    Q_PROPERTY(KotoArtistModel* artists READ getArtistsModel)
+    Q_PROPERTY(KotoArtistModel* artists READ getArtistsModel CONSTANT)
     // Q_PROPERTY(QQmlListProperty<KotoTrack*> tracks READ getTracksQml)
 
   public:
-    Cartographer(QObject* parent = nullptr);
+    Cartographer(QObject* parent);
     static Cartographer& instance();
-    //    static Cartographer* create(QQmlEngine* engine, QJSEngine*) {
-    //      engine->setObjectOwnership(&instance(), QQmlEngine::CppOwnership);
-    //      return &instance();
-    //    }
+    static Cartographer* create(QQmlEngine*, QJSEngine*) {
+      QQmlEngine::setObjectOwnership(&instance(), QQmlEngine::CppOwnership);
+      return &instance();
+    }
 
     void addAlbum(KotoAlbum* album);
     void addArtist(KotoArtist* artist);

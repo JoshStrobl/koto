@@ -65,7 +65,7 @@ class KotoArtistModel : public QAbstractListModel {
     Q_OBJECT
 
   public:
-    explicit KotoArtistModel(const QList<KotoArtist*>& artists, QObject* parent = nullptr) : QAbstractListModel(parent), m_artists(artists) {}
+    explicit KotoArtistModel(const QList<KotoArtist*>& artists, QObject* parent = nullptr);
 
     void                   addArtist(KotoArtist* artist);
     int                    rowCount(const QModelIndex& parent = QModelIndex()) const override;

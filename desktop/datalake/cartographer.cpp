@@ -10,7 +10,7 @@ Cartographer::Cartographer(QObject* parent)
       i_tracks(QHash<QUuid, KotoTrack*>()) {}
 
 Cartographer& Cartographer::instance() {
-  static Cartographer _instance;
+  static Cartographer _instance(nullptr);
   return _instance;
 }
 

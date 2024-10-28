@@ -21,13 +21,10 @@ int main(int argc, char* argv[]) {
   if (engine.rootObjects().isEmpty()) { return -1; }
 
   std::thread([]() {
-    // Cartographer::create();
     KotoConfig::create();
     KotoDatabase::create();
 
     KotoDatabase::instance().connect();
-
-    std::cout << "???" << std::endl;
 
     // If we needed to bootstrap, index all libraries, otherwise load the database
     if (KotoDatabase::instance().requiredBootstrap()) {
