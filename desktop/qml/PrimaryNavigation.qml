@@ -92,6 +92,7 @@ Kirigami.GlobalDrawer {
     header: Kirigami.SearchField {
         id: searchEntry
 
+        Layout.topMargin: Kirigami.Units.largeSpacing
         placeholderText: qsTr("Search")
     }
 
