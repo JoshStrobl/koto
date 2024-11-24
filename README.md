@@ -2,10 +2,13 @@
 
 ![koto alpha](https://raw.githubusercontent.com/JoshStrobl/koto/master/.github/koto-alpha-image.png)
 
-Koto is an in-development audiobook, music, and podcast manager that is designed *for* and caters *to* a modern desktop Linux experience. **Nothing to see here yet**.
+Koto is an in-development audiobook, music, and podcast manager that is designed *for* and caters *to* a modern desktop
+Linux experience. **Nothing to see here yet**.
 
 ## Blog
 
+- [Dev Diary 13: Koto - The Resurrection](https://joshuastrobl.com/2024/11/01/dev-diary-13-koto-the-resurrection)
+- [Dev Diary 12: Koto August Progress Report](https://joshuastrobl.com/2021/09/06/dev-diary-12-koto-august-progress-report)
 - [Dev Diary 11: Koto July Progress Report](https://joshuastrobl.com/2021/08/08/dev-diary-11-koto-july-progress-report/)
 - [Dev Diary 10: Koto June Progress Report](https://joshuastrobl.com/2021/07/08/dev-diary-10-koto-june-progress-report/)
 - [Dev Diary 9: Koto May Progress Report (B-side)](https://joshuastrobl.com/2021/06/10/dev-diary-9-koto-may-progress-report-b-side/)
